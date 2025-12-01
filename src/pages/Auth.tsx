@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { desktopApi } from "@/api";
 import { Button } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import ZigmaLogo from "../images/logo.png";
+import BgImg from "../images/bgSignin.png"
 
 export default function Auth() {
   const [username, setUsername] = useState("");
@@ -17,15 +18,17 @@ export default function Auth() {
   const { toast } = useToast();
   const { t } = useTranslation();
 
-  const handleSignIn = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
 
     try {
+      console.log(username, password);
       const res = await desktopApi.post("login-user/", {
         username,
         password,
       });
+      console.log(res);
 
       const { access_token, role, unique_id } = res.data;
 
@@ -52,7 +55,18 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f3f6f4] p-4 font-sans">
-      <div className="w-full max-w-5xl grid md:grid-cols-2 rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
+
+      {/* Background Image */}
+      <div
+        className="absolute inset-0 bg-cover bg-center"
+        style={{ backgroundImage: `url(${BgImg})` }}
+      />
+
+      {/* Shade Effect */}
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+
+      {/* Content Container */}
+      <div className="relative w-full max-w-5xl grid md:grid-cols-2 rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
 
         {/* LEFT */}
         <div className="flex flex-col items-center justify-center p-10 bg-[#e8f5e9] text-center border-r border-gray-200">
@@ -89,7 +103,9 @@ export default function Auth() {
                 type="text"
                 placeholder={t("login.username_placeholder")}
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setUsername(e.target.value)
+                }
                 className="h-12 rounded-lg bg-white border border-gray-300 
                   text-gray-800 placeholder-gray-500 
                   focus:ring-2 focus:ring-[#43A047] focus:border-[#43A047]"
@@ -106,7 +122,9 @@ export default function Auth() {
                 type="password"
                 placeholder={t("login.password_placeholder")}
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                  setPassword(e.target.value)
+                }
                 className="h-12 rounded-lg bg-white border border-gray-300 
                   text-gray-800 placeholder-gray-500 
                   focus:ring-2 focus:ring-[#43A047] focus:border-[#43A047]"

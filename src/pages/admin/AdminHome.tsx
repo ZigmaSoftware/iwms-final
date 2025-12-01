@@ -15,6 +15,9 @@ import {
 import { GIcon } from "../../components/ui/gicon";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
+import { useNavigate } from "react-router-dom";
+
+
 const {
   encMasters,
   encStaffCreation,
@@ -64,9 +67,18 @@ const pendingConfig = [
   { module: "Citizen grievance taxonomy", owner: "Customer Success", status: "Planned" },
 ];
 
+
 const AdminHome: React.FC = () => {
+  const navigate = useNavigate();
+  const logout = () => {
+    navigate('/auth')
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("unique_id");
+    localStorage.removeItem("user_role");
+  }
   return (
     <div className="space-y-6">
+      {/* HEADER */}
       {/* HEADER */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -77,11 +89,28 @@ const AdminHome: React.FC = () => {
             Configure core master data and keep every module aligned.
           </p>
         </div>
-        <Button size="sm" className="gap-2">
-          <GIcon name="settings" className="text-base" />
-          Global settings
-        </Button>
+
+        {/* ACTION BUTTONS */}
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            className="gap-2"
+            type="submit"
+            variant="secondary"
+            onClick={logout}
+          >
+            <GIcon name="logout" className="text-base" />
+            Logout
+          </Button>
+
+
+          <Button size="sm" className="gap-2">
+            <GIcon name="settings" className="text-base" />
+            Global settings
+          </Button>
+        </div>
       </div>
+
 
       {/* MASTER TILES */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -153,8 +182,8 @@ const AdminHome: React.FC = () => {
                         row.status === "Not started"
                           ? "outline"
                           : row.status === "In progress"
-                          ? "default"
-                          : "secondary"
+                            ? "default"
+                            : "secondary"
                       }
                     >
                       {row.status}
