@@ -41,14 +41,22 @@ const AppHeader: React.FC = () => {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 flex w-full border-b border-gray-100 bg-white/95 backdrop-blur">
+    <header
+      className="sticky top-0 z-50 flex w-full text-white"
+      style={{
+        background: "var(--admin-primaryGradient)",
+        boxShadow: "var(--admin-cardShadow)",
+        borderBottom: "1px solid rgba(255, 255, 255, 0.15)",
+      }}
+    >
       <div className="flex flex-col items-center justify-between grow lg:flex-row lg:px-8">
-        <div className="flex items-center justify-between w-full gap-3 px-4 py-3 border-b border-gray-100 sm:gap-4 lg:justify-normal lg:border-b-0 lg:px-0 lg:py-4">
-          <button
-            className="flex items-center justify-center w-11 h-11 rounded-xl border border-gray-200 text-gray-500 shadow-sm lg:flex"
-            onClick={handleToggle}
-            aria-label="Toggle Sidebar"
-          >
+        <div className="flex items-center justify-between w-full gap-3 px-4 py-3 border-b border-white/10 sm:gap-4 lg:justify-between lg:border-b-0 lg:px-0 lg:py-4">
+          <div className="flex items-center gap-3">
+            <button
+              className="flex items-center justify-center w-11 h-11 rounded-2xl border border-white/25 bg-white/10 text-white transition hover:bg-white/20"
+              onClick={handleToggle}
+              aria-label="Toggle Sidebar"
+            >
             {isMobileOpen ? (
               <svg
                 width="24"
@@ -80,32 +88,45 @@ const AppHeader: React.FC = () => {
                 />
               </svg>
             )}
-            {/* Cross Icon */}
-          </button>
+            </button>
 
-          <Link to="/admin" className="lg:hidden">
-            <img src="./logo.png" alt="Logo" />
-          </Link>
+            <div className="hidden lg:flex flex-col">
+              <span className="text-[11px] uppercase tracking-[0.35em] text-white/60">
+                Admin Console
+              </span>
+              <span className="text-xl font-semibold leading-tight">Control Center</span>
+            </div>
 
-          <button
-            onClick={toggleApplicationMenu}
-            className="flex items-center justify-center w-11 h-11 rounded-xl border border-gray-200 text-gray-500 shadow-sm lg:hidden"
-          >
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+            <Link to="/admin" className="lg:hidden">
+              <img src="./logo.png" alt="Logo" />
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2 rounded-full border border-white/25 bg-white/10 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.35em] text-white/70">
+              <span className="h-2 w-2 rounded-full bg-[var(--admin-accent)]"></span>
+              Live Sync Stable
+            </div>
+            <button
+              onClick={toggleApplicationMenu}
+              className="flex items-center justify-center w-11 h-11 rounded-2xl border border-white/25 bg-white/10 text-white transition hover:bg-white/20 lg:hidden"
             >
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M5.99902 10.4951C6.82745 10.4951 7.49902 11.1667 7.49902 11.9951V12.0051C7.49902 12.8335 6.82745 13.5051 5.99902 13.5051C5.1706 13.5051 4.49902 12.8335 4.49902 12.0051V11.9951C4.49902 11.1667 5.1706 10.4951 5.99902 10.4951ZM17.999 10.4951C18.8275 10.4951 19.499 11.1667 19.499 11.9951V12.0051C19.499 12.8335 18.8275 13.5051 17.999 13.5051C17.1706 13.5051 16.499 12.8335 16.499 12.0051V11.9951C16.499 11.1667 17.1706 10.4951 17.999 10.4951ZM13.499 11.9951C13.499 11.1667 12.8275 10.4951 11.999 10.4951C11.1706 10.4951 10.499 11.1667 10.499 11.9951V12.0051C10.499 12.8335 11.1706 13.5051 11.999 13.5051C12.8275 13.5051 13.499 12.8335 13.499 12.0051V11.9951Z"
-                fill="currentColor"
-              />
-            </svg>
-          </button>
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  fillRule="evenodd"
+                  clipRule="evenodd"
+                  d="M5.99902 10.4951C6.82745 10.4951 7.49902 11.1667 7.49902 11.9951V12.0051C7.49902 12.8335 6.82745 13.5051 5.99902 13.5051C5.1706 13.5051 4.49902 12.8335 4.49902 12.0051V11.9951C4.49902 11.1667 5.1706 10.4951 5.99902 10.4951ZM17.999 10.4951C18.8275 10.4951 19.499 11.1667 19.499 11.9951V12.0051C19.499 12.8335 18.8275 13.5051 17.999 13.5051C17.1706 13.5051 16.499 12.8335 16.499 12.0051V11.9951C16.499 11.1667 17.1706 10.4951 17.999 10.4951ZM13.499 11.9951C13.499 11.1667 12.8275 10.4951 11.999 10.4951C11.1706 10.4951 10.499 11.1667 10.499 11.9951V12.0051C10.499 12.8335 11.1706 13.5051 11.999 13.5051C12.8275 13.5051 13.499 12.8335 13.499 12.0051V11.9951Z"
+                  fill="currentColor"
+                />
+              </svg>
+            </button>
+          </div>
 {/* 
           <div className="hidden lg:block">
             <form>
@@ -145,16 +166,12 @@ const AppHeader: React.FC = () => {
         <div
           className={`${
             isApplicationMenuOpen ? "flex" : "hidden"
-          } items-center justify-between w-full gap-4 px-5 py-4 lg:flex lg:justify-end lg:px-0`}
+          } items-center justify-between w-full gap-4 px-5 py-4 text-white lg:flex lg:justify-end lg:px-0`}
         >
           <div className="flex items-center gap-2 2xsm:gap-3">
-            {/* <!-- Dark Mode Toggler --> */}
-            <ThemeToggleButton />
-            {/* <!-- Dark Mode Toggler --> */}
+            <ThemeToggleButton className="!h-11 !w-11 rounded-2xl border border-white/30 bg-white/10 text-white hover:bg-white/20" />
             <NotificationDropdown />
-            {/* <!-- Notification Menu Area --> */}
           </div>
-          {/* <!-- User Area --> */}
           <UserDropdown />
         </div>
       </div>

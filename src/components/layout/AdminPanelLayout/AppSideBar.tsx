@@ -193,11 +193,12 @@ const reportItems: NavItem[] = [
 ];
 
 const menuButtonBase =
-  "flex items-center w-full gap-3 rounded-xl border transition-all text-sm font-medium";
+  "flex items-center w-full gap-3 rounded-2xl border px-3 py-2.5 text-sm font-semibold transition-all duration-300";
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
+  const { isExpanded, isMobileOpen } = useSidebar();
   const location = useLocation();
+  const showFullSidebar = isExpanded || isMobileOpen;
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type:
@@ -282,19 +283,19 @@ const AppSidebar: React.FC = () => {
               onClick={() => handleSubmenuToggle(index, type)}
               className={`${menuButtonBase} ${
                 openSubmenu?.type === type && openSubmenu?.index === index
-                  ? "bg-[#eef7ff] border-[#cfe4ff] text-[#1f4d90]"
-                  : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-200"
+                  ? "bg-[var(--admin-primarySoft)] border-[var(--admin-border)] text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.12)]"
+                  : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)] hover:text-[var(--admin-primary)]"
               }`}
             >
               <span
                 className={`menu-item-icon-size ${
-                  !isExpanded && !isHovered && !isMobileOpen ? "mx-auto" : ""
+                  !showFullSidebar ? "mx-auto" : ""
                 }`}
               >
                 {nav.icon}
               </span>
 
-              {(isExpanded || isHovered || isMobileOpen) && (
+              {showFullSidebar && (
                 <>
                   <span className="menu-item-text text-base font-semibold">
                     {nav.name}
@@ -302,8 +303,8 @@ const AppSidebar: React.FC = () => {
                   <ChevronDown
                     className={`ml-auto w-5 h-5 transition-transform ${
                       openSubmenu?.type === type && openSubmenu?.index === index
-                        ? "rotate-180 text-[#1f4d90]"
-                        : "text-gray-400"
+                        ? "rotate-180 text-[var(--admin-primary)]"
+                        : "text-[var(--admin-mutedText)]"
                     }`}
                   />
                 </>
@@ -315,18 +316,18 @@ const AppSidebar: React.FC = () => {
                 to={nav.path}
                 className={`${menuButtonBase} ${
                   isActive(nav.path)
-                    ? "bg-[#eef7ff] border-[#cfe4ff] text-[#1f4d90]"
-                    : "border-transparent text-gray-600 hover:bg-gray-50 hover:border-gray-200"
+                    ? "bg-[var(--admin-primarySoft)] border-[var(--admin-border)] text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.12)]"
+                    : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)] hover:text-[var(--admin-primary)]"
                 }`}
               >
                 <span
                   className={`menu-item-icon-size ${
-                    !isExpanded && !isHovered && !isMobileOpen ? "mx-auto" : ""
+                    !showFullSidebar ? "mx-auto" : ""
                   }`}
                 >
                   {nav.icon}
                 </span>
-                {(isExpanded || isHovered || isMobileOpen) && (
+                {showFullSidebar && (
                   <span className="menu-item-text text-sm font-semibold">
                     {nav.name}
                   </span>
@@ -335,7 +336,7 @@ const AppSidebar: React.FC = () => {
             )
           )}
 
-          {nav.subItems && (isExpanded || isHovered || isMobileOpen) && (
+          {nav.subItems && showFullSidebar && (
             <div
               ref={(el) => {
                 subMenuRefs.current[`${type}-${index}`] = el;
@@ -348,15 +349,18 @@ const AppSidebar: React.FC = () => {
                     : "0px",
               }}
             >
-              <ul className="mt-2 ml-9 space-y-1 border-l border-gray-100 pl-4">
+              <ul
+                className="mt-2 ml-7 space-y-1 rounded-2xl border-l pl-4"
+                style={{ borderColor: "var(--admin-border)" }}
+              >
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
-                      className={`block rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                      className={`block rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
                         isActive(subItem.path)
-                          ? "bg-[#e8f5e9] text-[#2f855a]"
-                          : "text-gray-500 hover:bg-gray-50"
+                          ? "bg-[var(--admin-accentSoft)] text-[var(--admin-accent)]"
+                          : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
                       }`}
                     >
                       {subItem.name}
@@ -373,26 +377,48 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed  bg-white border-r border-gray-100 shadow-sm
-      transition-all duration-300 h-screen z-50
-      ${isExpanded || isMobileOpen ? "w-[280px]" : isHovered ? "w-[280px]" : "w-[96px]"}
+      className={`fixed z-50 h-screen border-r transition-all duration-300 backdrop-blur-lg
+      ${showFullSidebar ? "w-[300px]" : "w-[140px]"}
       ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
-      onMouseEnter={() => !isExpanded && setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        background: "var(--admin-surfaceAlt)",
+        borderColor: "var(--admin-border)",
+        boxShadow: showFullSidebar
+          ? "var(--admin-cardShadow)"
+          : "0 10px 30px rgba(15, 23, 42, 0.15)",
+      }}
     >
-      <div
-        className={`py-6 flex ${
-          !isExpanded && !isHovered ? "lg:justify-center" : "justify-center"
-        }`}
-      >
-        {/* <Link to="/admin" className="flex items-center justify-center">
-          <img src="/logo.png" className="w-[130px] h-auto mx-auto" />
-        </Link> */}
+
+      <div className={`px-6 pt-8 ${showFullSidebar ? "" : "flex justify-center"}`}>
+        {showFullSidebar ? (
+          <div
+            className="w-full rounded-3xl border p-5 text-white shadow-xl"
+            style={{
+              background: "var(--admin-primaryGradient)",
+              borderColor: "rgba(255,255,255,0.25)",
+              boxShadow: "0 25px 45px rgba(1,62,126,0.25)",
+            }}
+          >
+            <p className="text-[11px] uppercase tracking-[0.4em] text-white/70">City Ops</p>
+            <p className="text-xl font-semibold leading-tight">Admin Panel</p>
+            <p className="mt-2 text-sm text-white/70">
+              Navigate every master and workflow with a single control hub.
+            </p>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/80">
+              <span className="h-2 w-2 rounded-full bg-[var(--admin-accent)]"></span>
+              Active
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--admin-primarySoft)] text-lg font-semibold text-[var(--admin-primary)]">
+            IW
+          </div>
+        )}
       </div>
 
-      <div className="flex flex-col overflow-y-auto no-scrollbar px-4 pb-8">
-        <nav className="mb-4 flex flex-col gap-6">
-          <div>{renderMenuItems(navItems, "main")}</div>
+      <div className="flex flex-col overflow-y-auto no-scrollbar px-6 pb-10 pt-8">
+        <nav className="mb-4 flex flex-col gap-7">
+          <div className="pt-1">{renderMenuItems(navItems, "main")}</div>
           <div>{renderMenuItems(adminItems, "admin")}</div>
           <div>{renderMenuItems(masterItems, "master")}</div>
           <div>{renderMenuItems(transportMasters, "transportMaster")}</div>
@@ -403,7 +429,9 @@ const AppSidebar: React.FC = () => {
           <div>{renderMenuItems(workforceManagements, "workforceManagement")}</div>
 
           <div>
-            <h2 className="mb-4 text-xs uppercase text-gray-400">Report</h2>
+            <h2 className="mb-4 text-xs uppercase tracking-[0.3em] text-[var(--admin-mutedText)]">
+              Report
+            </h2>
             {renderMenuItems(reportItems, "report")}
           </div>
         </nav>
