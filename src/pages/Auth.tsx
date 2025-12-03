@@ -13,9 +13,26 @@ import {
   DEFAULT_ROLE,
   USER_ROLE_STORAGE_KEY,
   normalizeRole,
+  type UserRole,
 } from "@/types/roles";
 import ZigmaLogo from "../images/logo.png";
 import BgImg from "../images/bgSignin.png"
+
+const DUMMY_ACCESS_TOKEN =
+  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDAsInN1YiI6IklXTVNfUk5EIn0.dHVubmVsLXNpZ25hdHVyZQ";
+
+const RND_PROFILES: Record<UserRole, { name: string; email: string; uniqueId: string }> = {
+  admin: {
+    name: "Admin Preview",
+    email: "admin-preview@rnd.local",
+    uniqueId: "RND-ADMIN",
+  },
+  user: {
+    name: "Dashboard Preview",
+    email: "dashboard-preview@rnd.local",
+    uniqueId: "RND-USER",
+  },
+};
 
 export default function Auth() {
   const [username, setUsername] = useState("");
@@ -25,6 +42,21 @@ export default function Auth() {
   const { toast } = useToast();
   const { t } = useTranslation();
   const { setUser } = useUser();
+
+  const handleRndAccess = (targetRole: UserRole) => {
+    const normalizedRole: UserRole = targetRole === ADMIN_ROLE ? ADMIN_ROLE : DEFAULT_ROLE;
+    const profile = RND_PROFILES[normalizedRole] ?? RND_PROFILES[DEFAULT_ROLE];
+
+    localStorage.setItem("access_token", DUMMY_ACCESS_TOKEN);
+    localStorage.setItem(USER_ROLE_STORAGE_KEY, normalizedRole);
+    localStorage.setItem("unique_id", profile.uniqueId);
+    setUser({
+      name: profile.name,
+      email: profile.email,
+    });
+
+    navigate(normalizedRole === ADMIN_ROLE ? "/admin" : "/", { replace: true });
+  };
 
   const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -168,6 +200,30 @@ export default function Auth() {
             >
               {loading ? t("login.authenticating") : t("login.sign_in")}
             </Button>
+
+            <div className="pt-6 border-t border-dashed border-gray-200">
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-400 text-center">
+                {t("login.rnd_shortcuts_label")}
+              </p>
+              <div className="mt-4 flex flex-col gap-3 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-11 border-dashed border-[#43A047] text-[#2e7d32]"
+                  onClick={() => handleRndAccess(DEFAULT_ROLE)}
+                >
+                  {t("login.rnd_dashboard")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-11 border-dashed border-orange-500 text-orange-700"
+                  onClick={() => handleRndAccess(ADMIN_ROLE)}
+                >
+                  {t("login.rnd_admin")}
+                </Button>
+              </div>
+            </div>
           </form>
         </div>
       </div>
