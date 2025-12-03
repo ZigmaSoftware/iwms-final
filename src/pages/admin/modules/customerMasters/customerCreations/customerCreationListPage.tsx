@@ -1,0 +1,317 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {desktopApi}from "@/api";
+import Swal from "sweetalert2";
+
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
+import { FilterMatchMode } from "primereact/api";
+import QRCode from "react-qr-code";
+
+import "primereact/resources/themes/lara-light-blue/theme.css";
+import "primereact/resources/primereact.min.css";
+import "primeicons/primeicons.css";
+
+import { PencilIcon, TrashBinIcon } from "@/icons";
+import { getEncryptedRoute } from "@/utils/routeCache";
+
+import { Switch } from "@/components/ui/switch";
+
+type Customer = {
+  id: number;
+  unique_id: string;
+  customer_name: string;
+  contact_no: string;
+  building_no: string;
+  street: string;
+  area: string;
+  pincode: string;
+  ward_name: string;
+  zone_name: string;
+  city_name: string;
+  district_name: string;
+  state_name: string;
+  country_name: string;
+  property_name: string;
+  sub_property_name: string;
+  id_proof_type: string;
+  id_no: string;
+  is_active: boolean;
+};
+
+export default function CustomerCreationList() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
+  const [filters, setFilters] = useState<any>({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    customer_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+  });
+
+  const [qrModalOpen, setQrModalOpen] = useState(false);
+  const [qrData, setQrData] = useState("");
+
+  const navigate = useNavigate();
+  const { encCustomerMaster, encCustomerCreation } = getEncryptedRoute();
+
+  const ENC_NEW_PATH = `/${encCustomerMaster}/${encCustomerCreation}/new`;
+  const ENC_EDIT_PATH = (id: number) =>
+    `/${encCustomerMaster}/${encCustomerCreation}/${id}/edit`;
+
+  const fetchCustomers = async () => {
+    try {
+      const res = await desktopApi.get("customercreations/");
+      setCustomers(res.data);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const handleDelete = async (id: number) => {
+    const confirm = await Swal.fire({
+      title: "Are you sure?",
+      text: "This customer will be permanently deleted!",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    await desktopApi.delete(`customercreations/${id}/`);
+    Swal.fire({
+      icon: "success",
+      title: "Deleted successfully!",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    fetchCustomers();
+  };
+
+  const cap = (str?: string) =>
+    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
+
+  const onGlobalFilterChange = (e: any) => {
+    const updated = { ...filters };
+    updated["global"].value = e.target.value;
+    setFilters(updated);
+    setGlobalFilterValue(e.target.value);
+  };
+
+  const header = (
+    <div className="flex justify-end items-center">
+      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
+        <i className="pi pi-search text-gray-500" />
+        <InputText
+          value={globalFilterValue}
+          onChange={onGlobalFilterChange}
+          placeholder="Search Customer..."
+          className="p-inputtext-sm !border-0 !shadow-none"
+        />
+      </div>
+    </div>
+  );
+
+  // QR column
+  const qrTemplate = (c: Customer) => (
+    <div
+      className="cursor-pointer flex justify-center"
+      onClick={() => {
+        const qrText = `Customer ID: ${c.unique_id}
+Customer Name: ${c.customer_name}
+Contact: ${c.contact_no}
+Address: ${c.building_no}, ${c.street}, ${c.area}, ${c.pincode}
+${c.city_name}, ${c.district_name}, ${c.state_name}
+Ward: ${c.ward_name} | Zone: ${c.zone_name}
+Property: ${c.property_name} - ${c.sub_property_name}`;
+
+        setQrData(qrText);
+        setQrModalOpen(true);
+      }}
+    >
+      <div className="p-1 border rounded bg-white shadow-sm">
+        <QRCode
+          value={JSON.stringify({
+            id: c.id,
+            unique_id: c.unique_id,
+            name: c.customer_name,
+            mobile: c.contact_no,
+            ward: c.ward_name,
+            zone: c.zone_name,
+          })}
+          size={45}
+        />
+      </div>
+    </div>
+  );
+
+  /* --------------------- TOGGLE STATUS --------------------- */
+  const statusTemplate = (row: Customer) => {
+    const updateStatus = async (value: boolean) => {
+      try {
+        await desktopApi.patch(`customercreations/${row.id}/`, {
+          is_active: value,
+        });
+        fetchCustomers();
+      } catch (err) {
+        console.error("Status update failed:", err);
+      }
+    };
+
+    return (
+      <Switch checked={row.is_active} onCheckedChange={updateStatus} />
+    );
+  };
+
+  const actionTemplate = (c: Customer) => (
+    <div className="flex gap-3 justify-center">
+      <button
+        title="Edit"
+        onClick={() => navigate(ENC_EDIT_PATH(c.id))}
+        className="text-blue-600 hover:text-blue-800"
+      >
+        <PencilIcon className="size-5" />
+      </button>
+
+      <button
+        title="Delete"
+        onClick={() => handleDelete(c.id)}
+        className="text-red-600 hover:text-red-800"
+      >
+        <TrashBinIcon className="size-5" />
+      </button>
+    </div>
+  );
+
+  const indexTemplate = (_: Customer, { rowIndex }: { rowIndex: number }) =>
+    rowIndex + 1;
+
+  return (
+    <>
+      {/* QR Modal */}
+      {qrModalOpen && (
+        <div
+          className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50"
+          onClick={() => setQrModalOpen(false)}
+        >
+          <div
+            className="bg-white p-6 rounded-lg shadow-xl w-[280px]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 className="text-center text-lg font-semibold mb-4">
+              Customer QR
+            </h2>
+
+            <div className="flex justify-center mb-4">
+              <QRCode value={qrData} size={200} />
+            </div>
+
+            <Button
+              label="Close"
+              className="p-button-success w-full"
+              onClick={() => setQrModalOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="p-3">
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800 mb-1">
+                Customer Creation
+              </h1>
+              <p className="text-gray-500 text-sm">Manage customer records</p>
+            </div>
+
+            <Button
+              label="Add Customer"
+              icon="pi pi-plus"
+              className="p-button-success"
+              onClick={() => navigate(ENC_NEW_PATH)}
+            />
+          </div>
+
+          <DataTable
+            value={customers}
+            paginator
+            rows={10}
+            filters={filters}
+            loading={loading}
+            globalFilterFields={[
+              "customer_name",
+              "contact_no",
+              "ward_name",
+              "zone_name",
+              "city_name",
+            ]}
+            header={header}
+            emptyMessage="No customers found."
+            stripedRows
+            showGridlines
+            className="p-datatable-sm"
+          >
+            <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+
+            <Column
+              field="customer_name"
+              header="Customer"
+              body={(row: Customer) => cap(row.customer_name)}
+              sortable
+            />
+            <Column field="contact_no" header="Mobile" sortable />
+            <Column
+              field="ward_name"
+              header="Ward"
+              body={(row: Customer) => cap(row.ward_name)}
+              sortable
+            />
+            <Column
+              field="zone_name"
+              header="Zone"
+              body={(row: Customer) => cap(row.zone_name)}
+              sortable
+            />
+            <Column
+              field="city_name"
+              header="City"
+              body={(row: Customer) => cap(row.city_name)}
+              sortable
+            />
+            <Column
+              field="state_name"
+              header="State"
+              body={(row: Customer) => cap(row.state_name)}
+              sortable
+            />
+
+            <Column header="QR" body={qrTemplate} style={{ width: "100px" }} />
+
+            {/* 🔥 New Toggle Status */}
+            <Column
+              field="is_active"
+              header="Status"
+              body={statusTemplate}
+              style={{ width: "120px" }}
+            />
+
+            <Column
+              header="Actions"
+              body={actionTemplate}
+              style={{ width: "140px", textAlign: "center" }}
+            />
+          </DataTable>
+        </div>
+      </div>
+    </>
+  );
+}

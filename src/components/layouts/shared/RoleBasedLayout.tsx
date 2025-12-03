@@ -5,6 +5,7 @@ import {
   ADMIN_ROLE,
   DEFAULT_ROLE,
   USER_ROLE_STORAGE_KEY,
+  normalizeRole,
 } from "@/types/roles";
 
 const getStoredRole = (): UserRole | null => {
@@ -12,7 +13,7 @@ const getStoredRole = (): UserRole | null => {
     return null;
   }
 
-  return (localStorage.getItem(USER_ROLE_STORAGE_KEY) as UserRole | null) ?? null;
+  return normalizeRole(localStorage.getItem(USER_ROLE_STORAGE_KEY));
 };
 
 export function RoleBasedLayout({

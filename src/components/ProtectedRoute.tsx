@@ -2,10 +2,12 @@ import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { Navigate } from "react-router-dom";
 import { jwtDecode } from "jwt-decode";
+import type { UserRole } from "@/types/roles";
+import { USER_ROLE_STORAGE_KEY, normalizeRole } from "@/types/roles";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRoles?: string[];
+  allowedRoles?: UserRole[];
 }
 
 type JwtPayload = {
@@ -17,7 +19,7 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
   useEffect(() => {
     const token = localStorage.getItem("access_token");
-    const role = localStorage.getItem("user_role");
+    const role = normalizeRole(localStorage.getItem(USER_ROLE_STORAGE_KEY));
 
     if (!token) {
       setIsAllowed(false);

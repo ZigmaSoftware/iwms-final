@@ -1,0 +1,239 @@
+/* ================= CARD & LAYOUT ================= */
+
+.ws-card {
+  background: #fff;
+  border-radius: 10px;
+  padding: 18px 24px;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+.ws-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.ws-month-control {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ws-month-input {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.ws-month-input input[type="month"] {
+  border: 1px solid #dce1ef;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  background: #fff;
+  min-width: 160px;
+}
+
+.ws-go-button {
+  border: none;
+  padding: 9px 18px;
+  border-radius: 10px;
+  background: #22c55e;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* ================= SEARCH + EXPORT ================= */
+
+.ws-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ws-export-button {
+  border: none;
+  border-radius: 14px;
+  background: #22c55e;
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  padding: 10px 20px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(56, 78, 154, 0.3);
+}
+
+.ws-search {
+  border: 1px solid #dce1ef;
+  border-radius: 12px;
+  padding: 10px 14px;
+  min-width: 200px;
+  font-size: 13px;
+}
+
+/* ================= TABLE WRAPPER ================= */
+
+.ws-table-wrapper {
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #e6e9ef;
+  padding: 18px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ws-table-headline {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2a4a;
+}
+
+.ws-table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.ws-table th,
+.ws-table td {
+  border-bottom: 1px solid #edf0ff;
+  padding: 6px 8px;
+  text-align: center;
+  font-size: 12px;
+  white-space: normal;
+}
+
+.ws-table th {
+  background: #f8f9ff;
+  color: #5c6a92;
+  font-weight: 600;
+}
+
+.ws-table td:first-child,
+.ws-table th:first-child {
+  text-align: left;
+  padding-left: 14px;
+}
+
+.ws-table td:nth-child(2) {
+  text-align: left;
+}
+
+.ws-table tbody tr:hover {
+  background: #f5f7ff;
+}
+
+/* ================= PAGINATION ================= */
+
+.ws-pagination {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+}
+
+/* top bar */
+.ws-pagination-bar {
+  width: 95%;
+  height: 10px;
+  background: #d1d1d1;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+.ws-pagination-progress {
+  height: 100%;
+  background: #7b7b7b;
+  border-radius: 20px;
+  transition: width 0.3s ease;
+}
+
+/* page numbers */
+.ws-pagination-numbers {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.ws-page-btn {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  color: #7d7d7d;
+  cursor: pointer;
+  padding: 4px 6px;
+}
+
+.ws-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.ws-page-number {
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+  transition: all 0.2s ease;
+}
+
+.ws-page-number:hover {
+  background: #eee;
+}
+
+.ws-page-number.active {
+  background: #edf3ff;
+  color: #3567ff;
+  font-weight: 600;
+  box-shadow: 0 0 10px rgba(80, 130, 255, 0.2);
+}
+
+/* ================= RESPONSIVE ================= */
+
+@media (max-width: 960px) {
+  .ws-table {
+    font-size: 12px;
+  }
+
+  .ws-table-wrapper {
+    padding: 12px;
+  }
+
+  .ws-actions {
+    flex: 1;
+    justify-content: flex-end;
+  }
+
+  .ws-pagination-numbers {
+    gap: 8px;
+  }
+
+  .ws-page-number {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+}

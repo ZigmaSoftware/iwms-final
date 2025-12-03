@@ -15,12 +15,13 @@ import Weighbridge from "@/pages/dashboard/pages/Weighbridge";
 import NotFound from "@/pages/dashboard/pages/NotFound";
 import { HomeDashboard } from "@/pages/dashboard/pages/Dashboard/HomeDashboard";
 import AdminHome from "@/pages/admin/AdminHome";
+import EncryptedRouter from "@/components/layout/AdminPanelLayout/EncryptedRouter";
 
 import { AdminLayout } from "@/components/layouts/admin/AdminLayout";
 import { RoleBasedLayout } from "@/components/layouts/shared/RoleBasedLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import type { UserRole } from "@/types/roles";
-import { ADMIN_ROLE, USER_ROLE_STORAGE_KEY } from "@/types/roles";
+import { ADMIN_ROLE, USER_ROLE_STORAGE_KEY, normalizeRole } from "@/types/roles";
 
 function withDashboard(children: ReactNode) {
   return (
@@ -46,9 +47,7 @@ function DashboardRouteGuard({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     try {
-      setRole(
-        (localStorage.getItem(USER_ROLE_STORAGE_KEY) as UserRole | null) ?? null,
-      );
+      setRole(normalizeRole(localStorage.getItem(USER_ROLE_STORAGE_KEY)));
     } finally {
       setChecked(true);
     }
@@ -86,6 +85,9 @@ export default function App() {
       <Route path="/reports" element={withDashboard(<Reports />)} />
       <Route path="/weighbridge" element={withDashboard(<Weighbridge />)} />
       <Route path="/admin" element={withAdmin(<AdminHome />)} />
+      <Route path="/:encMaster/:encModule" element={withAdmin(<EncryptedRouter />)} />
+      <Route path="/:encMaster/:encModule/new" element={withAdmin(<EncryptedRouter />)} />
+      <Route path="/:encMaster/:encModule/:id/edit" element={withAdmin(<EncryptedRouter />)} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

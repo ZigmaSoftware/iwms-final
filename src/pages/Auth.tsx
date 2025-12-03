@@ -7,6 +7,13 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { useUser } from "@/contexts/UserContext";
+import {
+  ADMIN_ROLE,
+  DEFAULT_ROLE,
+  USER_ROLE_STORAGE_KEY,
+  normalizeRole,
+} from "@/types/roles";
 import ZigmaLogo from "../images/logo.png";
 import BgImg from "../images/bgSignin.png"
 
@@ -17,6 +24,7 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
+  const { setUser } = useUser();
 
   const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -30,13 +38,18 @@ export default function Auth() {
       });
       console.log(res);
 
-      const { access_token, role, unique_id } = res.data;
+      const { access_token, role, unique_id, name, username: apiUsername, email } = res.data;
+      const normalizedRole = normalizeRole(role) ?? DEFAULT_ROLE;
 
       localStorage.setItem("access_token", access_token);
-      localStorage.setItem("user_role", role);
+      localStorage.setItem(USER_ROLE_STORAGE_KEY, normalizedRole);
       localStorage.setItem("unique_id", unique_id);
+      setUser({
+        name: name ?? apiUsername ?? username,
+        email: email ?? "",
+      });
 
-      if (role === "admin") {
+      if (normalizedRole === ADMIN_ROLE) {
         navigate("/admin", { replace: true });
       } else {
         navigate("/", { replace: true });

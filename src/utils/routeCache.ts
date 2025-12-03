@@ -1,24 +1,110 @@
+import { encryptSegment } from "./routeCrypto";
+
 export type EncryptedRoutes = {
-  encMasters: string;
-  encStaffCreation: string;
+  encAdmins: string;
+  encCities: string;
+  encCitizenGrivence: string;
+  encCollectionMonitoring: string;
+  encComplaint: string;
   encContinents: string;
-  encVehicleCreation: string;
+  encCountries: string;
+  encCustomerCreation: string;
+  encCustomerMaster: string;
+  encDistricts: string;
+  encFeedback: string;
+  encFuel: string;
+  encMainComplaintCategory: string;
+  encMainUserScreen: string;
+  encMasters: string;
+  encMonthlyDistance: string;
+  encProperties: string;
+  encReport: string;
+  encStaffCreation: string;
+  encStaffUserType: string;
+  encStates: string;
+  encSubComplaintCategory: string;
+  encSubProperties: string;
+  encTripSummary: string;
   encUserCreation: string;
+  encUserPermission: string;
+  encUserScreen: string;
+  encUserType: string;
+  encVehicleCreation: string;
+  encVehicleHistory: string;
+  encVehicleTrack: string;
+  encVehicleTracking: string;
+  encVehicleType: string;
+  encWasteCollectedData: string;
+  encWasteCollectedSummary: string;
+  encWasteManagementMaster: string;
+  encWards: string;
+  encWorkforceManagement: string;
+  encZones: string;
+  encTransportMaster: string;
 };
 
-const defaultRoutes: EncryptedRoutes = {
-  encMasters: "masters",
-  encStaffCreation: "staff-creation",
+const plainRoutes: EncryptedRoutes = {
+  encAdmins: "admins",
+  encCities: "cities",
+  encCitizenGrivence: "citizen-grievance",
+  encCollectionMonitoring: "collection-monitoring",
+  encComplaint: "complaint",
   encContinents: "continents",
-  encVehicleCreation: "vehicle-creation",
+  encCountries: "countries",
+  encCustomerCreation: "customer-creation",
+  encCustomerMaster: "customer-master",
+  encDistricts: "districts",
+  encFeedback: "feedback",
+  encFuel: "fuel",
+  encMainComplaintCategory: "main-complaint-category",
+  encMainUserScreen: "main-user-screen",
+  encMasters: "masters",
+  encMonthlyDistance: "monthly-distance",
+  encProperties: "properties",
+  encReport: "reports",
+  encStaffCreation: "staff-creation",
+  encStaffUserType: "staff-user-type",
+  encStates: "states",
+  encSubComplaintCategory: "sub-complaint-category",
+  encSubProperties: "sub-properties",
+  encTripSummary: "trip-summary",
   encUserCreation: "user-creation",
+  encUserPermission: "user-permission",
+  encUserScreen: "user-screen",
+  encUserType: "user-type",
+  encVehicleCreation: "vehicle-creation",
+  encVehicleHistory: "vehicle-history",
+  encVehicleTrack: "vehicle-track",
+  encVehicleTracking: "vehicle-tracking",
+  encVehicleType: "vehicle-type",
+  encWasteCollectedData: "waste-collected-data",
+  encWasteCollectedSummary: "waste-collected-summary",
+  encWasteManagementMaster: "waste-management",
+  encWards: "wards",
+  encWorkforceManagement: "workforce-management",
+  encZones: "zones",
+  encTransportMaster: "transport-master",
 };
+
+const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {
+  return Object.fromEntries(
+    Object.entries(routes).map(([key, value]) => [key, encryptSegment(value)]),
+  ) as EncryptedRoutes;
+};
+
+const encryptedDefaults = encryptRoutes(plainRoutes);
 
 export function getEncryptedRoute(
   overrides?: Partial<EncryptedRoutes>,
 ): EncryptedRoutes {
-  return {
-    ...defaultRoutes,
+  if (!overrides || Object.keys(overrides).length === 0) {
+    return encryptedDefaults;
+  }
+
+  const merged = {
+    ...plainRoutes,
     ...overrides,
   };
+
+  return encryptRoutes(merged as EncryptedRoutes);
 }
