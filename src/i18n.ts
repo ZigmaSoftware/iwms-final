@@ -14,7 +14,7 @@ const resources = {
         title: "Welcome Back",
         subtitle: "Sign in to access your workspace",
         username: "Username",
-        username_placeholder: "aakash",
+        username_placeholder: "sathya",
         password: "Password",
         password_placeholder: "********",
         forgot_password: "Forgot Password?",
@@ -23,6 +23,9 @@ const resources = {
         left_title: "Transforming City Operations",
         left_text:
           "Experience a cleaner, faster workflow designed for modern field operations.",
+        rnd_shortcuts_label: "R&D shortcuts",
+        rnd_dashboard: "Open dashboard (dummy)",
+        rnd_admin: "Open admin (dummy)",
       },
       dashboard: {
         header: "Operations Dashboard",
@@ -94,6 +97,9 @@ const resources = {
         left_title: "நகர செயல்பாடுகளை மாற்றும் தீர்வு",
         left_text:
           "தள செயல்பாடுகளுக்காக வடிவமைக்கப்பட்ட விரைவான மற்றும் சுத்தமான பணிச் சுழற்சியை அனுபவிக்கவும்.",
+        rnd_shortcuts_label: "R&D விரைவு அணுகல்",
+        rnd_dashboard: "டாஷ்போர்டுக்கு செல்ல (டம்மி)",
+        rnd_admin: "நிர்வாகத்திற்கு செல்ல (டம்மி)",
       },
       dashboard: {
         header: "செயல்பாட்டு டாஷ்போர்டு",
