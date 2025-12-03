@@ -1,4 +1,4 @@
-import   { JSX, useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./vehicletracking.css";
@@ -136,7 +136,7 @@ const normalizeVehicle = (record: RawRecord): Vehicle | null => {
   };
 };
 
-export default function VehicleTracking(): JSX.Element{
+export default function VehicleTracking(): React.ReactElement {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [filters, setFilters] = useState<Record<Status, boolean>>({
     Running: true,

@@ -1,5 +1,6 @@
-import { JSX, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import L, { LatLngTuple } from "leaflet";
+import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import L from "leaflet";
+import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./vehiclehistory.css";
 import { FiCalendar, FiAlertTriangle } from "react-icons/fi";

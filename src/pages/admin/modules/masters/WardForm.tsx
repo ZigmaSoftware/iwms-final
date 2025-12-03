@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
-import { Input } from "@/components/ui/input";
+import { desktopApi } from "@/api";
 import ComponentCard from "@/components/common/ComponentCard";
-import Label from "@/components/form/Label";
-import Select from "@/components/form/Select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
 
 
@@ -292,14 +299,18 @@ function WardForm() {
             <Label htmlFor="country">
               Country <span className="text-red-500">*</span>
             </Label>
-            <Select
-              id="country"
-              value={countryId}
-              onChange={(val) => setCountryId(val)}
-              options={countries}
-              placeholder="Select Country"
-              required
-            />
+            <Select value={countryId || undefined} onValueChange={(val) => setCountryId(val)}>
+              <SelectTrigger className="input-validate w-full" id="country">
+                <SelectValue placeholder="Select Country" />
+              </SelectTrigger>
+              <SelectContent>
+                {countries.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* State */}
@@ -307,53 +318,69 @@ function WardForm() {
             <Label htmlFor="state">
               State <span className="text-red-500">*</span>
             </Label>
-            <Select
-              id="state"
-              value={stateId}
-              onChange={(val) => setStateId(val)}
-              options={states}
-              placeholder="Select State"
-              required
-            />
+            <Select value={stateId || undefined} onValueChange={(val) => setStateId(val)}>
+              <SelectTrigger className="input-validate w-full" id="state">
+                <SelectValue placeholder="Select State" />
+              </SelectTrigger>
+              <SelectContent>
+                {states.map((s) => (
+                  <SelectItem key={s.value} value={s.value}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* District */}
           <div>
             <Label htmlFor="district">District</Label>
-            <Select
-              id="district"
-              value={districtId}
-              onChange={(val) => setDistrictId(val)}
-              options={districts}
-              placeholder="Select District"
-              required
-            />
+            <Select value={districtId || undefined} onValueChange={(val) => setDistrictId(val)}>
+              <SelectTrigger className="input-validate w-full" id="district">
+                <SelectValue placeholder="Select District" />
+              </SelectTrigger>
+              <SelectContent>
+                {districts.map((d) => (
+                  <SelectItem key={d.value} value={d.value}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* City */}
           <div>
             <Label htmlFor="city">City</Label>
-            <Select
-              id="city"
-              value={cityId}
-              onChange={(val) => setCityId(val)}
-              options={cities}
-              placeholder="Select City"
-              required
-            />
+            <Select value={cityId || undefined} onValueChange={(val) => setCityId(val)}>
+              <SelectTrigger className="input-validate w-full" id="city">
+                <SelectValue placeholder="Select City" />
+              </SelectTrigger>
+              <SelectContent>
+                {cities.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Zone */}
           <div>
             <Label htmlFor="zone">Zone</Label>
-            <Select
-              id="zone"
-              value={zoneId}
-              onChange={(val) => setZoneId(val)}
-              options={zones}
-              placeholder="Select Zone"
-              required
-            />
+            <Select value={zoneId || undefined} onValueChange={(val) => setZoneId(val)}>
+              <SelectTrigger className="input-validate w-full" id="zone">
+                <SelectValue placeholder="Select Zone" />
+              </SelectTrigger>
+              <SelectContent>
+                {zones.map((z) => (
+                  <SelectItem key={z.value} value={z.value}>
+                    {z.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Ward Name */}
@@ -375,15 +402,17 @@ function WardForm() {
           <div>
             <Label htmlFor="isActive">Active Status</Label>
             <Select
-              id="isActive"
               value={isActive ? "true" : "false"}
-              onChange={(val) => setIsActive(val === "true")}
-              options={[
-                { value: "true", label: "Active" },
-                { value: "false", label: "Inactive" },
-              ]}
-              required
-            />
+              onValueChange={(val) => setIsActive(val === "true")}
+            >
+              <SelectTrigger className="input-validate w-full" id="isActive">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Description */}
@@ -402,11 +431,7 @@ function WardForm() {
 
         {/* Buttons */}
         <div className="flex justify-end gap-3 mt-6">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-green-custom text-white px-4 py-2 rounded disabled:opacity-50 transition-colors"
-          >
+          <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
                 ? "Updating..."
@@ -414,14 +439,10 @@ function WardForm() {
               : isEdit
                 ? "Update"
                 : "Save"}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(ENC_LIST_PATH)}
-            className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
-          >
+          </Button>
+          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </ComponentCard>

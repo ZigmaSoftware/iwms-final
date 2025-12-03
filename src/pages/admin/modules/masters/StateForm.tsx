@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
-import { Input } from "@/components/ui/input";
+import { desktopApi } from "@/api";
 import ComponentCard from "@/components/common/ComponentCard";
-import Label from "@/components/form/Label";
-import Select from "@/components/form/Select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
 
 const encMasters = encryptSegment("masters");
@@ -127,15 +134,18 @@ function StateForm() {
             <Label htmlFor="country">
               Country Name <span className="text-red-500">*</span>
             </Label>
-            <Select
-              id="country"
-              required
-              value={countryId}
-              onChange={(val) => setCountryId(val)}
-              options={countries}
-              className="input-validate w-full"
-              placeholder="Select Country"
-            />
+            <Select value={countryId || undefined} onValueChange={(val) => setCountryId(val)}>
+              <SelectTrigger className="input-validate w-full" id="country">
+                <SelectValue placeholder="Select Country" />
+              </SelectTrigger>
+              <SelectContent>
+                {countries.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/*  State Name */}
@@ -176,26 +186,23 @@ function StateForm() {
               Active Status <span className="text-red-500">*</span>
             </Label>
             <Select
-              id="isActive"
-              required
               value={isActive ? "true" : "false"}
-              onChange={(val) => setIsActive(val === "true")}
-              options={[
-                { value: "true", label: "Active" },
-                { value: "false", label: "Inactive" },
-              ]}
-              className="input-validate w-full"
-            />
+              onValueChange={(val) => setIsActive(val === "true")}
+            >
+              <SelectTrigger className="input-validate w-full" id="isActive">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {/*  Buttons */}
         <div className="flex justify-end gap-3 mt-6">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-green-custom text-white px-4 py-2 rounded disabled:opacity-50 transition-colors"
-          >
+          <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
                 ? "Updating..."
@@ -203,14 +210,10 @@ function StateForm() {
               : isEdit
                 ? "Update"
                 : "Save"}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(ENC_LIST_PATH)}
-            className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
-          >
+          </Button>
+          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </ComponentCard>

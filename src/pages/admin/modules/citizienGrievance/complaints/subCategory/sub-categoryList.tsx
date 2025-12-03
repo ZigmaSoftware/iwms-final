@@ -128,7 +128,7 @@ export default function SubComplaintCategoryList() {
   );
 
   return (
-    <div className="p-6 fade-in">
+    <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
 
         {/* PAGE TITLE */}

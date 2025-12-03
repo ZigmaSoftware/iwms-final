@@ -139,7 +139,7 @@ export default function UserTypePage() {
   );
 
   return (
-    <div className="p-6">
+    <div className="px-3 py-3 w-full ">
       <div className="bg-white rounded-lg shadow-lg p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">

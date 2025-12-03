@@ -373,7 +373,7 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed mt-16 bg-white border-r border-gray-100 shadow-sm
+      className={`fixed  bg-white border-r border-gray-100 shadow-sm
       transition-all duration-300 h-screen z-50
       ${isExpanded || isMobileOpen ? "w-[280px]" : isHovered ? "w-[280px]" : "w-[96px]"}
       ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
@@ -385,9 +385,9 @@ const AppSidebar: React.FC = () => {
           !isExpanded && !isHovered ? "lg:justify-center" : "justify-center"
         }`}
       >
-        <Link to="/admin" className="flex items-center justify-center">
+        {/* <Link to="/admin" className="flex items-center justify-center">
           <img src="/logo.png" className="w-[130px] h-auto mx-auto" />
-        </Link>
+        </Link> */}
       </div>
 
       <div className="flex flex-col overflow-y-auto no-scrollbar px-4 pb-8">

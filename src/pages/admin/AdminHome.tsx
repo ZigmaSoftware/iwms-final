@@ -2,15 +2,18 @@ import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { GIcon } from "@/components/ui/gicon";
+import { useUser } from "@/contexts/UserContext";
 
 const AdminHome: React.FC = () => {
   const navigate = useNavigate();
+  const { setUser } = useUser();
 
   const handleLogout = () => {
     navigate("/auth");
     localStorage.removeItem("access_token");
     localStorage.removeItem("unique_id");
     localStorage.removeItem("user_role");
+    setUser(null);
   };
 
   return (

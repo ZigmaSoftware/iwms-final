@@ -23,8 +23,8 @@ function AdminLayoutShell({ children }: AdminLayoutProps) {
       <AppHeader />
       <AppSidebar />
       <Backdrop />
-      <main className={`pt-16 transition-all ${desktopPadding}`}>
-        <div className="min-h-[calc(100vh-4rem)] bg-[#f5f7fb] px-4 py-8 lg:px-10">
+      <main className={`pt-3 transition-all ${desktopPadding}`}>
+        <div className="min-h-[calc(100vh-4rem)] bg-[#f5f7fb] px-4 py-4 lg:py-3 lg:px-3">
           {children}
         </div>
       </main>

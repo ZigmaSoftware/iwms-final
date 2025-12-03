@@ -84,13 +84,13 @@ type RouteConfig = {
 type RouteMap = Record<string, Record<string, RouteConfig>>;
 
 const ROUTES: RouteMap = {
-  admin: {
-    mainuserscreen: { list: MainUserScreenList, form: MainUserScreenForm },
-    userscreen: { list: UserScreenList, form: UserScreenForm },
-    usertype: { list: UserTypeList, form: UserTypeForm },
-    usercreation: { list: UserCreationList, form: UserCreationForm },
-    userpermission: { list: UserPermissionList, form: UserPermissionForm },
-    staffusertype: { list: StaffUserTypeList, form: StaffUserTypeForm },
+  admins: {
+    "main-user-screen": { list: MainUserScreenList, form: MainUserScreenForm },
+    "user-screen": { list: UserScreenList, form: UserScreenForm },
+    "user-type": { list: UserTypeList, form: UserTypeForm },
+    "user-creation": { list: UserCreationList, form: UserCreationForm },
+    "user-permission": { list: UserPermissionList, form: UserPermissionForm },
+    "staff-user-type": { list: StaffUserTypeList, form: StaffUserTypeForm },
   },
   masters: {
     continents: { list: ContinentList, form: ContinentForm },
@@ -100,41 +100,41 @@ const ROUTES: RouteMap = {
     cities: { list: CityList, form: CityForm },
     zones: { list: ZoneList, form: ZoneForm },
     wards: { list: WardList, form: WardForm },
-    property: { list: PropertyList, form: PropertyForm },
-    subproperty: { list: SubPropertyList, form: SubPropertyForm },
-    staffcreation: { list: StaffCreationList, form: StaffCreationForm },
+    properties: { list: PropertyList, form: PropertyForm },
+    "sub-properties": { list: SubPropertyList, form: SubPropertyForm },
+    "staff-creation": { list: StaffCreationList, form: StaffCreationForm },
   },
-  transportmaster: {
+  "transport-master": {
     fuel: { list: FuelList, form: FuelForm },
-    vehicletype: { list: VehicleTypeCreation, form: VehicleTypeCreationForm },
-    vehiclecreation: { list: VehicleCreation, form: VehicleCreationForm },
+    "vehicle-type": { list: VehicleTypeCreation, form: VehicleTypeCreationForm },
+    "vehicle-creation": { list: VehicleCreation, form: VehicleCreationForm },
   },
-  customermaster: {
-    customercreation: { list: CustomerCreationList, form: CustomerCreationForm },
+  "customer-master": {
+    "customer-creation": { list: CustomerCreationList, form: CustomerCreationForm },
   },
-  vehicletracking: {
-    vehicletrack: { component: VehicleTracking },
-    vehiclehistory: { component: VehicleHistory },
+  "vehicle-tracking": {
+    "vehicle-track": { component: VehicleTracking },
+    "vehicle-history": { component: VehicleHistory },
   },
-  wastemanagementmaster: {
-    wastecollecteddata: { list: WasteCollectedDataList, form: WasteCollectedForm },
-    collectionmonitoring: { component: WasteCollectionMonitor },
+  "waste-management": {
+    "waste-collected-data": { list: WasteCollectedDataList, form: WasteCollectedForm },
+    "collection-monitoring": { component: WasteCollectionMonitor },
   },
-  workforcemanagement: {
-    workforcemanagement: { component: WorkforceManagement },
-    datereport: { component: DateReport },
-    dayreport: { component: DayReport },
+  "workforce-management": {
+    "workforce-management": { component: WorkforceManagement },
+    "date-report": { component: DateReport },
+    "day-report": { component: DayReport },
   },
-  citizengrivence: {
+  "citizen-grievance": {
     complaint: { list: ComplaintsList, form: ComplaintAddForm, editForm: ComplaintEditForm },
-    mainCategoryComplaint: { list: MainComplaintCategoryList, form: MainComplaintCategoryForm },
-    subCategoryComplaint: { list: SubCategoryComplaintList, form: SubCategoryComplaintForm },
+    "main-complaint-category": { list: MainComplaintCategoryList, form: MainComplaintCategoryForm },
+    "sub-complaint-category": { list: SubCategoryComplaintList, form: SubCategoryComplaintForm },
     feedback: { list: FeedBackFormList, form: FeedBackForm },
   },
-  report: {
-    tripsummary: { component: TripSummary },
-    monthlydistance: { component: MonthlyDistance },
-    wastecollectedsummary: { component: WasteSummary },
+  reports: {
+    "trip-summary": { component: TripSummary },
+    "monthly-distance": { component: MonthlyDistance },
+    "waste-collected-summary": { component: WasteSummary },
   },
 };
 

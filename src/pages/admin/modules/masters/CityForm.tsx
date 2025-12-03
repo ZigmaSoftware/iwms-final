@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
-import { Input } from "@/components/ui/input";
+import { desktopApi } from "@/api";
 import ComponentCard from "@/components/common/ComponentCard";
-import Label from "@/components/form/Label";
-import Select from "@/components/form/Select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
 
 type Option = { value: number; label: string };
@@ -214,17 +221,20 @@ function CityForm() {
               Country <span className="text-red-500">*</span>
             </Label>
             <Select
-              id="country"
-              value={countryId === "" ? "" : countryId.toString()}
-              onChange={(val: string) => setCountryId(Number(val))}
-              options={countries.map((c) => ({
-                value: c.value.toString(),
-                label: c.label,
-              }))}
-              placeholder="Select Country"
-              className="input-validate w-full"
-              required
-            />
+              value={countryId === "" ? undefined : String(countryId)}
+              onValueChange={(val) => setCountryId(Number(val))}
+            >
+              <SelectTrigger className="input-validate w-full" id="country">
+                <SelectValue placeholder="Select Country" />
+              </SelectTrigger>
+              <SelectContent>
+                {countries.map((c) => (
+                  <SelectItem key={c.value} value={String(c.value)}>
+                    {c.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* State */}
@@ -233,18 +243,23 @@ function CityForm() {
               State <span className="text-red-500">*</span>
             </Label>
             <Select
-              id="state"
-              value={stateId === "" ? "" : stateId.toString()}
-              onChange={(val: string) => setStateId(Number(val))}
-              options={states.map((s) => ({
-                value: s.value.toString(),
-                label: s.label,
-              }))}
-              placeholder={countryId ? "Select State" : "Select Country First"}
-              className="input-validate w-full"
+              value={stateId === "" ? undefined : String(stateId)}
+              onValueChange={(val) => setStateId(Number(val))}
               disabled={!countryId}
-              required
-            />
+            >
+              <SelectTrigger className="input-validate w-full" id="state">
+                <SelectValue
+                  placeholder={countryId ? "Select State" : "Select Country First"}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {states.map((s) => (
+                  <SelectItem key={s.value} value={String(s.value)}>
+                    {s.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* District */}
@@ -253,18 +268,23 @@ function CityForm() {
               District <span className="text-red-500">*</span>
             </Label>
             <Select
-              id="district"
-              value={districtId === "" ? "" : districtId.toString()}
-              onChange={(val: string) => setDistrictId(Number(val))}
-              options={districts.map((d) => ({
-                value: d.value.toString(),
-                label: d.label,
-              }))}
-              placeholder={stateId ? "Select District" : "Select State First"}
-              className="input-validate w-full"
+              value={districtId === "" ? undefined : String(districtId)}
+              onValueChange={(val) => setDistrictId(Number(val))}
               disabled={!stateId}
-              required
-            />
+            >
+              <SelectTrigger className="input-validate w-full" id="district">
+                <SelectValue
+                  placeholder={stateId ? "Select District" : "Select State First"}
+                />
+              </SelectTrigger>
+              <SelectContent>
+                {districts.map((d) => (
+                  <SelectItem key={d.value} value={String(d.value)}>
+                    {d.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* City Name */}
@@ -289,26 +309,23 @@ function CityForm() {
               Active Status <span className="text-red-500">*</span>
             </Label>
             <Select
-              id="isActive"
               value={isActive ? "true" : "false"}
-              onChange={(val) => setIsActive(val === "true")}
-              options={[
-                { value: "true", label: "Active" },
-                { value: "false", label: "Inactive" },
-              ]}
-              className="input-validate w-full"
-              required
-            />
+              onValueChange={(val) => setIsActive(val === "true")}
+            >
+              <SelectTrigger className="input-validate w-full" id="isActive">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {/* Buttons */}
         <div className="flex justify-end gap-3 mt-6">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-green-custom text-white px-4 py-2 rounded disabled:opacity-50 transition-colors"
-          >
+          <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
                 ? "Updating..."
@@ -316,15 +333,11 @@ function CityForm() {
               : isEdit
                 ? "Update"
                 : "Save"}
-          </button>
+          </Button>
 
-          <button
-            type="button"
-            onClick={() => navigate(ENC_LIST_PATH)}
-            className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
-          >
+          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </ComponentCard>

@@ -148,8 +148,8 @@ export default function MainUserScreenList() {
   if (loading) return <div className="p-6">Loading main user screens...</div>;
 
   return (
-    <div className="p-6 flex justify-center">
-      <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-5xl">
+    <div className="p-3">
+      <div className="bg-white rounded-lg shadow-lg p-6">
 
         <div className="flex justify-between items-center mb-6">
           <div>

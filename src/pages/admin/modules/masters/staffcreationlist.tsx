@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useState } from "react";
+import { type ChangeEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {desktopApi} from "@/api";
 import Swal from "sweetalert2";
@@ -312,7 +312,7 @@ Status: ${row.active_status ? "Active" : "Inactive"}
         </div>
       )}
 
-      <div className="p-6">
+      <div className="p-3">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <DataTable
             value={staffs}

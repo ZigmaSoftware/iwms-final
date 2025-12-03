@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
-import { Input } from "@/components/ui/input";
+import { desktopApi } from "@/api";
 import ComponentCard from "@/components/common/ComponentCard";
-import Label from "@/components/form/Label";
-import Select from "@/components/form/Select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
 
@@ -110,7 +117,7 @@ function ContinentForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Continent Name */}
           <div>
-            <Label htmlFor="name">
+            <Label htmlFor="continentName">
               Continent Name <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -130,26 +137,23 @@ function ContinentForm() {
               Active Status <span className="text-red-500">*</span>
             </Label>
             <Select
-              id="isActive"
               value={isActive ? "true" : "false"}
-              onChange={(val) => setIsActive(val === "true")}
-              options={[
-                { value: "true", label: "Active" },
-                { value: "false", label: "Inactive" },
-              ]}
-              className="input-validate w-full"
-              required
-            />
+              onValueChange={(val) => setIsActive(val === "true")}
+            >
+              <SelectTrigger className="input-validate w-full" id="isActive">
+                <SelectValue placeholder="Select status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="true">Active</SelectItem>
+                <SelectItem value="false">Inactive</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
         {/* Buttons */}
         <div className="flex justify-end gap-3 mt-6">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-green-custom text-white px-4 py-2 rounded disabled:opacity-50 transition-colors"
-          >
+          <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
                 ? "Updating..."
@@ -157,14 +161,10 @@ function ContinentForm() {
               : isEdit
                 ? "Update"
                 : "Save"}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(ENC_LIST_PATH)}
-            className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
-          >
+          </Button>
+          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
             Cancel
-          </button>
+          </Button>
         </div>
       </form>
     </ComponentCard>

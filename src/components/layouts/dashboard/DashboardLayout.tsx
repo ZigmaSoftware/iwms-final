@@ -6,6 +6,7 @@ import { HorizontalNav } from "@/components/HorizontalNav";
 import { Button } from "@/components/ui/button";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import ZigmaLogo from "@/images/logo.png";
 import type { DashboardLayoutProps } from "@/types/roles";
@@ -15,6 +16,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const location = useLocation();
   const { toast } = useToast();
   const { theme, toggleTheme } = useTheme();
+  const { setUser } = useUser();
   const [isNavigating, setIsNavigating] = useState(false);
 
   useEffect(() => {
@@ -28,7 +30,9 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       localStorage.removeItem("access_token");
       localStorage.removeItem("user_role");
       localStorage.removeItem("unique_id");
-      localStorage.removeItem("name");
+      localStorage.removeItem("user_name");
+      localStorage.removeItem("user_email");
+      setUser(null);
 
       navigate("/auth", { replace: true });
     } catch (error) {

@@ -151,7 +151,7 @@ export default function SubPropertyList() {
     rowIndex + 1;
 
   return (
-    <div className="p-6">
+    <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
 
         <div className="flex justify-between items-center mb-6">

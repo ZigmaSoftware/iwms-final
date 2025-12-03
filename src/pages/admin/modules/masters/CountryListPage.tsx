@@ -151,7 +151,7 @@ export default function CountryList() {
   const indexTemplate = (_: Country, { rowIndex }: any) => rowIndex + 1;
 
   return (
-    <div className="p-6">
+    <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
         {/* Header Section */}
         <div className="flex justify-between items-center mb-6">

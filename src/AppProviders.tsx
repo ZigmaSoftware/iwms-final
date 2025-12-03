@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ModuleProvider } from "@/contexts/ModuleContext";
+import { UserProvider } from "@/contexts/UserContext";
 
 const queryClient = new QueryClient();
 
@@ -19,13 +20,15 @@ export function AppProviders({ children }: Props) {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <ModuleProvider>
-          <TooltipProvider>
-            <BrowserRouter>
-              {children}
-              <Toaster />
-              <Sonner />
-            </BrowserRouter>
-          </TooltipProvider>
+          <UserProvider>
+            <TooltipProvider>
+              <BrowserRouter>
+                {children}
+                <Toaster />
+                <Sonner />
+              </BrowserRouter>
+            </TooltipProvider>
+          </UserProvider>
         </ModuleProvider>
       </ThemeProvider>
     </QueryClientProvider>

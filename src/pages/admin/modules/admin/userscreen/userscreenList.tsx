@@ -173,7 +173,7 @@ export default function UserScreenList() {
   if (loading) return <div className="p-6">Loading screens…</div>;
 
   return (
-    <div className="p-6">
+    <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
 
         <div className="flex justify-between items-center mb-6">
