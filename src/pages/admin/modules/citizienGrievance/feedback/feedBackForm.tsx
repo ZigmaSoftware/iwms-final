@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
 import { Input } from "@/components/ui/input";
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
@@ -11,6 +10,10 @@ import {
   filterActiveCustomers,
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
+import { adminApi } from "@/helpers/admin";
+
+const customerApi = adminApi.customerCreations;
+const feedbackApi = adminApi.feedbacks;
 
 type Customer = {
   id: number;
@@ -29,14 +32,12 @@ type Customer = {
 };
 
 function FeedBackForm() {
-  const [customerId, setCustomerId] = useState<number | "">("");
+  const [customerId, setCustomerId] = useState<string>("");
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [feedbackCategory, setFeedBackCategory] = useState<string>(""); // use string, not String
   const [feedbackDetails, setFeedBackDetails] = useState<string>(""); // use string, not String
   const [loading, setLoading] = useState(false);
-  const [customerFallbackId, setCustomerFallbackId] = useState<number | null>(
-    null
-  );
+  const [customerFallbackId, setCustomerFallbackId] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
@@ -44,21 +45,21 @@ function FeedBackForm() {
 
   const ENC_LIST_PATH = `/${encCitizenGrivence}/${encFeedback}`;
 
-  const loadCustomers = async (includeId?: number) => {
+  const loadCustomers = useCallback(async (includeId?: string) => {
     try {
-      const response = await desktopApi.get("customercreations/");
-      const normalized = normalizeCustomerArray(response.data);
+      const response = await customerApi.list();
+      const normalized = normalizeCustomerArray(response);
       setCustomers(
         filterActiveCustomers(normalized, includeId ? [includeId] : [])
       );
     } catch (err) {
       console.error("Failed to fetch customers:", err);
     }
-  };
+  }, []);
 
   useEffect(() => {
     loadCustomers(customerFallbackId ?? undefined);
-  }, [customerFallbackId]);
+  }, [customerFallbackId, loadCustomers]);
 
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -66,14 +67,14 @@ function FeedBackForm() {
   // Fetch feedback for edit mode
   useEffect(() => {
     if (isEdit) {
-      desktopApi
-        .get(`feedbacks/${id}/`)
+      feedbackApi
+        .get(id as string)
         .then((res) => {
-          const customerValue = Number(res.data.customer);
+          const customerValue = String(res.customer ?? res.customer_id ?? "");
           setCustomerId(customerValue);
-          setFeedBackCategory(res.data.category || "");
-          setFeedBackDetails(res.data.feedback_details || "");
-          if (!Number.isNaN(customerValue)) {
+          setFeedBackCategory(res.category || "");
+          setFeedBackDetails(res.feedback_details || "");
+          if (customerValue) {
             setCustomerFallbackId(customerValue);
           }
         })
@@ -114,7 +115,7 @@ function FeedBackForm() {
       };
 
       if (isEdit) {
-        await desktopApi.put(`feedbacks/${id}/`, payload);
+        await feedbackApi.update(id as string, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -122,7 +123,7 @@ function FeedBackForm() {
           showConfirmButton: false,
         });
       } else {
-        await desktopApi.post("feedbacks/", payload);
+        await feedbackApi.create(payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",
@@ -146,7 +147,9 @@ function FeedBackForm() {
     }
   };
 
-  const selectedCustomer = customers.find((c) => c.id === customerId);
+  const selectedCustomer = customers.find(
+    (c) => (c as any).unique_id === customerId
+  );
 
   return (
     <ComponentCard title={isEdit ? "Edit Feedback" : "Add Feedback"}>
@@ -159,10 +162,10 @@ function FeedBackForm() {
             </Label>
             <Select
               id="customer"
-              value={customerId ? String(customerId) : ""} //  convert to string
-              onChange={(val) => setCustomerId(Number(val))}
-              options={customers.map((c) => ({
-                value: String(c.id),
+              value={customerId}
+              onChange={(val) => setCustomerId(val)}
+              options={customers.map((c: any) => ({
+                value: c.unique_id,
                 label: c.customer_name,
               }))}
               className="w-full"

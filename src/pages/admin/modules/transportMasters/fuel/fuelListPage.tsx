@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -17,13 +16,16 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 import { Switch } from "@/components/ui/switch";
+import { adminApi } from "@/helpers/admin";
 
 type Fuel = {
-  id: number;
+  unique_id: string;
   fuel_type: string;
   description: string;
   is_active: boolean;
 };
+
+const fuelApi = adminApi.fuels;
 
 export default function FuelList() {
   const [fuels, setFuels] = useState<Fuel[]>([]);
@@ -39,13 +41,15 @@ export default function FuelList() {
   const { encTransportMaster, encFuel } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encTransportMaster}/${encFuel}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encTransportMaster}/${encFuel}/${id}/edit`;
+
+  const resolveId = (value: Fuel) => value.unique_id;
 
   const fetchFuels = async () => {
     try {
-      const res = await desktopApi.get("fuels/");
-      setFuels(res.data);
+      const res = await fuelApi.list();
+      setFuels(res);
     } finally {
       setLoading(false);
     }
@@ -55,7 +59,7 @@ export default function FuelList() {
     fetchFuels();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
       text: "This fuel record will be permanently deleted!",
@@ -67,7 +71,7 @@ export default function FuelList() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await desktopApi.delete(`fuels/${id}/`);
+      await fuelApi.remove(id);
 
     Swal.fire({
       icon: "success",
@@ -93,7 +97,11 @@ export default function FuelList() {
   const statusTemplate = (row: Fuel) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`fuels/${row.id}/`, { is_active: value });
+        await fuelApi.update(resolveId(row), {
+          fuel_type: row.fuel_type,
+          description: row.description,
+          is_active: value,
+        });
         fetchFuels();
       } catch (err) {
         console.error("Failed to update status:", err);
@@ -111,7 +119,7 @@ export default function FuelList() {
       <button
         title="Edit"
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(resolveId(row)))}
       >
         <PencilIcon className="size-5" />
       </button>
@@ -119,7 +127,7 @@ export default function FuelList() {
       <button
         title="Delete"
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(resolveId(row))}
       >
         <TrashBinIcon className="size-5" />
       </button>
@@ -167,6 +175,7 @@ export default function FuelList() {
 
         <DataTable
           value={fuels}
+          dataKey="unique_id"
           paginator
           rows={10}
           loading={loading}

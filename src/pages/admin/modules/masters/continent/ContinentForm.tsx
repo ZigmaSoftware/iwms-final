@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import { desktopApi } from "@/api";
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,12 +13,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
+import { adminApi } from "@/helpers/admin";
 import { encryptSegment } from "@/utils/routeCrypto";
+
+type Continent = {
+  id: number;
+  name: string;
+  is_active: boolean;
+};
 
 const encMasters = encryptSegment("masters");
 const encContinents = encryptSegment("continents");
 
 const ENC_LIST_PATH = `/${encMasters}/${encContinents}`;
+const continentApi = adminApi.continents;
 
 function ContinentForm() {
   const [name, setName] = useState("");
@@ -32,11 +39,11 @@ function ContinentForm() {
   // Fetch existing data if editing
   useEffect(() => {
     if (isEdit) {
-      desktopApi
-        .get(`continents/${id}/`)
-        .then((res) => {
-          setName(res.data.name);
-          setIsActive(res.data.is_active);
+      continentApi
+        .get(id as string)
+        .then((record) => {
+          setName(record.name);
+          setIsActive(record.is_active);
         })
         .catch((err) => {
           console.error("Error fetching continent:", err);
@@ -69,7 +76,7 @@ function ContinentForm() {
       const payload = { name, is_active: isActive };
 
       if (isEdit) {
-        await desktopApi.put(`continents/${id}/`, payload);
+        await continentApi.update(id as string, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -77,7 +84,7 @@ function ContinentForm() {
           showConfirmButton: false,
         });
       } else {
-        await desktopApi.post("continents/", payload);
+        await continentApi.create(payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",

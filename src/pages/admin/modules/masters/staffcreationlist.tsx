@@ -123,7 +123,7 @@ export default function StaffCreationList() {
         const formData = new FormData();
         formData.append("active_status", String(value));
 
-        await desktopApi.patch(`staffcreation/${row.id}/`, formData, {
+        await desktopApi.put(`staffcreation/${row.id}/`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },

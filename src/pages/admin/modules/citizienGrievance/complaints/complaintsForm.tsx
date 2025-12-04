@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { desktopApi } from "@/api";
 import Swal from "sweetalert2";
 import ComponentCard from "@/components/common/ComponentCard";
 import { Label } from "@/components/ui/label";
@@ -18,9 +17,15 @@ import {
   filterActiveCustomers,
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
+import { adminApi } from "@/helpers/admin";
 
 const FILE_ICON =
   "https://cdn-icons-png.flaticon.com/512/337/337946.png"; // fallback for pdf/doc
+
+const customerApi = adminApi.customerCreations;
+const zoneApi = adminApi.zones;
+const wardApi = adminApi.wards;
+const complaintApi = adminApi.complaints;
 
 export default function ComplaintAddForm() {
   const navigate = useNavigate();
@@ -28,8 +33,6 @@ export default function ComplaintAddForm() {
   const { encCitizenGrivence, encComplaint } = getEncryptedRoute();
 
   const ENC_LIST_PATH = `/${encCitizenGrivence}/${encComplaint}`;
-
-
   const [customers, setCustomers] = useState<any[]>([]);
   const [customer, setCustomer] = useState<any>(null);
   const [zones, setZones] = useState<any[]>([]);
@@ -48,8 +51,8 @@ export default function ComplaintAddForm() {
 
   const fetchCustomers = async () => {
     try {
-      const res = await desktopApi.get("/customercreations/");
-      const normalized = normalizeCustomerArray(res.data);
+      const res = await customerApi.list();
+      const normalized = normalizeCustomerArray(res);
       setCustomers(filterActiveCustomers(normalized));
     } catch (err) {
       console.error("Failed to fetch customers:", err);
@@ -60,24 +63,26 @@ export default function ComplaintAddForm() {
     fetchCustomers();
   }, []);
 
-  const loadZones = async (cid: number) => {
-    const res = await desktopApi.get(`/zones/?customer=${cid}`);
-    setZones(res.data);
+  const loadZones = async (cid: string) => {
+    const res = await zoneApi.list({ params: { customer: cid } });
+    setZones(res);
   };
 
-  const loadWards = async (zid: number) => {
-    const res = await desktopApi.get(`/wards/?zone=${zid}`);
-    setWards(res.data);
+  const loadWards = async (zid: string) => {
+    const res = await wardApi.list({ params: { zone: zid } });
+    setWards(res);
   };
+
+  const resolveId = (item: any) => item?.unique_id ?? "";
 
   const onCustomerChange = (id: string) => {
-    const c = customers.find((x) => x.id === Number(id));
+    const c = customers.find((x) => resolveId(x) === id);
     setCustomer(c);
     setContact(c.contact_no);
     setAddress(
       `${c.building_no}, ${c.street}, ${c.area}, ${c.city_name}, ${c.district_name}, ${c.state_name}, ${c.pincode}`
     );
-    loadZones(c.id);
+    loadZones(resolveId(c));
   };
 
   const isImageFile = (f: File) =>
@@ -120,7 +125,7 @@ export default function ComplaintAddForm() {
     e.preventDefault();
 
     const fd = new FormData();
-    fd.append("customer", customer.id);
+    fd.append("customer", resolveId(customer));
     fd.append("zone", zone);
     fd.append("ward", ward);
     fd.append("contact_no", contact);
@@ -130,7 +135,9 @@ export default function ComplaintAddForm() {
     if (file) fd.append("image", file);
 
     try {
-      await desktopApi.post("/complaints/", fd);
+      await complaintApi.create(fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
       Swal.fire("Saved", "Complaint created successfully", "success");
       navigate(ENC_LIST_PATH);
     } catch {
@@ -146,7 +153,7 @@ export default function ComplaintAddForm() {
           <div>
             <Label>Customer *</Label>
             <Select
-              value={customer?.id ? String(customer.id) : undefined}
+              value={customer ? resolveId(customer) : undefined}
               onValueChange={onCustomerChange}
             >
               <SelectTrigger>
@@ -154,7 +161,7 @@ export default function ComplaintAddForm() {
               </SelectTrigger>
               <SelectContent>
                 {customers.map((c) => (
-                  <SelectItem key={c.id} value={String(c.id)}>
+                  <SelectItem key={resolveId(c)} value={resolveId(c)}>
                     {c.customer_name}
                   </SelectItem>
                 ))}
@@ -178,7 +185,7 @@ export default function ComplaintAddForm() {
               value={zone || undefined}
               onValueChange={(v) => {
                 setZone(v);
-                loadWards(Number(v));
+                loadWards(v);
               }}
             >
               <SelectTrigger>
@@ -186,7 +193,7 @@ export default function ComplaintAddForm() {
               </SelectTrigger>
               <SelectContent>
                 {zones.map((z) => (
-                  <SelectItem key={z.id} value={String(z.id)}>
+                  <SelectItem key={resolveId(z)} value={resolveId(z)}>
                     {z.name}
                   </SelectItem>
                 ))}
@@ -202,7 +209,7 @@ export default function ComplaintAddForm() {
               </SelectTrigger>
               <SelectContent>
                 {wards.map((w) => (
-                  <SelectItem key={w.id} value={String(w.id)}>
+                  <SelectItem key={resolveId(w)} value={resolveId(w)}>
                     {w.name}
                   </SelectItem>
                 ))}

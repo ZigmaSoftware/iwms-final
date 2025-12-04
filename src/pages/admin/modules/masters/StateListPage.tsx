@@ -112,7 +112,7 @@ export default function StateList() {
   const statusTemplate = (row: State) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`states/${row.id}/`, { is_active: value });
+        await desktopApi.put(`states/${row.id}/`, { is_active: value });
         fetchStates();
       } catch (err) {
         console.error("Status update failed:", err);

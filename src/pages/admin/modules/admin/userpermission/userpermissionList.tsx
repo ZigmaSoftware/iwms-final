@@ -144,7 +144,7 @@ export default function UserPer() {
       try {
         // Update ALL records under this grouping
         for (const recordId of row.recordIds) {
-          await desktopApi.patch(`userpermissions/${recordId}/`, { is_active: value });
+          await desktopApi.put(`userpermissions/${recordId}/`, { is_active: value });
         }
         fetchSummary();
       } catch (err) {

@@ -157,7 +157,7 @@ Property: ${c.property_name} - ${c.sub_property_name}`;
   const statusTemplate = (row: Customer) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`customercreations/${row.id}/`, {
+        await desktopApi.put(`customercreations/${row.id}/`, {
           is_active: value,
         });
         fetchCustomers();

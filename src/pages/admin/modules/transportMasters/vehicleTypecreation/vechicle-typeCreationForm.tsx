@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { adminApi } from "@/helpers/admin";
+
+const vehicleTypeApi = adminApi.vehicleTypes;
 
 export default function VehicleTypeCreationForm() {
   const [vehicleType, setVehicleType] = useState("");
@@ -22,12 +24,12 @@ export default function VehicleTypeCreationForm() {
   // Fetch existing record if editing
   useEffect(() => {
     if (isEdit) {
-      desktopApi
-        .get(`vehicle-type/${id}/`)
+      vehicleTypeApi
+        .get(id as string)
         .then((res) => {
-          setVehicleType(res.data.vehicleType);
-          setDescription(res.data.description || "");
-          setIsActive(res.data.is_active);
+          setVehicleType(res.vehicleType);
+          setDescription(res.description || "");
+          setIsActive(res.is_active);
 
         })
         .catch(() => {
@@ -55,7 +57,7 @@ export default function VehicleTypeCreationForm() {
 
     try {
       if (isEdit) {
-        await desktopApi.put(`vehicle-type/${id}/`, payload);
+        await vehicleTypeApi.update(id as string, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -63,7 +65,7 @@ export default function VehicleTypeCreationForm() {
           showConfirmButton: false,
         });
       } else {
-        await desktopApi.post("vehicle-type/", payload);
+        await vehicleTypeApi.create(payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",

@@ -1,11 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
 import Swal from "sweetalert2";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
@@ -13,10 +12,11 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 import { Switch } from "@/components/ui/switch";
+import { adminApi } from "@/helpers/admin";
 import { encryptSegment } from "@/utils/routeCrypto";
 
 type Continent = {
-  id: number;
+  unique_id: string;
   name: string;
   is_active: boolean;
 };
@@ -33,9 +33,11 @@ const ENC_NEW_PATH = `/${encMasters}/${encContinents}/new`;
 const ENC_EDIT_PATH = (id: number) =>
   `/${encMasters}/${encContinents}/${id}/edit`;
 
+const continentApi = adminApi.continents;
+
 export default function ContinentList() {
   const [continents, setContinents] = useState<Continent[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
 
   const [filters, setFilters] = useState<TableFilters>({
@@ -45,22 +47,23 @@ export default function ContinentList() {
 
   const navigate = useNavigate();
 
-  const fetchContinents = async () => {
+  const fetchContinents = useCallback(async () => {
     try {
-      const res = await desktopApi.get("continents/");
-      setContinents(res.data);
+      setLoading(true);
+      const data = await continentApi.list();
+      setContinents(data);
     } catch (error) {
-      console.error("Failed to fetch continents:", error);
+      Swal.fire("Error", "Failed to fetch continents", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchContinents();
-  }, []);
+  }, [fetchContinents]);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This continent will be permanently deleted!",
@@ -72,7 +75,7 @@ export default function ContinentList() {
     if (!confirm.isConfirmed) return;
 
     try {
-      await desktopApi.delete(`continents/${id}/`);
+      await continentApi.remove(id);
       Swal.fire("Deleted!", "Record removed successfully", "success");
       fetchContinents();
     } catch (error) {
@@ -99,10 +102,10 @@ export default function ContinentList() {
         const formData = new FormData();
         formData.append("is_active", String(checked));
 
-        await desktopApi.patch(`continents/${row.id}/`, formData, {
-          headers: { "Content-Type": "multipart/form-data" },
+        await continentApi.update(row.unique_id, {
+          name: row.name,
+          is_active: checked,
         });
-
         fetchContinents();
       } catch (err) {
         Swal.fire("Error", "Failed to update status", "error");
@@ -124,14 +127,14 @@ export default function ContinentList() {
         rounded
         outlined
         severity="info"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
       />
       <Button
         icon="pi pi-trash"
         rounded
         outlined
         severity="danger"
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
       />
     </div>
   );
@@ -173,6 +176,7 @@ export default function ContinentList() {
 
         <DataTable
           value={continents}
+          dataKey="unique_id"
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25, 50]}

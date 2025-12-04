@@ -106,7 +106,7 @@ export default function SubComplaintCategoryForm() {
               </SelectTrigger>
               <SelectContent>
                 {mainList.map((m: any) => (
-                  <SelectItem key={m.id} value={String(m.id)}>
+                  <SelectItem key={m.unique_id} value={m.unique_id}>
                     {m.name}
                   </SelectItem>
                 ))}

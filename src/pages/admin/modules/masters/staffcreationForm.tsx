@@ -331,7 +331,7 @@ export default function StaffCreationForm() {
       }
 
       const request = isEdit
-        ? desktopApi.patch(`staffcreation/${id}/`, formBody, {
+        ? desktopApi.put(`staffcreation/${id}/`, formBody, {
             headers: { "Content-Type": "multipart/form-data" },
           })
         : desktopApi.post("staffcreation/", formBody, {

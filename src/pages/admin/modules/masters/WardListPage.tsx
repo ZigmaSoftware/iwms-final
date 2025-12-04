@@ -117,7 +117,7 @@ export default function WardList() {
   const statusTemplate = (row: Ward) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`wards/${row.id}/`, { is_active: value });
+        await desktopApi.put(`wards/${row.id}/`, { is_active: value });
         fetchWards();
       } catch (err) {
         console.error("Status update failed:", err);

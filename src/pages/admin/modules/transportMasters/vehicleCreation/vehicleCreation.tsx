@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -17,9 +16,12 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 import { Switch } from "@/components/ui/switch";
+import { adminApi } from "@/helpers/admin";
+
+const vehicleApi = adminApi.vehicleCreation;
 
 type Vehicles = {
-  id: number;
+  unique_id: string;
   vehicle_no: string;
   driver_name: string;
   driver_no: string;
@@ -38,7 +40,7 @@ export default function VehicleCreation() {
   const { encTransportMaster, encVehicleCreation } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encTransportMaster}/${encVehicleCreation}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string | number) =>
     `/${encTransportMaster}/${encVehicleCreation}/${id}/edit`;
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -48,10 +50,12 @@ export default function VehicleCreation() {
     vehicle_no: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
+  const resolveId = (vehicle: Vehicles) => vehicle.unique_id;
+
   const fetchVehicles = async () => {
     try {
-      const res = await desktopApi.get("vehicle-creation/");
-      setVehicles(res.data);
+      const res = await vehicleApi.list();
+      setVehicles(res);
     } catch (err) {
       console.error("Failed to fetch vehicles:", err);
     } finally {
@@ -63,7 +67,7 @@ export default function VehicleCreation() {
     fetchVehicles();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
       text: "This vehicle will be permanently deleted!",
@@ -76,7 +80,7 @@ export default function VehicleCreation() {
     if (!confirmDelete.isConfirmed) return;
 
     try {
-      await desktopApi.delete(`vehicle-creation/${id}/`);
+      await vehicleApi.remove(id);
       Swal.fire({
         icon: "success",
         title: "Deleted successfully!",
@@ -103,7 +107,10 @@ export default function VehicleCreation() {
   const statusTemplate = (row: Vehicles) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`vehicle-creation/${row.id}/`, {
+        await vehicleApi.update(resolveId(row), {
+          vehicle_no: row.vehicle_no,
+          driver_name: row.driver_name,
+          driver_no: row.driver_no,
           is_active: value,
         });
         fetchVehicles();
@@ -123,7 +130,7 @@ export default function VehicleCreation() {
   const actionTemplate = (row: Vehicles) => (
     <div className="flex gap-3 justify-center">
       <button
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(resolveId(row)))}
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
         title="Edit"
       >
@@ -131,7 +138,7 @@ export default function VehicleCreation() {
       </button>
 
       <button
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(resolveId(row))}
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
         title="Delete"
       >
@@ -182,6 +189,7 @@ export default function VehicleCreation() {
         {/* Table */}
         <DataTable
           value={vehicles}
+          dataKey="unique_id"
           paginator
           rows={10}
           loading={loading}

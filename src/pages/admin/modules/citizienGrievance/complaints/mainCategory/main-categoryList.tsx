@@ -32,7 +32,7 @@ export default function MainComplaintCategoryList() {
   const { encCitizenGrivence, encMainComplaintCategory } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encCitizenGrivence}/${encMainComplaintCategory}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encCitizenGrivence}/${encMainComplaintCategory}/${id}/edit`;
 
   const [filters, setFilters] = useState({
@@ -53,7 +53,7 @@ export default function MainComplaintCategoryList() {
     fetchData();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This category will be deleted!",
@@ -78,7 +78,7 @@ export default function MainComplaintCategoryList() {
 
   const statusTemplate = (row: MainCategory) => {
     const updateStatus = async (value: boolean) => {
-      await mobileAPI.patch(`main-category/${row.id}/`, { is_active: value });
+      await mobileAPI.put(`main-category/${row.unique_id}/`, { is_active: value });
       fetchData();
     };
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
@@ -87,7 +87,7 @@ export default function MainComplaintCategoryList() {
   const actionTemplate = (row: MainCategory) => (
     <div className="flex gap-3 justify-center">
       <button
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
         title="Edit"
       >
@@ -95,7 +95,7 @@ export default function MainComplaintCategoryList() {
       </button>
 
       <button
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
         title="Delete"
       >
@@ -153,6 +153,7 @@ export default function MainComplaintCategoryList() {
         {/* TABLE */}
         <DataTable
           value={records}
+          dataKey="unique_id"
           paginator
           rows={10}
           loading={loading}

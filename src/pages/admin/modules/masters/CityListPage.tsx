@@ -119,7 +119,7 @@ export default function CityList() {
   const statusTemplate = (city: City) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`cities/${city.id}/`, { is_active: value });
+        await desktopApi.put(`cities/${city.id}/`, { is_active: value });
         fetchCities();
       } catch (error) {
         console.error("Status update failed:", error);
