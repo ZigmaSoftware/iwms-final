@@ -10,6 +10,7 @@ import {
   PieChart,
   UserCircle,
   Trash2,
+  Truck,
 } from "lucide-react";
 
 import { useSidebar } from "../../../contexts/SideBarContext";
@@ -109,7 +110,7 @@ const masterItems: NavItem[] = [
 // Transport
 const transportMasters: NavItem[] = [
   {
-    icon: <List size={18} />,
+    icon: <Truck size={18} />,
     name: "Transport Masters",
     subItems: [
       { name: "Fuel", path: `/${encTransportMaster}/${encFuel}` },
@@ -389,7 +390,7 @@ const AppSidebar: React.FC = () => {
       }}
     >
 
-      <div className={`px-6 pt-8 ${showFullSidebar ? "" : "flex justify-center"}`}>
+      {/* <div className={`px-6 pt-8 ${showFullSidebar ? "" : "flex justify-center"}`}>
         {showFullSidebar ? (
           <div
             className="w-full rounded-3xl border p-5 text-white shadow-xl"
@@ -414,7 +415,7 @@ const AppSidebar: React.FC = () => {
             IW
           </div>
         )}
-      </div>
+      </div> */}
 
       <div className="flex flex-col overflow-y-auto no-scrollbar px-6 pb-10 pt-8">
         <nav className="mb-4 flex flex-col gap-7">
