@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -17,9 +16,9 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 import { Switch } from "@/components/ui/switch";
+import { adminApi } from "@/helpers/admin";
 
 type feedback = {
-  id: number;
   unique_id: string;
   customer: number;
   customer_name: string;
@@ -42,8 +41,10 @@ type feedback = {
   is_active: boolean;
 };
 
+const feedbackApi = adminApi.feedbacks;
+
 export default function FeedBackFormList() {
-  const [feedbacks, setFeedBacks] = useState<feedback[]>([]);
+  const [feedbacks, setFeedbacks] = useState<feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -59,22 +60,23 @@ export default function FeedBackFormList() {
     customer_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
-  const fetchFeedbacks = async () => {
+  const fetchFeedbacks = useCallback(async () => {
     try {
-      const res = await desktopApi.get("feedbacks/");
-      setFeedBacks(res.data);
+      setLoading(true);
+      const data = await feedbackApi.list();
+      setFeedbacks(data);
     } catch (error) {
       console.error("Failed to fetch feedbacks", error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchFeedbacks();
-  }, []);
+  }, [fetchFeedbacks]);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This feedback will be permanently deleted!",
@@ -88,7 +90,7 @@ export default function FeedBackFormList() {
     if (!confirm.isConfirmed) return;
 
     try {
-      await desktopApi.delete(`feedbacks/${id}/`);
+      await feedbackApi.remove(id);
       Swal.fire({
         icon: "success",
         title: "Deleted successfully!",
@@ -130,7 +132,7 @@ export default function FeedBackFormList() {
   const statusTemplate = (row: feedback) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`feedbacks/${row.id}/`, { is_active: value });
+        await feedbackApi.update(row.unique_id, { is_active: value });
         fetchFeedbacks();
       } catch (error) {
         console.error("Failed to update status", error);
@@ -148,7 +150,7 @@ export default function FeedBackFormList() {
   const actionTemplate = (row: feedback) => (
     <div className="flex gap-3 justify-center">
       <button
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
         title="Edit"
       >
@@ -156,7 +158,7 @@ export default function FeedBackFormList() {
       </button>
 
       <button
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
         title="Delete"
       >
@@ -195,6 +197,7 @@ export default function FeedBackFormList() {
         {/* Table */}
         <DataTable
           value={feedbacks}
+          dataKey="unique_id"
           paginator
           rows={10}
           loading={loading}

@@ -142,7 +142,7 @@ export default function WasteCollectedDataList() {
   const statusTemplate = (row: WasteCollection) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`wastecollections/${row.id}/`, { is_active: value });
+        await desktopApi.put(`wastecollections/${row.id}/`, { is_active: value });
         fetchWasteCollectedData();
       } catch (error) {
         console.error("Failed to update status", error);

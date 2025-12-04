@@ -92,7 +92,7 @@ export default function UserCreationList() {
 
   /** ---------- Toggle Status ---------- */
   const handleStatusToggle = async (id: number, value: boolean) => {
-    await desktopApi.patch(`user/${id}/`, { is_active: value });
+    await desktopApi.put(`user/${id}/`, { is_active: value });
     fetchUsers();
   };
 

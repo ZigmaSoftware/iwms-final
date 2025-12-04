@@ -1,13 +1,22 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { filterActiveRecords } from "@/utils/customerUtils";
+import { adminApi } from "@/helpers/admin";
+
+const vehicleTypeApi = adminApi.vehicleTypes;
+const fuelTypeApi = adminApi.fuels;
+const stateApi = adminApi.states;
+const districtApi = adminApi.districts;
+const cityApi = adminApi.cities;
+const zoneApi = adminApi.zones;
+const wardApi = adminApi.wards;
+const vehicleApi = adminApi.vehicleCreation;
 
 export default function VehicleCreationForm() {
   const [vehicleNo, setVehicleNo] = useState("");
@@ -54,29 +63,25 @@ export default function VehicleCreationForm() {
   // ===============================
   // Load base dropdowns & edit data
   // ===============================
+  const resolveId = (item: any) => item?.unique_id ?? "";
+
   useEffect(() => {
-    // Load static dropdowns
-    Promise.all([desktopApi.get("vehicle-type/"), desktopApi.get("fuels/")])
+    Promise.all([vehicleTypeApi.list(), fuelTypeApi.list()])
       .then(([vtypeRes, fuelRes]) => {
-        setVehicleTypes(vtypeRes.data);
-        setFuelTypes(fuelRes.data);
+        setVehicleTypes(vtypeRes);
+        setFuelTypes(fuelRes);
       })
       .catch(() => Swal.fire("Error", "Failed to load vehicle/fuel types", "error"));
 
-    // Load states
-    desktopApi
-      .get("states/")
-      .then((res) => setStates(res.data))
+    stateApi
+      .list()
+      .then((res) => setStates(res))
       .catch(() => Swal.fire("Error", "Failed to load states", "error"));
 
-    // Editing case
     if (isEdit) {
-      desktopApi
-        .get(`vehicle-creation/${id}/`)
-        .then(async (res) => {
-          const v = res.data;
-
-          // Set all fields
+      vehicleApi
+        .get(id as string)
+        .then(async (v) => {
           setVehicleNo(v.vehicle_no);
           setChaseNo(v.chase_no);
           setImeiNo(v.imei_no);
@@ -85,25 +90,24 @@ export default function VehicleCreationForm() {
           setVehicleType(String(v.vehicle_type));
           setFuelType(String(v.fuel_type));
 
-          setState(v.state);
-          setDistrict(v.district);
-          setCity(v.city);
-          setZone(v.zone);
-          setWard(v.ward);
+          setState(String(v.state_id ?? v.state ?? ""));
+          setDistrict(String(v.district_id ?? v.district ?? ""));
+          setCity(String(v.city_id ?? v.city ?? ""));
+          setZone(String(v.zone_id ?? v.zone ?? ""));
+          setWard(String(v.ward_id ?? v.ward ?? ""));
           setIsActive(v.is_active);
 
-          // Now load dependent dropdowns in correct order
-          const distRes = await desktopApi.get(`districts/?state_id=${v.state}`);
-          setDistricts(distRes.data);
+          const distRes = await districtApi.list({ params: { state_id: v.state_id ?? v.state } });
+          setDistricts(distRes);
 
-          const cityRes = await desktopApi.get(`cities/?district_id=${v.district}`);
-          setCities(cityRes.data);
+          const cityRes = await cityApi.list({ params: { district_id: v.district_id ?? v.district } });
+          setCities(cityRes);
 
-          const zoneRes = await desktopApi.get(`zones/?city_id=${v.city}`);
-          setZones(zoneRes.data);
+          const zoneRes = await zoneApi.list({ params: { city_id: v.city_id ?? v.city } });
+          setZones(zoneRes);
 
-          const wardRes = await desktopApi.get(`wards/?zone_id=${v.zone}`);
-          setWards(wardRes.data);
+          const wardRes = await wardApi.list({ params: { zone_id: v.zone_id ?? v.zone } });
+          setWards(wardRes);
 
           setInitialLoad(false);
         })
@@ -111,7 +115,10 @@ export default function VehicleCreationForm() {
     } else {
       setInitialLoad(false);
     }
-  }, [id, isEdit]);
+  }, [
+    id,
+    isEdit,
+  ]);
 
   // ===============================
   // Cascading Logic – Safe for Edit
@@ -120,7 +127,7 @@ export default function VehicleCreationForm() {
   useEffect(() => {
     if (!state || initialLoad) return;
 
-    desktopApi.get(`districts/?state_id=${state}`).then((res) => setDistricts(res.data));
+    districtApi.list({ params: { state_id: state } }).then((res) => setDistricts(res));
 
     setDistrict("");
     setCity("");
@@ -129,37 +136,37 @@ export default function VehicleCreationForm() {
     setCities([]);
     setZones([]);
     setWards([]);
-  }, [state]);
+  }, [initialLoad, state]);
 
   useEffect(() => {
     if (!district || initialLoad) return;
 
-    desktopApi.get(`cities/?district_id=${district}`).then((res) => setCities(res.data));
+    cityApi.list({ params: { district_id: district } }).then((res) => setCities(res));
 
     setCity("");
     setZone("");
     setWard("");
     setZones([]);
     setWards([]);
-  }, [district]);
+  }, [district, initialLoad]);
 
   useEffect(() => {
     if (!city || initialLoad) return;
 
-    desktopApi.get(`zones/?city_id=${city}`).then((res) => setZones(res.data));
+    zoneApi.list({ params: { city_id: city } }).then((res) => setZones(res));
 
     setZone("");
     setWard("");
     setWards([]);
-  }, [city]);
+  }, [city, initialLoad]);
 
   useEffect(() => {
     if (!zone || initialLoad) return;
 
-    desktopApi.get(`wards/?zone_id=${zone}`).then((res) => setWards(res.data));
+    wardApi.list({ params: { zone_id: zone } }).then((res) => setWards(res));
 
     setWard("");
-  }, [zone]);
+  }, [initialLoad, zone]);
 
   // ===============================
   // Submit
@@ -214,10 +221,10 @@ export default function VehicleCreationForm() {
       setLoading(true);
 
       if (isEdit) {
-        await desktopApi.put(`vehicle-creation/${id}/`, payload);
+        await vehicleApi.update(id as string, payload);
         Swal.fire("Updated", "Vehicle updated successfully", "success");
       } else {
-        await desktopApi.post("vehicle-creation/", payload);
+        await vehicleApi.create(payload);
         Swal.fire("Success", "Vehicle added successfully", "success");
       }
 
@@ -288,7 +295,7 @@ export default function VehicleCreationForm() {
               required
               onChange={setVehicleType}
               options={vehicleTypeOptions.map((v) => ({
-                value: String(v.id),
+                value: resolveId(v),
                 label: v.vehicleType,
               }))}
             />
@@ -301,7 +308,7 @@ export default function VehicleCreationForm() {
               required
               onChange={setFuelType}
               options={fuelTypeOptions.map((f) => ({
-                value: String(f.id),
+                value: resolveId(f),
                 label: f.fuel_type,
               }))}
             />
@@ -313,7 +320,7 @@ export default function VehicleCreationForm() {
               value={state}
               required
               onChange={setState}
-              options={states.map((s) => ({ value: s.id, label: s.name }))}
+              options={states.map((s) => ({ value: resolveId(s), label: s.name }))}
             />
           </div>
 
@@ -323,7 +330,7 @@ export default function VehicleCreationForm() {
               value={district}
               required
               onChange={setDistrict}
-              options={districts.map((d) => ({ value: d.id, label: d.name }))}
+              options={districts.map((d) => ({ value: resolveId(d), label: d.name }))}
             />
           </div>
 
@@ -333,7 +340,7 @@ export default function VehicleCreationForm() {
               value={city}
               required
               onChange={setCity}
-              options={cities.map((c) => ({ value: c.id, label: c.name }))}
+              options={cities.map((c) => ({ value: resolveId(c), label: c.name }))}
             />
           </div>
 
@@ -343,7 +350,7 @@ export default function VehicleCreationForm() {
               value={zone}
               required
               onChange={setZone}
-              options={zones.map((z) => ({ value: z.id, label: z.name }))}
+              options={zones.map((z) => ({ value: resolveId(z), label: z.name }))}
             />
           </div>
 
@@ -353,7 +360,7 @@ export default function VehicleCreationForm() {
               value={ward}
               required
               onChange={setWard}
-              options={wards.map((w) => ({ value: w.id, label: w.name }))}
+              options={wards.map((w) => ({ value: resolveId(w), label: w.name }))}
             />
           </div>
 

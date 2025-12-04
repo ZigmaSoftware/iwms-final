@@ -1,7 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { desktopApi } from "@/api";
 import { FileDown } from "lucide-react";
 import { PencilIcon } from "@/icons";
 import { FilterMatchMode } from "primereact/api";
@@ -10,13 +9,13 @@ import { DataTable } from "primereact/datatable";
 import { InputText } from "primereact/inputtext";
 
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { adminApi } from "@/helpers/admin";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 type Complaint = {
-  id: number;
   unique_id: string;
   customer_name: string;
   contact_no: string;
@@ -32,6 +31,8 @@ type Complaint = {
   created: string;
   complaint_closed_at?: string | null;
 };
+
+const complaintApi = adminApi.complaints;
 
 export default function ComplaintsList() {
   const [complaints, setComplaints] = useState<Complaint[]>([]);
@@ -49,24 +50,23 @@ export default function ComplaintsList() {
   
   
     const ENC_NEW_PATH = `/${encCitizenGrivence}/${encComplaint}/new`;
-    const ENC_EDIT_PATH = (id: number) => `/${encCitizenGrivence}/${encComplaint}/${id}/edit`;
+    const ENC_EDIT_PATH = (id: string) => `/${encCitizenGrivence}/${encComplaint}/${id}/edit`;
   
-  
-
-  const fetchData = async () => {
+  const fetchComplaints = useCallback(async () => {
     try {
-      const res = await desktopApi.get("/complaints/");
-      setComplaints(res.data);
+      setLoading(true);
+      const data = await complaintApi.list();
+      setComplaints(data);
     } catch {
       Swal.fire("Error", "Unable to load complaints", "error");
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    fetchComplaints();
+  }, [fetchComplaints]);
 
   // ==========================================================
   // DATE FORMATTER → DD-MM-YYYY HH:MM AM/PM
@@ -191,7 +191,7 @@ const rowExpansionTemplate = (data: Complaint) => (
           <div className="w-full md:w-1/4 font-semibold">Action :</div>
           <button
             className="text-blue-600 flex items-center gap-2 border px-4 py-1 rounded"
-            onClick={() => navigate(ENC_EDIT_PATH(data.id))}
+            onClick={() => navigate(ENC_EDIT_PATH(data.unique_id))}
           >
             <PencilIcon className="size-5" />
           </button>
@@ -240,6 +240,7 @@ const rowExpansionTemplate = (data: Complaint) => (
       <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3">
         <DataTable
           value={complaints}
+          dataKey="unique_id"
           dataKey="id"
           paginator
           rows={10}

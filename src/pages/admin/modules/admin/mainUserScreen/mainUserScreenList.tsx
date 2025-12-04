@@ -93,7 +93,7 @@ export default function MainUserScreenList() {
   const statusTemplate = (row: MainUserScreen) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`mainuserscreen/${row.id}/`, { is_active: value });
+        await desktopApi.put(`mainuserscreen/${row.id}/`, { is_active: value });
         fetchMainScreens();
       } catch (err) {
         console.error("Status update failed:", err);

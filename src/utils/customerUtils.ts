@@ -1,10 +1,12 @@
 export type CustomerRecord = {
   id?: number | string;
+  unique_id?: string;
   is_active?: boolean;
 } & Record<string, any>;
 
 export type ActiveRecord = {
   id?: number | string;
+  unique_id?: string;
   is_active?: boolean;
 } & Record<string, any>;
 
@@ -29,24 +31,20 @@ export function filterActiveRecords<T extends ActiveRecord>(
   records: T[],
   includeIds: Array<number | string> = []
 ): T[] {
-  const includeSet = new Set(
-    includeIds
-      .map((value) => Number(value))
-      .filter((value) => !Number.isNaN(value))
-  );
+  const includeSet = new Set(includeIds.map((value) => String(value)));
 
   return records.filter((record) => {
-    if (record?.id === undefined || record?.id === null) return false;
-    const id = Number(record.id);
-    if (Number.isNaN(id)) return false;
+    const rawId = record?.unique_id ?? record?.id;
+    if (rawId === undefined || rawId === null) return false;
+    const normalizedId = String(rawId);
 
-    return (record.is_active ?? true) || includeSet.has(id);
+    return (record.is_active ?? true) || includeSet.has(normalizedId);
   });
 }
 
 export function filterActiveCustomers(
   customers: CustomerRecord[],
-  includeIds: number[] = []
+  includeIds: Array<number | string> = []
 ): CustomerRecord[] {
   return filterActiveRecords<CustomerRecord>(customers, includeIds);
 }

@@ -116,7 +116,7 @@ export default function CountryList() {
   const statusTemplate = (row: Country) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`countries/${row.id}/`, { is_active: value });
+        await desktopApi.put(`countries/${row.id}/`, { is_active: value });
         fetchCountries();
       } catch (err) {
         console.error("Status update failed:", err);

@@ -1,12 +1,21 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
 import { Input } from "@/components/ui/input";
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { adminApi } from "@/helpers/admin";
+
+type Fuel = {
+  id: number;
+  fuel_type: string;
+  description: string;
+  is_active: boolean;
+};
+
+const fuelApi = adminApi.fuels;
 
 function FuelForm() {
   const [fuelType, setFuelType] = useState("");
@@ -28,12 +37,12 @@ function FuelForm() {
   // Fetch existing data if editing
   useEffect(() => {
     if (isEdit) {
-      desktopApi
-        .get(`fuels/${id}/`)
+      fuelApi
+        .get(id as string)
         .then((res) => {
-          setFuelType(res.data.fuel_type);
-          setDescription(res.data.description);
-          setIsActive(res.data.is_active);
+          setFuelType(res.fuel_type);
+          setDescription(res.description);
+          setIsActive(res.is_active);
         })
         .catch((err) => {
           console.error("Error fetching fuelData:", err);
@@ -67,7 +76,7 @@ function FuelForm() {
       console.log(payload);
 
       if (isEdit) {
-        await desktopApi.put(`fuels/${id}/`, payload);
+        await fuelApi.update(id as string, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -75,7 +84,7 @@ function FuelForm() {
           showConfirmButton: false,
         });
       } else {
-        await desktopApi.post("fuels/", payload);
+        await fuelApi.create(payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",

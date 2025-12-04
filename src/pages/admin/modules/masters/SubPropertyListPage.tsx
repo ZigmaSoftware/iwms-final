@@ -18,7 +18,7 @@ import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";   // 🔥 Toggle
 
 type SubProperty = {
-  id: number;
+  unique_id: string;
   sub_property_name: string;
   property_name?: string;
   is_active: boolean;
@@ -40,7 +40,7 @@ export default function SubPropertyList() {
   const encSubProperties = encryptSegment("subproperty");
 
   const ENC_NEW_PATH = `/${encMasters}/${encSubProperties}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encSubProperties}/${id}/edit`;
 
   const fetchSubProperties = async () => {
@@ -56,7 +56,7 @@ export default function SubPropertyList() {
     fetchSubProperties();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This sub property will be permanently deleted!",
@@ -112,7 +112,7 @@ export default function SubPropertyList() {
   const statusTemplate = (row: SubProperty) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`subproperties/${row.id}/`, { is_active: value });
+        await desktopApi.put(`subproperties/${row.unique_id}/`, { is_active: value });
         fetchSubProperties();
       } catch (err) {
         console.error("Status update failed:", err);
@@ -131,7 +131,7 @@ export default function SubPropertyList() {
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -139,7 +139,7 @@ export default function SubPropertyList() {
 
       <button
         title="Delete"
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
@@ -170,6 +170,7 @@ export default function SubPropertyList() {
 
         <DataTable
           value={subProperties}
+          dataKey="unique_id"
           paginator
           rows={10}
           loading={loading}

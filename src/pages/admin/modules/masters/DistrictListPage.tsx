@@ -14,14 +14,11 @@ import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";
 
 type District = {
-  id: number;
-  uniqueId: string;
+  unique_id: string;
   countryName: string;
   stateName: string;
   name: string;
   is_active: boolean;
-  country: number;
-  state: number;
 };
 
 export default function DistrictListPage() {
@@ -40,24 +37,21 @@ export default function DistrictListPage() {
   const encDistricts = encryptSegment("districts");
 
   const ENC_NEW_PATH = `/${encMasters}/${encDistricts}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encDistricts}/${id}/edit`;
 
   const fetchDistricts = async () => {
     try {
       const res = await desktopApi.get("districts/");
       const mapped: District[] = res.data.map((d: any) => ({
-        id: d.id,
-        uniqueId: d.unique_id,
+        unique_id: d.unique_id,
         countryName: d.country_name,
         stateName: d.state_name,
         name: d.name,
         is_active: d.is_active,
-        country: d.country,
-        state: d.state,
       }));
 
-      mapped.sort((a, b) => a.id - b.id);
+      mapped.sort((a, b) => a.name.localeCompare(b.name));
       setDistricts(mapped);
     } finally {
       setLoading(false);
@@ -68,7 +62,7 @@ export default function DistrictListPage() {
     fetchDistricts();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This district will be permanently deleted!",
@@ -123,7 +117,7 @@ export default function DistrictListPage() {
   const statusTemplate = (row: District) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`districts/${row.id}/`, {
+        await desktopApi.put(`districts/${row.unique_id}/`, {
           is_active: value,
         });
         fetchDistricts();
@@ -141,7 +135,7 @@ export default function DistrictListPage() {
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -149,7 +143,7 @@ export default function DistrictListPage() {
 
       <button
         title="Delete"
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
@@ -178,6 +172,7 @@ export default function DistrictListPage() {
 
         <DataTable
           value={districts}
+          dataKey="unique_id"
           loading={loading}
           paginator
           rows={10}

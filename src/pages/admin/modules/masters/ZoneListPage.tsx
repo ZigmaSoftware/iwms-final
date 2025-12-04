@@ -117,7 +117,7 @@ export default function ZoneList() {
   const statusTemplate = (row: Zone) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`zones/${row.id}/`, { is_active: value });
+        await desktopApi.put(`zones/${row.id}/`, { is_active: value });
         fetchZones();
       } catch (error) {
         console.error("Status update failed:", error);

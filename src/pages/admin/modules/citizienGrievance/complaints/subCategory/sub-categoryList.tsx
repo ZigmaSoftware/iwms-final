@@ -32,7 +32,7 @@ export default function SubComplaintCategoryList() {
   const { encCitizenGrivence, encSubComplaintCategory } = getEncryptedRoute();
 
   const NEW_PATH = `/${encCitizenGrivence}/${encSubComplaintCategory}/new`;
-  const EDIT_PATH = (id: number) =>
+  const EDIT_PATH = (id: string) =>
     `/${encCitizenGrivence}/${encSubComplaintCategory}/${id}/edit`;
 
   const fetchData = async () => {
@@ -50,7 +50,7 @@ export default function SubComplaintCategoryList() {
     fetchData();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirmation = await Swal.fire({
       title: "Confirm Deletion",
       text: "This record will be permanently removed.",
@@ -76,7 +76,7 @@ export default function SubComplaintCategoryList() {
 
   const statusTemplate = (row: any) => {
     const updateStatus = async (value: boolean) => {
-      await mobileAPI.patch(`sub-category/${row.id}/`, { is_active: value });
+      await mobileAPI.put(`sub-category/${row.unique_id}/`, { is_active: value });
       fetchData();
     };
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
@@ -85,14 +85,14 @@ export default function SubComplaintCategoryList() {
   const actionTemplate = (row: any) => (
     <div className="flex gap-3 justify-center">
       <button
-        onClick={() => navigate(EDIT_PATH(row.id))}
+        onClick={() => navigate(EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5 fill-gray-600" />
       </button>
 
       <button
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5 fill-gray-600" />

@@ -92,7 +92,7 @@ export default function StaffUserTypeList() {
   const statusTemplate = (row: StaffUserType) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`staffusertypes/${row.id}/`, { is_active: value });
+        await desktopApi.put(`staffusertypes/${row.id}/`, { is_active: value });
         fetchStaffUserTypes();
       } catch (err) {
         console.error("Failed to update status:", err);

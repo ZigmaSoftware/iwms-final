@@ -112,7 +112,7 @@ export default function UserTypePage() {
 
   const statusTemplate = (row: UserType) => {
     const updateStatus = async (value: boolean) => {
-      await desktopApi.patch(`user-type/${row.id}/`, { is_active: value });
+      await desktopApi.put(`user-type/${row.id}/`, { is_active: value });
       fetchUserTypes();
     };
 

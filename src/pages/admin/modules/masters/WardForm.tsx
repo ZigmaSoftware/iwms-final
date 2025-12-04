@@ -54,7 +54,7 @@ function WardForm() {
       .then((res) => {
         const data = res.data
           .filter((c: any) => c.is_active)
-          .map((c: any) => ({ value: c.id.toString(), label: c.name }));
+          .map((c: any) => ({ value: c.unique_id, label: c.name }));
         setCountries(data);
       })
       .catch((err) => console.error("Error fetching countries:", err));
@@ -76,7 +76,7 @@ function WardForm() {
       .then((res) => {
         const data = res.data
           .filter((s: any) => s.is_active)
-          .map((s: any) => ({ value: s.id.toString(), label: s.name }));
+          .map((s: any) => ({ value: s.unique_id, label: s.name }));
         setStates(data);
       })
       .catch((err) => console.error("Error fetching states:", err));
@@ -96,7 +96,7 @@ function WardForm() {
       .then((res) => {
         const data = res.data
           .filter((d: any) => d.is_active)
-          .map((d: any) => ({ value: d.id.toString(), label: d.name }));
+          .map((d: any) => ({ value: d.unique_id, label: d.name }));
         setDistricts(data);
       })
       .catch((err) => console.error("Error fetching districts:", err));
@@ -114,7 +114,7 @@ function WardForm() {
       .then((res) => {
         const data = res.data
           .filter((c: any) => c.is_active)
-          .map((c: any) => ({ value: c.id.toString(), label: c.name }));
+          .map((c: any) => ({ value: c.unique_id, label: c.name }));
         setCities(data);
       })
       .catch((err) => console.error("Error fetching cities:", err));
@@ -130,7 +130,7 @@ function WardForm() {
       .then((res) => {
         const data = res.data
           .filter((z: any) => z.is_active && !z.is_deleted)
-          .map((z: any) => ({ value: z.id.toString(), label: z.name }));
+          .map((z: any) => ({ value: z.unique_id, label: z.name }));
         setZones(data);
       })
       .catch((err) => console.error("Error fetching zones:", err));
@@ -150,47 +150,47 @@ function WardForm() {
         // Preload cascading selects for edit (ensure option lists exist before setting IDs)
         const loadCascade = async () => {
           // country
-          if (w.country) {
-            setCountryId(String(w.country));
-            const statesRes = await desktopApi.get(`states/?country=${w.country}`);
+          if (w.country_id) {
+            setCountryId(String(w.country_id));
+            const statesRes = await desktopApi.get(`states/?country=${w.country_id}`);
             setStates(
               statesRes.data
                 .filter((s: any) => s.is_active)
-                .map((s: any) => ({ value: s.id.toString(), label: s.name }))
+                .map((s: any) => ({ value: s.unique_id, label: s.name }))
             );
           }
           // state
-          if (w.state) {
-            setStateId(String(w.state));
-            const dRes = await desktopApi.get(`districts/?state=${w.state}`);
+          if (w.state_id) {
+            setStateId(String(w.state_id));
+            const dRes = await desktopApi.get(`districts/?state=${w.state_id}`);
             setDistricts(
               dRes.data
                 .filter((d: any) => d.is_active)
-                .map((d: any) => ({ value: d.id.toString(), label: d.name }))
+                .map((d: any) => ({ value: d.unique_id, label: d.name }))
             );
           }
           // district
-          if (w.district) {
-            setDistrictId(String(w.district));
-            const cRes = await desktopApi.get(`cities/?district=${w.district}`);
+          if (w.district_id) {
+            setDistrictId(String(w.district_id));
+            const cRes = await desktopApi.get(`cities/?district=${w.district_id}`);
             setCities(
               cRes.data
                 .filter((c: any) => c.is_active)
-                .map((c: any) => ({ value: c.id.toString(), label: c.name }))
+                .map((c: any) => ({ value: c.unique_id, label: c.name }))
             );
           }
           // city
-          if (w.city) {
-            setCityId(String(w.city));
-            const zRes = await desktopApi.get(`zones/?city=${w.city}`);
+          if (w.city_id) {
+            setCityId(String(w.city_id));
+            const zRes = await desktopApi.get(`zones/?city=${w.city_id}`);
             setZones(
               zRes.data
                 .filter((z: any) => z.is_active && !z.is_deleted)
-                .map((z: any) => ({ value: z.id.toString(), label: z.name }))
+                .map((z: any) => ({ value: z.unique_id, label: z.name }))
             );
           }
           // zone
-          if (w.zone) setZoneId(String(w.zone));
+          if (w.zone_id) setZoneId(String(w.zone_id));
         };
 
         await loadCascade();

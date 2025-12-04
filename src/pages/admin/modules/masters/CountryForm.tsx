@@ -40,9 +40,9 @@ function CountryForm() {
       .get("continents/")
       .then((res) => {
         const activeContinents = res.data
-          .filter((c: any) => c.is_active) // only active ones
+          .filter((c: any) => c.is_active)
           .map((c: any) => ({
-            value: c.id.toString(),
+            value: c.unique_id,
             label: `${c.name}`,
           }));
         console.log(activeContinents);
@@ -61,7 +61,7 @@ function CountryForm() {
           setIsActive(res.data.is_active);
           setMobcode(res.data.mob_code);
           setCurrency(res.data.currency);
-          setContinentId(res.data.continent?.toString() || ""); //
+          setContinentId(res.data.continent_id || "");
         })
         .catch((err) => {
           console.error("Error fetching country:", err);

@@ -18,7 +18,7 @@ import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";   // 🔥 Toggle
 
 type Property = {
-  id: number;
+  unique_id: string;
   property_name: string;
   is_active: boolean;
 };
@@ -39,7 +39,7 @@ export default function PropertyList() {
   const encProperties = encryptSegment("property");
 
   const ENC_NEW_PATH = `/${encMasters}/${encProperties}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encProperties}/${id}/edit`;
 
   const fetchProperties = async () => {
@@ -55,7 +55,7 @@ export default function PropertyList() {
     fetchProperties();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This property will be permanently deleted!",
@@ -111,7 +111,7 @@ export default function PropertyList() {
   const statusTemplate = (row: Property) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.patch(`properties/${row.id}/`, { is_active: value });
+        await desktopApi.put(`properties/${row.unique_id}/`, { is_active: value });
         fetchProperties();
       } catch (err) {
         console.error("Status update failed:", err);
@@ -130,7 +130,7 @@ export default function PropertyList() {
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -138,7 +138,7 @@ export default function PropertyList() {
 
       <button
         title="Delete"
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
@@ -169,6 +169,7 @@ export default function PropertyList() {
 
         <DataTable
           value={properties}
+          dataKey="unique_id"
           paginator
           rows={10}
           loading={loading}

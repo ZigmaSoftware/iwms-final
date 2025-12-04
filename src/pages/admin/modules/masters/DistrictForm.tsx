@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import { desktopApi } from "@/api";
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -14,18 +13,22 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
+import { adminApi } from "@/helpers/admin";
 
-type Option = { value: number; label: string }; // use number for DB ID
+type Option = { value: string; label: string };
 
 const encMasters = encryptSegment("masters");
 const encDistricts = encryptSegment("districts");
 
 const ENC_LIST_PATH = `/${encMasters}/${encDistricts}`;
+const countryApi = adminApi.countries;
+const stateApi = adminApi.states;
+const districtApi = adminApi.districts;
 
 export default function DistrictForm() {
   const [districtName, setDistrictName] = useState("");
-  const [countryId, setCountryId] = useState<number | "">(""); // store DB id
-  const [stateId, setStateId] = useState<number | "">(""); // store DB id
+  const [countryId, setCountryId] = useState<string>("");
+  const [stateId, setStateId] = useState<string>("");
   const [countries, setCountries] = useState<Option[]>([]);
   const [states, setStates] = useState<Option[]>([]);
   const [isActive, setIsActive] = useState(true);
@@ -40,10 +43,13 @@ export default function DistrictForm() {
   useEffect(() => {
     const fetchCountries = async () => {
       try {
-        const res = await desktopApi.get("countries/");
-        const activeCountries = res.data
+        const res = await countryApi.list();
+        const activeCountries = res
           .filter((c: any) => c.is_active)
-          .map((c: any) => ({ value: c.id, label: c.name })); // use DB id
+          .map((c: any) => ({
+            value: c.unique_id,
+            label: c.name,
+          }));
         setCountries(activeCountries);
       } catch (err) {
         console.error("Error fetching countries:", err);
@@ -58,13 +64,14 @@ export default function DistrictForm() {
 
     const fetchDistrict = async () => {
       try {
-        const res = await desktopApi.get(`districts/${id}/`);
-        const data = res.data;
+        const data = await districtApi.get(id as string);
 
         setDistrictName(data.name);
         setIsActive(data.is_active);
-        setCountryId(data.country); // DB id
-        setStateId(data.state); // DB id
+        const resolvedCountry = data.country_id ?? data.country ?? "";
+        const resolvedState = data.state_id ?? data.state ?? "";
+        setCountryId(resolvedCountry);
+        setStateId(resolvedState);
       } catch (err: any) {
         console.error("Error fetching district:", err);
         Swal.fire({
@@ -84,10 +91,10 @@ export default function DistrictForm() {
 
     const fetchStates = async () => {
       try {
-        const res = await desktopApi.get(`states/?country=${countryId}`);
-        const activeStates = res.data
+        const res = await stateApi.list({ params: { country: countryId } });
+        const activeStates = res
           .filter((s: any) => s.is_active)
-          .map((s: any) => ({ value: s.id, label: s.name })); // use DB id
+          .map((s: any) => ({ value: s.unique_id, label: s.name }));
 
         setStates(activeStates);
       } catch (err) {
@@ -125,7 +132,7 @@ export default function DistrictForm() {
       console.log("Submitting payload:", payload);
 
       if (isEdit) {
-        await desktopApi.put(`districts/${id}/`, payload);
+        await districtApi.update(id as string, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -133,7 +140,7 @@ export default function DistrictForm() {
           showConfirmButton: false,
         });
       } else {
-        await desktopApi.post("districts/", payload);
+        await districtApi.create(payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",
@@ -190,10 +197,9 @@ export default function DistrictForm() {
             </Label>
 
             <Select
-              value={countryId === "" ? undefined : String(countryId)}
+              value={countryId === "" ? undefined : countryId}
               onValueChange={(val) => {
-                const numVal = Number(val);
-                setCountryId(numVal);
+                setCountryId(val);
                 setStateId("");
               }}
             >
@@ -202,7 +208,7 @@ export default function DistrictForm() {
               </SelectTrigger>
               <SelectContent>
                 {countries.map((c) => (
-                  <SelectItem key={c.value} value={String(c.value)}>
+                  <SelectItem key={c.value} value={c.value}>
                     {c.label}
                   </SelectItem>
                 ))}
@@ -216,8 +222,8 @@ export default function DistrictForm() {
               State <span className="text-red-500">*</span>
             </Label>
             <Select
-              value={stateId === "" ? undefined : String(stateId)}
-              onValueChange={(val) => setStateId(Number(val))}
+              value={stateId === "" ? undefined : stateId}
+              onValueChange={(val) => setStateId(val)}
               disabled={!countryId}
             >
               <SelectTrigger className="input-validate w-full" id="state">
