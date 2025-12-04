@@ -30,7 +30,7 @@ const encMasters = encryptSegment("masters");
 const encContinents = encryptSegment("continents");
 
 const ENC_NEW_PATH = `/${encMasters}/${encContinents}/new`;
-const ENC_EDIT_PATH = (id: number) =>
+const ENC_EDIT_PATH = (id: string) =>
   `/${encMasters}/${encContinents}/${id}/edit`;
 
 const continentApi = adminApi.continents;
@@ -93,7 +93,7 @@ export default function ContinentList() {
   };
 
   /**
-   * 🔥 Toggle switch replacing Tag
+   * Toggle switch replacing Tag
    * Uses FormData PATCH => No 415 Unsupported Media Type
    */
   const statusBodyTemplate = (row: Continent) => {

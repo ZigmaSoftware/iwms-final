@@ -1,17 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-import {
-  ChevronDown,
-  LayoutGrid,
-  MoreHorizontal,
-  List,
-  File,
-  PieChart,
-  UserCircle,
-  Trash2,
-  Truck,
-} from "lucide-react";
+import { ChevronDown, LayoutGrid, MoreHorizontal, List, File, PieChart, UserCircle, Trash2 } from "lucide-react";
 
 import { useSidebar } from "../../../contexts/SideBarContext";
 import { getEncryptedRoute } from "@/utils/routeCache";
@@ -66,12 +56,8 @@ type NavItem = {
   subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
 };
 
-// Main menu
-const navItems: NavItem[] = [
-  { icon: <LayoutGrid size={18} />, name: "Dashboard", path: "/admin" },
-];
+const navItems: NavItem[] = [{ icon: <LayoutGrid size={18} />, name: "Dashboard", path: "/admin" }];
 
-// Admin
 const adminItems: NavItem[] = [
   {
     name: "Admin",
@@ -87,7 +73,6 @@ const adminItems: NavItem[] = [
   },
 ];
 
-// Master
 const masterItems: NavItem[] = [
   {
     icon: <List size={18} />,
@@ -107,7 +92,6 @@ const masterItems: NavItem[] = [
   },
 ];
 
-// Transport
 const transportMasters: NavItem[] = [
   {
     icon: <Truck size={18} />,
@@ -120,7 +104,6 @@ const transportMasters: NavItem[] = [
   },
 ];
 
-// Vehicle Tracking
 const vehicleTrackingItems: NavItem[] = [
   {
     name: "Vehicle Tracking",
@@ -132,18 +115,14 @@ const vehicleTrackingItems: NavItem[] = [
   },
 ];
 
-// Customer Master
 const customerMasters: NavItem[] = [
   {
     icon: <UserCircle size={18} />,
     name: "Customer Masters",
-    subItems: [
-      { name: "Customer Creation", path: `/${encCustomerMaster}/${encCustomerCreation}` },
-    ],
+    subItems: [{ name: "Customer Creation", path: `/${encCustomerMaster}/${encCustomerCreation}` }],
   },
 ];
 
-// Waste Management
 const wasteManagementMasters: NavItem[] = [
   {
     icon: <Trash2 size={18} />,
@@ -155,7 +134,6 @@ const wasteManagementMasters: NavItem[] = [
   },
 ];
 
-// Citizen Grievance
 const citizenGrievanceItems: NavItem[] = [
   {
     icon: <MoreHorizontal size={18} />,
@@ -169,18 +147,14 @@ const citizenGrievanceItems: NavItem[] = [
   },
 ];
 
-// Workforce
 const workforceManagements: NavItem[] = [
   {
     icon: <PieChart size={18} />,
     name: "Workforce Management",
-    subItems: [
-      { name: "WorkForce Management", path: `/${encWorkforceManagement}/${encWorkforceManagement}` },
-    ],
+    subItems: [{ name: "WorkForce Management", path: `/${encWorkforceManagement}/${encWorkforceManagement}` }],
   },
 ];
 
-// Reports
 const reportItems: NavItem[] = [
   {
     icon: <PieChart size={18} />,
@@ -194,7 +168,7 @@ const reportItems: NavItem[] = [
 ];
 
 const menuButtonBase =
-  "flex items-center w-full gap-3 rounded-2xl border px-3 py-2.5 text-sm font-semibold transition-all duration-300";
+  "flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-sm font-semibold tracking-wide transition-all duration-300 backdrop-blur";
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen } = useSidebar();
@@ -203,18 +177,18 @@ const AppSidebar: React.FC = () => {
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type:
-      | "main"
-      | "admin"
-      | "master"
-      | "entry"
-      | "report"
-      | "others"
-      | "transportMaster"
-      | "customerMaster"
-      | "vehicleTracking"
-      | "wasteManagementMaster"
-      | "citizenGrievance"
-      | "workforceManagement";
+    | "main"
+    | "admin"
+    | "master"
+    | "entry"
+    | "report"
+    | "others"
+    | "transportMaster"
+    | "customerMaster"
+    | "vehicleTracking"
+    | "wasteManagementMaster"
+    | "citizenGrievance"
+    | "workforceManagement";
     index: number;
   } | null>(null);
 
@@ -223,7 +197,6 @@ const AppSidebar: React.FC = () => {
 
   const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
 
-  // Auto-open submenu on route change
   useEffect(() => {
     let matched = false;
 
@@ -255,7 +228,6 @@ const AppSidebar: React.FC = () => {
     if (!matched) setOpenSubmenu(null);
   }, [location, isActive]);
 
-  // Measure submenu height
   useEffect(() => {
     if (openSubmenu) {
       const key = `${openSubmenu.type}-${openSubmenu.index}`;
@@ -270,9 +242,7 @@ const AppSidebar: React.FC = () => {
   }, [openSubmenu]);
 
   const handleSubmenuToggle = (index: number, type: any) => {
-    setOpenSubmenu((prev) =>
-      prev && prev.type === type && prev.index === index ? null : { type, index }
-    );
+    setOpenSubmenu((prev) => (prev && prev.type === type && prev.index === index ? null : { type, index }));
   };
 
   const renderMenuItems = (items: NavItem[], type: any) => (
@@ -282,31 +252,21 @@ const AppSidebar: React.FC = () => {
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, type)}
-              className={`${menuButtonBase} ${
-                openSubmenu?.type === type && openSubmenu?.index === index
-                  ? "bg-[var(--admin-primarySoft)] border-[var(--admin-border)] text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.12)]"
-                  : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)] hover:text-[var(--admin-primary)]"
-              }`}
-            >
-              <span
-                className={`menu-item-icon-size ${
-                  !showFullSidebar ? "mx-auto" : ""
+              className={`${menuButtonBase} ${openSubmenu?.type === type && openSubmenu?.index === index
+                  ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
+                  : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
                 }`}
-              >
-                {nav.icon}
-              </span>
+            >
+              <span className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}>{nav.icon}</span>
 
               {showFullSidebar && (
                 <>
-                  <span className="menu-item-text text-base font-semibold">
-                    {nav.name}
-                  </span>
+                  <span className="text-base font-semibold">{nav.name}</span>
                   <ChevronDown
-                    className={`ml-auto w-5 h-5 transition-transform ${
-                      openSubmenu?.type === type && openSubmenu?.index === index
+                    className={`ml-auto h-5 w-5 transition-transform ${openSubmenu?.type === type && openSubmenu?.index === index
                         ? "rotate-180 text-[var(--admin-primary)]"
                         : "text-[var(--admin-mutedText)]"
-                    }`}
+                      }`}
                   />
                 </>
               )}
@@ -315,24 +275,13 @@ const AppSidebar: React.FC = () => {
             nav.path && (
               <Link
                 to={nav.path}
-                className={`${menuButtonBase} ${
-                  isActive(nav.path)
-                    ? "bg-[var(--admin-primarySoft)] border-[var(--admin-border)] text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.12)]"
-                    : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)] hover:text-[var(--admin-primary)]"
-                }`}
-              >
-                <span
-                  className={`menu-item-icon-size ${
-                    !showFullSidebar ? "mx-auto" : ""
+                className={`${menuButtonBase} ${isActive(nav.path)
+                    ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
+                    : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
                   }`}
-                >
-                  {nav.icon}
-                </span>
-                {showFullSidebar && (
-                  <span className="menu-item-text text-sm font-semibold">
-                    {nav.name}
-                  </span>
-                )}
+              >
+                <span className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}>{nav.icon}</span>
+                {showFullSidebar && <span className="text-sm font-semibold">{nav.name}</span>}
               </Link>
             )
           )}
@@ -351,18 +300,16 @@ const AppSidebar: React.FC = () => {
               }}
             >
               <ul
-                className="mt-2 ml-7 space-y-1 rounded-2xl border-l pl-4"
-                style={{ borderColor: "var(--admin-border)" }}
+                className="mt-3 ml-6 space-y-1 rounded-2xl border-l-2 border-[var(--admin-border)]/70 pl-4"
               >
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
-                      className={`block rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                        isActive(subItem.path)
+                      className={`block rounded-2xl px-3 py-2 text-sm font-medium transition ${isActive(subItem.path)
                           ? "bg-[var(--admin-accentSoft)] text-[var(--admin-accent)]"
                           : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
-                      }`}
+                        }`}
                     >
                       {subItem.name}
                     </Link>
@@ -378,64 +325,35 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed z-50 h-screen border-r transition-all duration-300 backdrop-blur-lg
-      ${showFullSidebar ? "w-[300px]" : "w-[140px]"}
-      ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+      className={`fixed top-0 left-0 z-50 h-screen border-r border-[var(--admin-border)]/80 bg-[var(--admin-surfaceAlt)]/95 text-[var(--admin-text)] transition-all duration-300 ease-out backdrop-blur-2xl ${showFullSidebar ? "w-[300px]" : "w-[140px]"
+        } ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       style={{
-        background: "var(--admin-surfaceAlt)",
-        borderColor: "var(--admin-border)",
-        boxShadow: showFullSidebar
-          ? "var(--admin-cardShadow)"
-          : "0 10px 30px rgba(15, 23, 42, 0.15)",
+        boxShadow: showFullSidebar ? "var(--admin-cardShadow)" : "0 10px 35px rgba(1,62,126,0.18)",
       }}
     >
+      <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--admin-primarySoft)] to-transparent opacity-70" />
+      <div className="flex h-full flex-col px-5 pb-8 pt-8">
 
-      {/* <div className={`px-6 pt-8 ${showFullSidebar ? "" : "flex justify-center"}`}>
-        {showFullSidebar ? (
-          <div
-            className="w-full rounded-3xl border p-5 text-white shadow-xl"
-            style={{
-              background: "var(--admin-primaryGradient)",
-              borderColor: "rgba(255,255,255,0.25)",
-              boxShadow: "0 25px 45px rgba(1,62,126,0.25)",
-            }}
-          >
-            <p className="text-[11px] uppercase tracking-[0.4em] text-white/70">City Ops</p>
-            <p className="text-xl font-semibold leading-tight">Admin Panel</p>
-            <p className="mt-2 text-sm text-white/70">
-              Navigate every master and workflow with a single control hub.
-            </p>
-            <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-white/30 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white/80">
-              <span className="h-2 w-2 rounded-full bg-[var(--admin-accent)]"></span>
-              Active
+
+        <div className="mt-[70px] flex-1 overflow-y-auto pr-2 no-scrollbar">
+          <nav className="flex flex-col gap-7">
+            <div>{renderMenuItems(navItems, "main")}</div>
+            <div>{renderMenuItems(adminItems, "admin")}</div>
+            <div>{renderMenuItems(masterItems, "master")}</div>
+            <div>{renderMenuItems(transportMasters, "transportMaster")}</div>
+            <div>{renderMenuItems(customerMasters, "customerMaster")}</div>
+            <div>{renderMenuItems(vehicleTrackingItems, "vehicleTracking")}</div>
+            <div>{renderMenuItems(wasteManagementMasters, "wasteManagementMaster")}</div>
+            <div>{renderMenuItems(citizenGrievanceItems, "citizenGrievance")}</div>
+            <div>{renderMenuItems(workforceManagements, "workforceManagement")}</div>
+            <div>
+              <h2 className="mb-4 text-xs uppercase tracking-[0.35em] text-[var(--admin-mutedText)]">Report</h2>
+              {renderMenuItems(reportItems, "report")}
             </div>
-          </div>
-        ) : (
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--admin-primarySoft)] text-lg font-semibold text-[var(--admin-primary)]">
-            IW
-          </div>
-        )}
-      </div> */}
+          </nav>
+        </div>
 
-      <div className="flex flex-col overflow-y-auto no-scrollbar px-6 pb-10 pt-8">
-        <nav className="mb-4 flex flex-col gap-7">
-          <div className="pt-1">{renderMenuItems(navItems, "main")}</div>
-          <div>{renderMenuItems(adminItems, "admin")}</div>
-          <div>{renderMenuItems(masterItems, "master")}</div>
-          <div>{renderMenuItems(transportMasters, "transportMaster")}</div>
-          <div>{renderMenuItems(customerMasters, "customerMaster")}</div>
-          <div>{renderMenuItems(vehicleTrackingItems, "vehicleTracking")}</div>
-          <div>{renderMenuItems(wasteManagementMasters, "wasteManagementMaster")}</div>
-          <div>{renderMenuItems(citizenGrievanceItems, "citizenGrievance")}</div>
-          <div>{renderMenuItems(workforceManagements, "workforceManagement")}</div>
 
-          <div>
-            <h2 className="mb-4 text-xs uppercase tracking-[0.3em] text-[var(--admin-mutedText)]">
-              Report
-            </h2>
-            {renderMenuItems(reportItems, "report")}
-          </div>
-        </nav>
       </div>
     </aside>
   );
