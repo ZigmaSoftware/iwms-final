@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
+import { desktopApi } from "@/api";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -15,13 +15,14 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch"; // 🔥 NEW toggle
+import { Switch } from "@/components/ui/switch"; // 
+import { adminApi } from "@/helpers/admin";
 
 // ===========================
 //   Types
 // ===========================
-type Zone = {
-  id: number;
+type ZoneRecord = {
+  unique_id: string;
   name: string;
   city_name: string;
   district_name: string;
@@ -29,11 +30,58 @@ type Zone = {
   is_active: boolean;
 };
 
+
+type ErrorWithResponse = {
+  response?: {
+    data?: unknown;
+  };
+};
+
+const extractErrorMessage = (error: unknown) => {
+  if (!error) {
+    return "Something went wrong while processing the request.";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  const withResponse = error as ErrorWithResponse;
+  const data = withResponse.response?.data;
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.join(", ");
+  }
+
+  if (data && typeof data === "object") {
+    return Object.entries(data as Record<string, unknown>)
+      .map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return `${key}: ${value.join(", ")}`;
+        }
+        return `${key}: ${String(value)}`;
+      })
+      .join("\n");
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Something went wrong while processing the request.";
+};
+
+const zoneApi = adminApi.zones;
+
 // ===========================
 //   Component
 // ===========================
 export default function ZoneList() {
-  const [zones, setZones] = useState<Zone[]>([]);
+  const [zones, setZones] = useState<ZoneRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -47,20 +95,30 @@ export default function ZoneList() {
   const encZones = encryptSegment("zones");
 
   const ENC_NEW_PATH = `/${encMasters}/${encZones}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encZones}/${id}/edit`;
 
   // ===========================
   //   Load Data
   // ===========================
-  const fetchZones = async () => {
+
+
+  const fetchZones = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await desktopApi.get("zones/");
-      setZones(res.data);
+      const data = (await zoneApi.list()) as ZoneRecord[];
+      setZones(data);
+    } catch (error) {
+      console.error("Failed loading zones:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Unable to load zones",
+        text: extractErrorMessage(error),
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchZones();
@@ -69,7 +127,7 @@ export default function ZoneList() {
   // ===========================
   //   Delete
   // ===========================
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This zone will be permanently deleted!",
@@ -82,7 +140,7 @@ export default function ZoneList() {
 
     if (!confirm.isConfirmed) return;
 
-    await desktopApi.delete(`zones/${id}/`);
+    await zoneApi.remove(id);
 
     Swal.fire({
       icon: "success",
@@ -114,10 +172,10 @@ export default function ZoneList() {
   // ===========================
   //   Toggle Status (PATCH)
   // ===========================
-  const statusTemplate = (row: Zone) => {
+  const statusTemplate = (row: ZoneRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`zones/${row.id}/`, { is_active: value });
+        await desktopApi.put(`zones/${row.unique_id}/`, { is_active: value });
         fetchZones();
       } catch (error) {
         console.error("Status update failed:", error);
@@ -130,11 +188,11 @@ export default function ZoneList() {
   // ===========================
   //   Actions
   // ===========================
-  const actionTemplate = (row: Zone) => (
+  const actionTemplate = (row: ZoneRecord) => (
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -142,7 +200,7 @@ export default function ZoneList() {
 
       <button
         title="Delete"
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
@@ -150,7 +208,7 @@ export default function ZoneList() {
     </div>
   );
 
-  const indexTemplate = (_: Zone, { rowIndex }: { rowIndex: number }) =>
+  const indexTemplate = (_: ZoneRecord, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
   // ===========================
@@ -213,14 +271,14 @@ export default function ZoneList() {
             field="city_name"
             header="City"
             sortable
-            body={(row: Zone) => cap(row.city_name)}
+            body={(row: ZoneRecord) => cap(row.city_name)}
           />
 
           <Column
             field="name"
             header="Zone"
             sortable
-            body={(row: Zone) => cap(row.name)}
+            body={(row: ZoneRecord) => cap(row.name)}
           />
 
           {/* 🔥 Toggle Status */}

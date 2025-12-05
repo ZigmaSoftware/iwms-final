@@ -15,10 +15,11 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch";   // 🔥 Toggle component
+import { Switch } from "@/components/ui/switch";   // Toggle component
+import { adminApi } from "@/helpers/admin";
 
 type Ward = {
-  id: number;
+  unique_id: string;
   name: string;
   is_active: boolean;
   zone_name: string;
@@ -27,6 +28,52 @@ type Ward = {
   state_name: string;
   country_name: string;
 };
+
+type ErrorWithResponse = {
+  response?: {
+    data?: unknown;
+  };
+};
+
+const extractErrorMessage = (error: unknown) => {
+  if (!error) {
+    return "Something went wrong while processing the request.";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  const withResponse = error as ErrorWithResponse;
+  const data = withResponse.response?.data;
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.join(", ");
+  }
+
+  if (data && typeof data === "object") {
+    return Object.entries(data as Record<string, unknown>)
+      .map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return `${key}: ${value.join(", ")}`;
+        }
+        return `${key}: ${String(value)}`;
+      })
+      .join("\n");
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Something went wrong while processing the request.";
+};
+
+const wardApi = adminApi.wards;
 
 export default function WardList() {
   const [wards, setWards] = useState<Ward[]>([]);
@@ -44,7 +91,7 @@ export default function WardList() {
   const encWards = encryptSegment("wards");
 
   const ENC_NEW_PATH = `/${encMasters}/${encWards}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encWards}/${id}/edit`;
 
   const fetchWards = async () => {
@@ -60,7 +107,7 @@ export default function WardList() {
     fetchWards();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This ward will be permanently deleted!",
@@ -113,11 +160,11 @@ export default function WardList() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // 🔥 Toggle Status (PATCH)
+  // Toggle Status (PATCH)
   const statusTemplate = (row: Ward) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`wards/${row.id}/`, { is_active: value });
+        await desktopApi.put(`wards/${row.unique_id}/`, { is_active: value });
         fetchWards();
       } catch (err) {
         console.error("Status update failed:", err);
@@ -136,7 +183,7 @@ export default function WardList() {
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -144,7 +191,7 @@ export default function WardList() {
 
       <button
         title="Delete"
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />

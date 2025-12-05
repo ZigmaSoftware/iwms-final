@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import { desktopApi } from "@/api";
+
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,223 +13,439 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+
 import { encryptSegment } from "@/utils/routeCrypto";
+import { adminApi } from "@/helpers/admin";
 
-type Option = { value: number; label: string };
+/* ------------------------------
+    TYPES
+------------------------------ */
+type SelectOption = { value: string; label: string };
 
+type CountryMeta = {
+  id: string;
+  name: string;
+  continentId: string | null;
+  isActive: boolean;
+};
+
+type StateMeta = {
+  id: string;
+  name: string;
+  countryId: string | null;
+  isActive: boolean;
+};
+
+type DistrictMeta = {
+  id: string;
+  name: string;
+  stateId: string | null;
+  isActive: boolean;
+};
+
+type CityRecord = {
+  name?: string;
+  is_active?: boolean;
+
+  continent_id?: string | number | null;
+  continent?: string | number | null;
+
+  country_id?: string | number | null;
+  country?: string | number | null;
+
+  state_id?: string | number | null;
+  state?: string | number | null;
+
+  district_id?: string | number | null;
+  district?: string | number | null;
+};
+
+/* ------------------------------
+    UTILITIES
+------------------------------ */
+const normalizeNullable = (v: any): string | null => {
+  if (v === undefined || v === null) return null;
+  return String(v);
+};
+
+const extractError = (error: any): string => {
+  if (error?.response?.data) return String(error.response.data);
+  if (error?.message) return error.message;
+  return "Unexpected error!";
+};
+
+/* ------------------------------
+    ROUTES
+------------------------------ */
 const encMasters = encryptSegment("masters");
 const encCities = encryptSegment("cities");
-
 const ENC_LIST_PATH = `/${encMasters}/${encCities}`;
 
+/* ------------------------------
+    APIS
+------------------------------ */
+const continentApi = adminApi.continents;
+const countryApi = adminApi.countries;
+const stateApi = adminApi.states;
+const districtApi = adminApi.districts;
+const cityApi = adminApi.cities;
 
-function CityForm() {
+/* ==========================================================
+    COMPONENT STARTS
+========================================================== */
+export default function CityForm() {
+  /* FIELD STATES */
   const [cityName, setCityName] = useState("");
-  const [countryId, setCountryId] = useState<number | "">("");
-  const [stateId, setStateId] = useState<number | "">("");
-  const [districtId, setDistrictId] = useState<number | "">("");
+  const [continentId, setContinentId] = useState("");
+  const [countryId, setCountryId] = useState("");
+  const [stateId, setStateId] = useState("");
+  const [districtId, setDistrictId] = useState("");
+
+  /* PENDING STATES */
+  const [pendingCountryId, setPendingCountryId] = useState("");
+  const [pendingStateId, setPendingStateId] = useState("");
+  const [pendingDistrictId, setPendingDistrictId] = useState("");
+
+  /* MASTER DATA */
+  const [continents, setContinents] = useState<SelectOption[]>([]);
+  const [allCountries, setAllCountries] = useState<CountryMeta[]>([]);
+  const [filteredCountries, setFilteredCountries] = useState<SelectOption[]>([]);
+
+  const [allStates, setAllStates] = useState<StateMeta[]>([]);
+  const [filteredStates, setFilteredStates] = useState<SelectOption[]>([]);
+
+  const [allDistricts, setAllDistricts] = useState<DistrictMeta[]>([]);
+  const [filteredDistricts, setFilteredDistricts] = useState<SelectOption[]>([]);
+
   const [isActive, setIsActive] = useState(true);
-
-  const [countries, setCountries] = useState<Option[]>([]);
-  const [states, setStates] = useState<Option[]>([]);
-  const [districts, setDistricts] = useState<Option[]>([]);
-
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
 
-  //  Fetch active countries
+  /* ==========================================================
+      LOAD MASTER DATA
+  ========================================================== */
   useEffect(() => {
-    const fetchCountries = async () => {
+    (async () => {
       try {
-        const res = await desktopApi.get("countries/");
-        const data = res.data
-          .filter((c: any) => c.is_active)
-          .map((c: any) => ({ value: c.id, label: c.name }));
-        setCountries(data);
+        const res = await continentApi.list();
+        setContinents(
+          res
+            .filter((x: any) => x.is_active)
+            .map((x: any) => ({
+              value: String(x.unique_id),
+              label: x.name,
+            }))
+        );
       } catch (err) {
-        console.error("Error fetching countries:", err);
+        Swal.fire("Error", extractError(err), "error");
       }
-    };
-    fetchCountries();
+    })();
   }, []);
 
-  //  Fetch city details (Edit mode)
   useEffect(() => {
-    if (!isEdit) return;
-
-    const fetchCity = async () => {
+    (async () => {
       try {
-        const res = await desktopApi.get(`cities/${id}/`);
-        const data = res.data;
-
-        setCityName(data.name);
-        setCountryId(data.country);
-        setStateId(data.state);
-        setIsActive(data.is_active);
-
-        //  Fetch districts for this state before setting districtId
-        if (data.state) {
-          const districtRes = await desktopApi.get(`districts/?state=${data.state}`);
-          const districtOptions = districtRes.data
-            .filter((d: any) => d.is_active)
-            .map((d: any) => ({ value: d.id, label: d.name }));
-
-          setDistricts(districtOptions);
-          setDistrictId(data.district);
-        }
-      } catch (err: any) {
-        console.error("Error fetching city:", err);
-        Swal.fire({
-          icon: "error",
-          title: "Failed to load city",
-          text: err.response?.data?.detail || "Something went wrong!",
-        });
-      }
-    };
-
-    fetchCity();
-  }, [id, isEdit]);
-
-  // Fetch states when country changes
-  useEffect(() => {
-    if (!countryId) return;
-
-    const fetchStates = async () => {
-      try {
-        const res = await desktopApi.get(`states/?country=${countryId}`);
-        const data = res.data
-          .filter((s: any) => s.is_active)
-          .map((s: any) => ({ value: s.id, label: s.name }));
-        setStates(data);
+        const res = await countryApi.list();
+        const mapped = res.map((c: any) => ({
+          id: String(c.unique_id),
+          name: c.name,
+          continentId: normalizeNullable(c.continent_id ?? c.continent),
+          isActive: Boolean(c.is_active),
+        }));
+        setAllCountries(mapped);
       } catch (err) {
-        console.error("Error fetching states:", err);
-        setStates([]);
+        Swal.fire("Error", extractError(err), "error");
       }
-    };
+    })();
+  }, []);
 
-    fetchStates();
-    setStateId("");
-    setDistrictId("");
-    setDistricts([]);
-  }, [countryId]);
-
-  // Fetch districts when state changes
   useEffect(() => {
-    if (!stateId) return;
-
-    const fetchDistricts = async () => {
+    (async () => {
       try {
-        const res = await desktopApi.get(`districts/?state=${stateId}`);
-        const data = res.data
-          .filter((d: any) => d.is_active)
-          .map((d: any) => ({ value: d.id, label: d.name }));
-        setDistricts(data);
-
-        // Only clear selected district when adding new city
-        if (!isEdit) setDistrictId("");
+        const res = await stateApi.list();
+        const mapped = res.map((s: any) => ({
+          id: String(s.unique_id),
+          name: s.name,
+          countryId: normalizeNullable(s.country_id ?? s.country),
+          isActive: Boolean(s.is_active),
+        }));
+        setAllStates(mapped);
       } catch (err) {
-        console.error("Error fetching districts:", err);
-        setDistricts([]);
+        Swal.fire("Error", extractError(err), "error");
       }
-    };
+    })();
+  }, []);
 
-    fetchDistricts();
-  }, [stateId]);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await districtApi.list();
+        const mapped = res.map((d: any) => ({
+          id: String(d.unique_id),
+          name: d.name,
+          stateId: normalizeNullable(d.state_id ?? d.state),
+          isActive: Boolean(d.is_active),
+        }));
+        setAllDistricts(mapped);
+      } catch (err) {
+        Swal.fire("Error", extractError(err), "error");
+      }
+    })();
+  }, []);
 
-  // 🔹 Handle submit
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    // 🔹 Basic validation BEFORE enabling loading or API call
-    if (!countryId || !stateId || !districtId || !cityName.trim()) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "Please fill all the required fields before submitting.",
-        confirmButtonColor: "#3085d6",
-      });
-      return; //  Stop here if validation fails
+  /* ==========================================================
+      FILTER COUNTRIES BASED ON SELECTED CONTINENT
+  ========================================================== */
+  useEffect(() => {
+    if (!continentId) {
+      setFilteredCountries([]);
+      return;
     }
 
-    setLoading(true); //  Only set loading if validation passed
+    const filt = allCountries
+      .filter((c) => c.isActive && c.continentId === continentId)
+      .map((c) => ({ value: c.id, label: c.name }));
+
+    if (
+      pendingCountryId &&
+      !filt.some((o) => o.value === pendingCountryId)
+    ) {
+      const found = allCountries.find((c) => c.id === pendingCountryId);
+      if (found) {
+        filt.push({ value: found.id, label: found.name });
+      }
+    }
+
+    setFilteredCountries(filt);
+  }, [continentId, allCountries, pendingCountryId]);
+
+  /* ==========================================================
+      FILTER STATES BASED ON SELECTED COUNTRY
+  ========================================================== */
+  useEffect(() => {
+    if (!countryId) {
+      setFilteredStates([]);
+      return;
+    }
+
+    const filt = allStates
+      .filter((s) => s.isActive && s.countryId === countryId)
+      .map((s) => ({ value: s.id, label: s.name }));
+
+    if (
+      pendingStateId &&
+      !filt.some((o) => o.value === pendingStateId)
+    ) {
+      const found = allStates.find((s) => s.id === pendingStateId);
+      if (found) {
+        filt.push({ value: found.id, label: found.name });
+      }
+    }
+
+    setFilteredStates(filt);
+  }, [countryId, allStates, pendingStateId]);
+
+  /* ==========================================================
+      FILTER DISTRICTS BY STATE
+  ========================================================== */
+  useEffect(() => {
+    if (!stateId) {
+      setFilteredDistricts([]);
+      return;
+    }
+
+    const filt = allDistricts
+      .filter((d) => d.isActive && d.stateId === stateId)
+      .map((d) => ({ value: d.id, label: d.name }));
+
+    if (
+      pendingDistrictId &&
+      !filt.some((o) => o.value === pendingDistrictId)
+    ) {
+      const found = allDistricts.find((d) => d.id === pendingDistrictId);
+      if (found) {
+        filt.push({ value: found.id, label: found.name });
+      }
+    }
+
+    setFilteredDistricts(filt);
+  }, [stateId, allDistricts, pendingDistrictId]);
+
+  /* ==========================================================
+      APPLY PENDING COUNTRY WHEN FILTER READY
+  ========================================================== */
+  useEffect(() => {
+    if (
+      pendingCountryId &&
+      filteredCountries.some((o) => o.value === pendingCountryId)
+    ) {
+      setCountryId(pendingCountryId);
+      setPendingCountryId("");
+    }
+  }, [filteredCountries, pendingCountryId]);
+
+  /* ==========================================================
+      APPLY PENDING STATE WHEN FILTER READY
+  ========================================================== */
+  useEffect(() => {
+    if (
+      pendingStateId &&
+      filteredStates.some((o) => o.value === pendingStateId)
+    ) {
+      setStateId(pendingStateId);
+      setPendingStateId("");
+    }
+  }, [filteredStates, pendingStateId]);
+
+  /* ==========================================================
+      APPLY PENDING DISTRICT WHEN FILTER READY
+  ========================================================== */
+  useEffect(() => {
+    if (
+      pendingDistrictId &&
+      filteredDistricts.some((o) => o.value === pendingDistrictId)
+    ) {
+      setDistrictId(pendingDistrictId);
+      setPendingDistrictId("");
+    }
+  }, [filteredDistricts, pendingDistrictId]);
+
+  /* ==========================================================
+      AUTO-RESOLVE CHAINS
+  ========================================================== */
+
+  // If only pendingCountry exists → set continent
+  useEffect(() => {
+    if (!continentId && pendingCountryId) {
+      const found = allCountries.find((c) => c.id === pendingCountryId);
+      if (found?.continentId) {
+        setContinentId(found.continentId);
+      }
+    }
+  }, [pendingCountryId, continentId, allCountries]);
+
+  // If only pendingState exists → get country
+  useEffect(() => {
+    if (!countryId && pendingStateId) {
+      const found = allStates.find((s) => s.id === pendingStateId);
+      if (found?.countryId) {
+        setCountryId(found.countryId);
+        setPendingCountryId(found.countryId);
+      }
+    }
+  }, [pendingStateId, countryId, allStates]);
+
+  // If only pendingDistrict exists → get state
+  useEffect(() => {
+    if (!stateId && pendingDistrictId) {
+      const found = allDistricts.find((d) => d.id === pendingDistrictId);
+      if (found?.stateId) {
+        setStateId(found.stateId);
+        setPendingStateId(found.stateId);
+      }
+    }
+  }, [pendingDistrictId, stateId, allDistricts]);
+
+  /* ==========================================================
+      EDIT MODE — LOAD EXISTING CITY
+  ========================================================== */
+  useEffect(() => {
+    if (!isEdit || !id) return;
+
+    (async () => {
+      try {
+        const data: CityRecord = await cityApi.get(id);
+
+        setCityName(data.name ?? "");
+        setIsActive(Boolean(data.is_active));
+
+        const cont = normalizeNullable(data.continent_id ?? data.continent);
+        const ctr = normalizeNullable(data.country_id ?? data.country);
+        const ste = normalizeNullable(data.state_id ?? data.state);
+        const dis = normalizeNullable(data.district_id ?? data.district);
+
+        setContinentId(cont ?? "");
+        setPendingCountryId(ctr ?? "");
+        setPendingStateId(ste ?? "");
+        setPendingDistrictId(dis ?? "");
+      } catch (err) {
+        Swal.fire("Error", extractError(err), "error");
+      }
+    })();
+  }, [id, isEdit]);
+
+  /* ==========================================================
+      SUBMIT
+  ========================================================== */
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!continentId || !countryId || !stateId || !districtId || !cityName.trim()) {
+      Swal.fire("Missing Fields", "All fields are mandatory.", "warning");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const payload = {
         name: cityName.trim(),
-        country: countryId,
-        state: stateId,
-        district: districtId || null,
+        continent_id: continentId,
+        country_id: countryId,
+        state_id: stateId,
+        district_id: districtId,
         is_active: isActive,
       };
 
-      console.log("Submitting payload:", payload);
-
-      if (isEdit) {
-        await desktopApi.put(`cities/${id}/`, payload);
-        Swal.fire({
-          icon: "success",
-          title: "Updated successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
+      if (isEdit && id) {
+        await cityApi.update(id, payload);
+        Swal.fire("Success", "Updated successfully!", "success");
       } else {
-        await desktopApi.post("cities/", payload);
-        Swal.fire({
-          icon: "success",
-          title: "Added successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
+        await cityApi.create(payload);
+        Swal.fire("Success", "Added successfully!", "success");
       }
 
       navigate(ENC_LIST_PATH);
-    } catch (error: any) {
-      console.error("Failed to save:", error);
-      const data = error.response?.data;
-
-      if (data?.non_field_errors?.length) {
-        Swal.fire({
-          icon: "warning",
-          title: "Duplicate Entry",
-          text: data.non_field_errors[0],
-        });
-      } else {
-        let message = "Something went wrong while saving.";
-        if (typeof data === "object" && data !== null) {
-          message = Object.entries(data)
-            .map(([key, val]) => `${key}: ${(val as string[]).join(", ")}`)
-            .join("\n");
-        }
-        Swal.fire({ icon: "error", title: "Save failed", text: message });
-      }
+    } catch (err) {
+      Swal.fire("Save failed", extractError(err), "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Render form
+  /* ==========================================================
+      JSX
+  ========================================================== */
   return (
     <ComponentCard title={isEdit ? "Edit City" : "Add City"}>
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Country */}
+
+          {/* Continent */}
           <div>
-            <Label htmlFor="country">
-              Country <span className="text-red-500">*</span>
-            </Label>
+            <Label>Continent *</Label>
             <Select
-              value={countryId === "" ? undefined : String(countryId)}
-              onValueChange={(val) => setCountryId(Number(val))}
+              value={continentId}
+              onValueChange={(val) => {
+                setContinentId(val);
+                setCountryId("");
+                setStateId("");
+                setDistrictId("");
+
+                setPendingCountryId("");
+                setPendingStateId("");
+                setPendingDistrictId("");
+              }}
             >
-              <SelectTrigger className="input-validate w-full" id="country">
-                <SelectValue placeholder="Select Country" />
+              <SelectTrigger className="input-validate w-full">
+                <SelectValue placeholder="Select Continent" />
               </SelectTrigger>
               <SelectContent>
-                {countries.map((c) => (
-                  <SelectItem key={c.value} value={String(c.value)}>
+                {continents.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
                     {c.label}
                   </SelectItem>
                 ))}
@@ -237,64 +453,104 @@ function CityForm() {
             </Select>
           </div>
 
-          {/* State */}
+          {/* Country */}
           <div>
-            <Label htmlFor="state">
-              State <span className="text-red-500">*</span>
-            </Label>
+            <Label>Country *</Label>
             <Select
-              value={stateId === "" ? undefined : String(stateId)}
-              onValueChange={(val) => setStateId(Number(val))}
-              disabled={!countryId}
+              value={countryId}
+              onValueChange={(val) => {
+                setCountryId(val);
+                setStateId("");
+                setDistrictId("");
+
+                setPendingStateId("");
+                setPendingDistrictId("");
+              }}
+              disabled={!continentId}
             >
-              <SelectTrigger className="input-validate w-full" id="state">
-                <SelectValue
-                  placeholder={countryId ? "Select State" : "Select Country First"}
-                />
+              <SelectTrigger className="input-validate w-full">
+                <SelectValue placeholder="Select Country" />
               </SelectTrigger>
               <SelectContent>
-                {states.map((s) => (
-                  <SelectItem key={s.value} value={String(s.value)}>
-                    {s.label}
-                  </SelectItem>
-                ))}
+                {filteredCountries.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {continentId
+                      ? "No countries available"
+                      : "Select a continent first"}
+                  </div>
+                ) : (
+                  filteredCountries.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* State */}
+          <div>
+            <Label>State *</Label>
+            <Select
+              value={stateId}
+              onValueChange={(val) => {
+                setStateId(val);
+                setDistrictId("");
+                setPendingDistrictId("");
+              }}
+              disabled={!countryId}
+            >
+              <SelectTrigger className="input-validate w-full">
+                <SelectValue placeholder="Select State" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredStates.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {countryId ? "No states available" : "Select a country first"}
+                  </div>
+                ) : (
+                  filteredStates.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
 
           {/* District */}
           <div>
-            <Label htmlFor="district">
-              District <span className="text-red-500">*</span>
-            </Label>
+            <Label>District *</Label>
             <Select
-              value={districtId === "" ? undefined : String(districtId)}
-              onValueChange={(val) => setDistrictId(Number(val))}
+              value={districtId}
+              onValueChange={(val) => setDistrictId(val)}
               disabled={!stateId}
             >
-              <SelectTrigger className="input-validate w-full" id="district">
-                <SelectValue
-                  placeholder={stateId ? "Select District" : "Select State First"}
-                />
+              <SelectTrigger className="input-validate w-full">
+                <SelectValue placeholder="Select District" />
               </SelectTrigger>
               <SelectContent>
-                {districts.map((d) => (
-                  <SelectItem key={d.value} value={String(d.value)}>
-                    {d.label}
-                  </SelectItem>
-                ))}
+                {filteredDistricts.length === 0 ? (
+                  <div className="px-3 py-2 text-sm text-muted-foreground">
+                    {stateId ? "No districts available" : "Select a state first"}
+                  </div>
+                ) : (
+                  filteredDistricts.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
 
-          {/* City Name */}
+          {/* City */}
           <div>
-            <Label htmlFor="cityName">
-              City Name <span className="text-red-500">*</span>
-            </Label>
+            <Label>City Name *</Label>
             <Input
-              id="cityName"
-              type="text"
               value={cityName}
               onChange={(e) => setCityName(e.target.value)}
               placeholder="Enter city name"
@@ -303,16 +559,14 @@ function CityForm() {
             />
           </div>
 
-          {/* Active Status */}
+          {/* Status */}
           <div>
-            <Label htmlFor="isActive">
-              Active Status <span className="text-red-500">*</span>
-            </Label>
+            <Label>Active Status *</Label>
             <Select
               value={isActive ? "true" : "false"}
-              onValueChange={(val) => setIsActive(val === "true")}
+              onValueChange={(v) => setIsActive(v === "true")}
             >
-              <SelectTrigger className="input-validate w-full" id="isActive">
+              <SelectTrigger className="input-validate w-full">
                 <SelectValue placeholder="Select status" />
               </SelectTrigger>
               <SelectContent>
@@ -321,9 +575,10 @@ function CityForm() {
               </SelectContent>
             </Select>
           </div>
+
         </div>
 
-        {/* Buttons */}
+        {/* Actions */}
         <div className="flex justify-end gap-3 mt-6">
           <Button type="submit" disabled={loading}>
             {loading
@@ -331,11 +586,15 @@ function CityForm() {
                 ? "Updating..."
                 : "Saving..."
               : isEdit
-                ? "Update"
-                : "Save"}
+              ? "Update"
+              : "Save"}
           </Button>
 
-          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => navigate(ENC_LIST_PATH)}
+          >
             Cancel
           </Button>
         </div>
@@ -343,5 +602,3 @@ function CityForm() {
     </ComponentCard>
   );
 }
-
-export default CityForm;

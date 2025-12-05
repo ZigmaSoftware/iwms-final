@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -15,10 +14,11 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch"; // ✅ Toggle import
+import { Switch } from "@/components/ui/switch"; //  Toggle import
+import { adminApi } from "@/helpers/admin";
 
-type City = {
-  id: number;
+type CityRecord = {
+  unique_id: string;
   name: string;
   is_active: boolean;
   country_name: string;
@@ -26,8 +26,55 @@ type City = {
   district_name: string;
 };
 
+type ErrorWithResponse = {
+  response?: {
+    data?: unknown;
+  };
+};
+
+const extractErrorMessage = (error: unknown) => {
+  if (!error) {
+    return "Something went wrong while processing the request.";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  const withResponse = error as ErrorWithResponse;
+  const data = withResponse.response?.data;
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.join(", ");
+  }
+
+  if (data && typeof data === "object") {
+    return Object.entries(data as Record<string, unknown>)
+      .map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return `${key}: ${value.join(", ")}`;
+        }
+        return `${key}: ${String(value)}`;
+      })
+      .join("\n");
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Something went wrong while processing the request.";
+};
+
+const cityApi = adminApi.cities;
+
+
 export default function CityList() {
-  const [cities, setCities] = useState<City[]>([]);
+  const [cities, setCities] = useState<CityRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -41,25 +88,34 @@ export default function CityList() {
   const encCities = encryptSegment("cities");
 
   const ENC_NEW_PATH = `/${encMasters}/${encCities}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encCities}/${id}/edit`;
 
-  // Fetch data
-  const fetchCities = async () => {
+  //Fetch cities
+
+  const fetchCities = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await desktopApi.get("cities/");
-      setCities(res.data);
+      const data = (await cityApi.list()) as CityRecord[];
+      setCities(data);
+    } catch (error) {
+      console.error("Failed loading cities:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Unable to load cities",
+        text: extractErrorMessage(error),
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchCities();
   }, []);
 
   // Delete
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This city will be permanently deleted!",
@@ -72,7 +128,9 @@ export default function CityList() {
 
     if (!confirm.isConfirmed) return;
 
-    await desktopApi.delete(`cities/${id}/`);
+
+    await cityApi.remove(id);
+
 
     Swal.fire({
       icon: "success",
@@ -115,11 +173,13 @@ export default function CityList() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // 🔥 Toggle handling (PATCH only)
-  const statusTemplate = (city: City) => {
+
+  const statusTemplate = (city: CityRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`cities/${city.id}/`, { is_active: value });
+
+        await cityApi.update(city.unique_id, { is_active: value });
+
         fetchCities();
       } catch (error) {
         console.error("Status update failed:", error);
@@ -130,11 +190,11 @@ export default function CityList() {
   };
 
   // Actions
-  const actionTemplate = (city: City) => (
+  const actionTemplate = (city: CityRecord) => (
     <div className="flex gap-3">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(city.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(city.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -142,7 +202,7 @@ export default function CityList() {
 
       <button
         title="Delete"
-        onClick={() => handleDelete(city.id)}
+        onClick={() => handleDelete(city.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
@@ -150,7 +210,7 @@ export default function CityList() {
     </div>
   );
 
-  const indexTemplate = (_: City, { rowIndex }: { rowIndex: number }) =>
+  const indexTemplate = (_: CityRecord, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
   return (
@@ -195,32 +255,31 @@ export default function CityList() {
           <Column
             field="country_name"
             header="Country"
-            body={(row: City) => cap(row.country_name)}
+            body={(row: CityRecord) => cap(row.country_name)}
             sortable
           />
 
           <Column
             field="state_name"
             header="State"
-            body={(row: City) => cap(row.state_name)}
+            body={(row: CityRecord) => cap(row.state_name)}
             sortable
           />
 
           <Column
             field="district_name"
             header="District"
-            body={(row: City) => cap(row.district_name)}
+            body={(row: CityRecord) => cap(row.district_name)}
             sortable
           />
 
           <Column
             field="name"
             header="City"
-            body={(row: City) => cap(row.name)}
+            body={(row: CityRecord) => cap(row.name)}
             sortable
           />
 
-          {/* 🔥 TOGGLE */}
           <Column
             header="Status"
             body={statusTemplate}

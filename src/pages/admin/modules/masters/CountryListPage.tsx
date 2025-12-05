@@ -176,7 +176,7 @@ export default function CountryList() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // 🔥 Toggle logic (PATCH only)
+  // Toggle logic (PATCH only)
   const statusTemplate = (row: CountryRecord) => {
     const updateStatus = async (value: boolean) => {
       try {

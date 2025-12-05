@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
+import { desktopApi } from "@/api";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -12,8 +12,10 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";
+import { adminApi } from "@/helpers/admin";
 
-type District = {
+
+type DistrictRecord = {
   unique_id: string;
   countryName: string;
   stateName: string;
@@ -21,8 +23,54 @@ type District = {
   is_active: boolean;
 };
 
+type ErrorWithResponse = {
+  response?: {
+    data?: unknown;
+  };
+};
+
+const extractErrorMessage = (error: unknown) => {
+  if (!error) {
+    return "Something went wrong while processing the request.";
+  }
+
+  if (typeof error === "string") {
+    return error;
+  }
+
+  const withResponse = error as ErrorWithResponse;
+  const data = withResponse.response?.data;
+
+  if (typeof data === "string") {
+    return data;
+  }
+
+  if (Array.isArray(data)) {
+    return data.join(", ");
+  }
+
+  if (data && typeof data === "object") {
+    return Object.entries(data as Record<string, unknown>)
+      .map(([key, value]) => {
+        if (Array.isArray(value)) {
+          return `${key}: ${value.join(", ")}`;
+        }
+        return `${key}: ${String(value)}`;
+      })
+      .join("\n");
+  }
+
+  if (error instanceof Error && error.message) {
+    return error.message;
+  }
+
+  return "Something went wrong while processing the request.";
+};
+
+const districtApi = adminApi.districts;
+
 export default function DistrictListPage() {
-  const [districts, setDistricts] = useState<District[]>([]);
+  const [districts, setDistricts] = useState<DistrictRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -40,10 +88,13 @@ export default function DistrictListPage() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encDistricts}/${id}/edit`;
 
-  const fetchDistricts = async () => {
+  const fetchDistricts = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await desktopApi.get("districts/");
-      const mapped: District[] = res.data.map((d: any) => ({
+      const res = await districtApi.list(); // Keep original ref
+      const data = res as any[];            // Convert to array
+
+      const mapped: DistrictRecord[] = data.map((d: any) => ({
         unique_id: d.unique_id,
         countryName: d.country_name,
         stateName: d.state_name,
@@ -52,11 +103,21 @@ export default function DistrictListPage() {
       }));
 
       mapped.sort((a, b) => a.name.localeCompare(b.name));
+
       setDistricts(mapped);
+    } catch (error) {
+      console.error("Failed loading districts:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Unable to load districts",
+        text: extractErrorMessage(error),
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+
 
   useEffect(() => {
     fetchDistricts();
@@ -75,7 +136,7 @@ export default function DistrictListPage() {
 
     if (!confirm.isConfirmed) return;
 
-    await desktopApi.delete(`districts/${id}/`);
+    await districtApi.remove(id);
 
     Swal.fire({
       icon: "success",
@@ -113,13 +174,11 @@ export default function DistrictListPage() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // 🔥 Toggle Component Body
-  const statusTemplate = (row: District) => {
+  // Toggle Component Body
+  const statusTemplate = (row: DistrictRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`districts/${row.unique_id}/`, {
-          is_active: value,
-        });
+        await districtApi.update(row.unique_id, { is_active: value });
         fetchDistricts();
       } catch (e) {
         console.error("Toggle update failed:", e);
@@ -131,7 +190,7 @@ export default function DistrictListPage() {
     );
   };
 
-  const actionTemplate = (row: District) => (
+  const actionTemplate = (row: DistrictRecord) => (
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
@@ -151,7 +210,7 @@ export default function DistrictListPage() {
     </div>
   );
 
-  const indexTemplate = (_: District, { rowIndex }: any) => rowIndex + 1;
+  const indexTemplate = (_: DistrictRecord, { rowIndex }: any) => rowIndex + 1;
 
   return (
     <div className="p-3">
