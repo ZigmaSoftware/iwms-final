@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
+import { desktopApi } from "@/api";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -18,7 +18,7 @@ import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";   // Toggle component
 import { adminApi } from "@/helpers/admin";
 
-type Ward = {
+type WardRecord = {
   unique_id: string;
   name: string;
   is_active: boolean;
@@ -76,7 +76,7 @@ const extractErrorMessage = (error: unknown) => {
 const wardApi = adminApi.wards;
 
 export default function WardList() {
-  const [wards, setWards] = useState<Ward[]>([]);
+  const [wards, setWards] = useState<WardRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -94,14 +94,27 @@ export default function WardList() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encWards}/${id}/edit`;
 
-  const fetchWards = async () => {
+  // ===========================
+  //   Load Data
+  // ===========================
+
+
+  const fetchWards = useCallback(async () => {
+    setLoading(true);
     try {
-      const res = await desktopApi.get("wards/");
-      setWards(res.data);
+      const data = (await wardApi.list()) as WardRecord[];
+      setWards(data);
+    } catch (error) {
+      console.error("Failed loading wards:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Unable to load wards",
+        text: extractErrorMessage(error),
+      });
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchWards();
@@ -120,7 +133,7 @@ export default function WardList() {
 
     if (!confirm.isConfirmed) return;
 
-    await desktopApi.delete(`wards/${id}/`);
+    await wardApi.remove(id);
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
@@ -161,7 +174,7 @@ export default function WardList() {
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
   // Toggle Status (PATCH)
-  const statusTemplate = (row: Ward) => {
+  const statusTemplate = (row: WardRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
         await desktopApi.put(`wards/${row.unique_id}/`, { is_active: value });
@@ -179,7 +192,7 @@ export default function WardList() {
     );
   };
 
-  const actionTemplate = (row: Ward) => (
+  const actionTemplate = (row: WardRecord) => (
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
@@ -199,7 +212,7 @@ export default function WardList() {
     </div>
   );
 
-  const indexTemplate = (_: Ward, { rowIndex }: { rowIndex: number }) =>
+  const indexTemplate = (_: WardRecord, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
   return (
@@ -248,21 +261,21 @@ export default function WardList() {
             field="zone_name"
             header="Zone"
             sortable
-            body={(row: Ward) => cap(row.zone_name)}
+            body={(row: WardRecord) => cap(row.zone_name)}
           />
 
           <Column
             field="city_name"
             header="City"
             sortable
-            body={(row: Ward) => cap(row.city_name)}
+            body={(row: WardRecord) => cap(row.city_name)}
           />
 
           <Column
             field="name"
             header="Ward"
             sortable
-            body={(row: Ward) => cap(row.name)}
+            body={(row: WardRecord) => cap(row.name)}
           />
 
           {/* 🔥 ***TOGGLE REPLACED TAG*** */}
