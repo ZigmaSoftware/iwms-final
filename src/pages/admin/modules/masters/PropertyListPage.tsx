@@ -14,8 +14,9 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
-import { encryptSegment } from "@/utils/routeCrypto";
+import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";   // 🔥 Toggle
+import { adminApi } from "@/helpers/admin";
 
 type Property = {
   unique_id: string;
@@ -35,17 +36,17 @@ export default function PropertyList() {
 
   const navigate = useNavigate();
 
-  const encMasters = encryptSegment("masters");
-  const encProperties = encryptSegment("property");
+  const { encMasters, encProperties } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encMasters}/${encProperties}/new`;
-  const ENC_EDIT_PATH = (id: string) =>
-    `/${encMasters}/${encProperties}/${id}/edit`;
+  const ENC_EDIT_PATH = (unique_id: string) =>
+    `/${encMasters}/${encProperties}/${unique_id}/edit`;
+  const propertiesApi = adminApi.properties;
 
   const fetchProperties = async () => {
     try {
-      const res = await desktopApi.get("properties/");
-      setProperties(res.data);
+      const res = await propertiesApi.list();
+      setProperties(res);
     } finally {
       setLoading(false);
     }
@@ -55,7 +56,7 @@ export default function PropertyList() {
     fetchProperties();
   }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (unique_id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This property will be permanently deleted!",
@@ -68,7 +69,7 @@ export default function PropertyList() {
 
     if (!confirm.isConfirmed) return;
 
-    await desktopApi.delete(`properties/${id}/`);
+    await propertiesApi.remove(unique_id);
 
     Swal.fire({
       icon: "success",
@@ -111,7 +112,12 @@ export default function PropertyList() {
   const statusTemplate = (row: Property) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`properties/${row.unique_id}/`, { is_active: value });
+        
+       await propertiesApi.update(row.unique_id, {
+  property_name: row.property_name,   // required
+  is_active: value,                      // toggle
+});
+
         fetchProperties();
       } catch (err) {
         console.error("Status update failed:", err);

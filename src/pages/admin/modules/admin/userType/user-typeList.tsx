@@ -16,9 +16,9 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
-
+import { adminApi } from "@/helpers/admin";
 type UserType = {
-  id: number;
+ 
   unique_id: string;
   name: string;
   is_active: boolean;
@@ -36,14 +36,20 @@ export default function UserTypePage() {
 
   const navigate = useNavigate();
   const { encAdmins, encUserType } = getEncryptedRoute();
+  const userTypeapi = adminApi.userTypes;
 
   const ENC_NEW_PATH = `/${encAdmins}/${encUserType}/new`;
-  const ENC_EDIT_PATH = (id: number) => `/${encAdmins}/${encUserType}/${id}/edit`;
+  const ENC_EDIT_PATH = (unique_id: string) => `/${encAdmins}/${encUserType}/${unique_id}/edit`;
 
   const fetchUserTypes = async () => {
     try {
-      const res = await desktopApi.get("user-type/");
-      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
+      const res = await  userTypeapi.list();
+      const payload: any = res;
+      const data = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload.data)
+        ? payload.data
+        : payload.data?.results ?? [];
       setUserTypes(data);
     } finally {
       setLoading(false);
@@ -54,7 +60,7 @@ export default function UserTypePage() {
     fetchUserTypes();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
       text: "This userType will be permanently deleted!",
@@ -67,7 +73,7 @@ export default function UserTypePage() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await desktopApi.delete(`user-type/${id}/`);
+    await userTypeapi.remove(unique_id);
 
     Swal.fire({
       icon: "success",
@@ -95,7 +101,7 @@ export default function UserTypePage() {
       <button
         title="Edit"
         className="text-blue-600 hover:text-blue-800"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
       >
         <PencilIcon className="size-5" />
       </button>
@@ -103,7 +109,7 @@ export default function UserTypePage() {
       <button
         title="Delete"
         className="text-red-600 hover:text-red-800"
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
       >
         <TrashBinIcon className="size-5" />
       </button>
@@ -112,7 +118,12 @@ export default function UserTypePage() {
 
   const statusTemplate = (row: UserType) => {
     const updateStatus = async (value: boolean) => {
-      await desktopApi.put(`user-type/${row.id}/`, { is_active: value });
+     await userTypeapi.update(row.unique_id, {
+  name: row.name,         // correct field name
+  is_active: value,
+});
+
+      
       fetchUserTypes();
     };
 

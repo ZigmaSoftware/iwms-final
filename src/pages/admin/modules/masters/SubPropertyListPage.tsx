@@ -14,8 +14,9 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
-import { encryptSegment } from "@/utils/routeCrypto";
+import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";   // 🔥 Toggle
+import { adminApi } from "@/helpers/admin";
 
 type SubProperty = {
   unique_id: string;
@@ -36,17 +37,18 @@ export default function SubPropertyList() {
 
   const navigate = useNavigate();
 
-  const encMasters = encryptSegment("masters");
-  const encSubProperties = encryptSegment("subproperty");
+  const { encMasters, encSubProperties } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encMasters}/${encSubProperties}/new`;
-  const ENC_EDIT_PATH = (id: string) =>
-    `/${encMasters}/${encSubProperties}/${id}/edit`;
+  const ENC_EDIT_PATH = (unique_id: string) =>
+    `/${encMasters}/${encSubProperties}/${unique_id}/edit`;
+
+  const subPropertiesApi = adminApi.subProperties;
 
   const fetchSubProperties = async () => {
     try {
-      const res = await desktopApi.get("subproperties/");
-      setSubProperties(res.data);
+      const res = await subPropertiesApi.list();
+      setSubProperties(res);
     } finally {
       setLoading(false);
     }
@@ -69,7 +71,7 @@ export default function SubPropertyList() {
 
     if (!confirm.isConfirmed) return;
 
-    await desktopApi.delete(`subproperties/${id}/`);
+    await subPropertiesApi.remove(id as string);
 
     Swal.fire({
       icon: "success",
@@ -112,7 +114,8 @@ export default function SubPropertyList() {
   const statusTemplate = (row: SubProperty) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`subproperties/${row.unique_id}/`, { is_active: value });
+        await subPropertiesApi.update(row.unique_id, { is_active: value });
+        
         fetchSubProperties();
       } catch (err) {
         console.error("Status update failed:", err);

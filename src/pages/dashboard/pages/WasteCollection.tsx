@@ -211,7 +211,7 @@ export default function WasteCollection() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="space-y-6">
         {/* Header */}
         <div className="flex items-center justify-between bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
           <div>
@@ -231,99 +231,91 @@ export default function WasteCollection() {
         {/* KPI GRID */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           {/* TODAY'S COLLECTION */}
-          <Card className="border-0 bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white/90">
-                Today's Collection
-              </CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                <Trash2 className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {latestEntry ? formatTons(latestEntry.total) : "44.3 Tons"}
-              </div>
-              <p className="text-sm text-white/80 flex items-center gap-1 mt-2">
-                <TrendingUp className="h-4 w-4" />
-                +8.2% from yesterday
-              </p>
-            </CardContent>
-          </Card>
+          {/* TODAY'S COLLECTION - Pastel Violet */}
+<Card className="border-0 bg-gradient-to-br from-[#D8B4FE] to-[#C084FC] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardTitle className="text-sm font-medium text-white/90">
+      Today's Collection
+    </CardTitle>
+    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+      <Trash2 className="h-5 w-5 text-white" />
+    </div>
+  </CardHeader>
+  <CardContent>
+    <div className="text-3xl font-bold">
+      {latestEntry ? formatTons(latestEntry.total) : "44.3 Tons"}
+    </div>
+  </CardContent>
+</Card>
 
-          {/* WET WASTE */}
-          <Card className="border-0 bg-gradient-to-br from-emerald-400 to-teal-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white/90">
-                Wet Waste
-              </CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                <Droplets className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {latestEntry ? formatTons(latestEntry.wet) : "27.2 Tons"}
-              </div>
-              <p className="text-sm text-white/80 mt-2">Organic materials</p>
-            </CardContent>
-          </Card>
+{/* WET WASTE – Pastel Mint */}
+<Card className="border-0 bg-gradient-to-br from-[#A7F3D0] to-[#6EE7B7] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardTitle className="text-sm font-medium text-white/90">
+      Wet Waste
+    </CardTitle>
+    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+      <Droplets className="h-5 w-5 text-white" />
+    </div>
+  </CardHeader>
+  <CardContent>
+    <div className="text-3xl font-bold">
+      {latestEntry ? formatTons(latestEntry.wet) : "27.2 Tons"}
+    </div>
+  </CardContent>
+</Card>
 
-          {/* DRY WASTE */}
-          <Card className="border-0 bg-gradient-to-br from-sky-400 to-blue-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white/90">
-                Dry Waste
-              </CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                <Recycle className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {latestEntry ? formatTons(latestEntry.dry) : "17.1 Tons"}
-              </div>
-              <p className="text-sm text-white/80 mt-2">Recyclable items</p>
-            </CardContent>
-          </Card>
+{/* DRY WASTE – Pastel Sky */}
+<Card className="border-0 bg-gradient-to-br from-[#BAE6FD] to-[#7DD3FC] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardTitle className="text-sm font-medium text-white/90">
+      Dry Waste
+    </CardTitle>
+    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+      <Recycle className="h-5 w-5 text-white" />
+    </div>
+  </CardHeader>
+  <CardContent>
+    <div className="text-3xl font-bold">
+      {latestEntry ? formatTons(latestEntry.dry) : "17.1 Tons"}
+    </div>
+  </CardContent>
+</Card>
 
-          {/* MONTHLY TOTAL */}
-          <Card className="border-0 bg-gradient-to-br from-amber-400 to-orange-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white/90">
-                Monthly Total
-              </CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                <Calendar className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {monthStat ? formatTons(monthStat.total) : "401 Tons"}
-              </div>
-              <p className="text-sm text-white/80 mt-2">
-                {monthStat ? monthStat.month : "October 2025"}
-              </p>
-            </CardContent>
-          </Card>
+{/* MONTHLY TOTAL – Pastel Amber */}
+<Card className="border-0 bg-gradient-to-br from-[#FDE68A] to-[#FCD34D] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardTitle className="text-sm font-medium text-white/90">
+      Monthly Total
+    </CardTitle>
+    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+      <Calendar className="h-5 w-5 text-white" />
+    </div>
+  </CardHeader>
+  <CardContent>
+    <div className="text-3xl font-bold">
+      {monthStat ? formatTons(monthStat.total) : "401 Tons"}
+    </div>
+  </CardContent>
+</Card>
 
-          {/* HOUSEHOLDS */}
-          <Card className="border-0 bg-gradient-to-br from-pink-400 to-rose-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-1">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-white/90">
-                Households
-              </CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-                <Home className="h-5 w-5 text-white" />
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {latestEntry ? latestEntry.households.toLocaleString() : "0"}
-              </div>
-              <p className="text-sm text-white/80 mt-2">Total coverage</p>
-            </CardContent>
-          </Card>
+{/* HOUSEHOLDS – Pastel Rose */}
+<Card className="border-0 bg-gradient-to-br from-[#FBCFE8] to-[#F9A8D4] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <CardTitle className="text-sm font-medium text-white/90">
+      Households
+    </CardTitle>
+    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
+      <Home className="h-5 w-5 text-white" />
+    </div>
+  </CardHeader>
+  <CardContent>
+    <div className="text-3xl font-bold">
+      {latestEntry ? latestEntry.households.toLocaleString() : "0"}
+    </div>
+  </CardContent>
+</Card>
+
         </div>
 
         {/* TABS SECTION */}

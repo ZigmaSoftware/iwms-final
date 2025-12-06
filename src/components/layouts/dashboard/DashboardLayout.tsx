@@ -45,7 +45,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   };
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="flex min-h-screen w-full   flex-col bg-gray-50 dark:bg-gray-900">
 
       {/* TOPBAR */}
       <header
@@ -56,7 +56,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           shadow-sm
         "
       >
-        <div className="flex h-16 items-center justify-between px-4">
+        <div className="flex h-16 items-center justify-between px-2 md:px-4 lg:px-6">
 
           {/* LOGO */}
           <div className="flex items-center gap-3">
@@ -65,13 +65,13 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               alt="Zigma Logo"
               className="h-12 w-12 object-contain"
             />
-            <h1 className="hidden md:block text-lg font-semibold text-gray-700 dark:text-gray-200">
+            {/* <h1 className="hidden md:block text-lg font-semibold text-gray-700 dark:text-gray-200">
               IWMS Dashboard
-            </h1>
+            </h1> */}
           </div>
 
           {/* NAVIGATION + ACTIONS */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
 
             {/* NAVIGATION */}
             <HorizontalNav />
@@ -119,7 +119,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       )} */}
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 overflow-auto p-4">
+      <main className="flex-1  p-2 md:p-4 lg:p-6">
         {isNavigating ? (
           <PageLoader fullHeight message="Loading dashboard..." />
         ) : (

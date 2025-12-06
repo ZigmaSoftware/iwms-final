@@ -6,10 +6,10 @@ import { Input } from "@/components/ui/input";
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
-import { encryptSegment } from "@/utils/routeCrypto";
+import { getEncryptedRoute } from "@/utils/routeCache";
+import { adminApi } from "@/helpers/admin";
 
-const encMasters = encryptSegment("masters");
-const encProperties = encryptSegment("property");
+const { encMasters, encProperties } = getEncryptedRoute();
 
 const ENC_LIST_PATH = `/${encMasters}/${encProperties}`;
 
@@ -21,16 +21,17 @@ function PropertyForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
+  const propertiesApi = adminApi.properties;
 
   // Fetch existing data if editing
   useEffect(() => {
     if (isEdit) {
-      desktopApi
-        .get(`properties/${id}/`)
+      propertiesApi
+        .get(id as string)
         .then((res) => {
-          setPropertyName(res.data.property_name);
+          setPropertyName(res.property_name);
 
-          setIsActive(res.data.is_active);
+          setIsActive(res.is_active);
         })
         .catch((err) => {
           console.error("Error fetching propertyData:", err);
@@ -64,7 +65,8 @@ function PropertyForm() {
       console.log(payload);
 
       if (isEdit) {
-        await desktopApi.put(`properties/${id}/`, payload);
+       
+        await propertiesApi.update(id as string, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -72,7 +74,7 @@ function PropertyForm() {
           showConfirmButton: false,
         });
       } else {
-        await desktopApi.post("properties/", payload);
+        await propertiesApi.create(payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",

@@ -28,7 +28,7 @@ export default function Select({
   id,
   value,
   onChange,
-  options,
+  options = [],
   placeholder,
   className,
   disabled,
