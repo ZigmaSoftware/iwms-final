@@ -13,56 +13,59 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
-import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
+import { getEncryptedRoute } from "@/utils/routeCache";
 import { adminApi } from "@/helpers/admin";
-type UserType = {
 
+type UserScreenAction = {
   unique_id: string;
-  name: string;
+  action_name: string;
+  variable_name: string;
   is_active: boolean;
 };
 
-export default function UserTypePage() {
-  const [userTypes, setUserTypes] = useState<UserType[]>([]);
+export default function UserScreenActionList() {
+  const [records, setRecords] = useState<UserScreenAction[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: { value: null, matchMode: FilterMatchMode.STARTS_WITH }
+    action_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
   const navigate = useNavigate();
-  const { encAdmins, encUserType } = getEncryptedRoute();
-  const userTypeapi = adminApi.userTypes;
+  const { encAdmins, encUserScreenAction } = getEncryptedRoute();
+  const api = adminApi.userscreenaction;
 
-  const ENC_NEW_PATH = `/${encAdmins}/${encUserType}/new`;
-  const ENC_EDIT_PATH = (unique_id: string) => `/${encAdmins}/${encUserType}/${unique_id}/edit`;
+  const ENC_NEW_PATH = `/${encAdmins}/${encUserScreenAction}/new`;
+  const ENC_EDIT_PATH = (unique_id: string) =>
+    `/${encAdmins}/${encUserScreenAction}/${unique_id}/edit`;
 
-  const fetchUserTypes = async () => {
+  const extractData = (response: any) => {
+    if (Array.isArray(response)) return response;
+    if (Array.isArray(response?.data)) return response.data;
+    return response?.data?.results ?? [];
+  };
+
+  const fetchRecords = async () => {
     try {
-      const res = await userTypeapi.list();
-      const payload: any = res;
-      const data = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload.data)
-          ? payload.data
-          : payload.data?.results ?? [];
-      setUserTypes(data);
+      const res = await api.list();
+      console.log(res);
+      setRecords(extractData(res));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUserTypes();
+    fetchRecords();
   }, []);
 
   const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
-      text: "This userType will be permanently deleted!",
+      text: "This action will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -72,7 +75,7 @@ export default function UserTypePage() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await userTypeapi.remove(unique_id);
+    await api.remove(unique_id);
 
     Swal.fire({
       icon: "success",
@@ -81,7 +84,7 @@ export default function UserTypePage() {
       showConfirmButton: false,
     });
 
-    fetchUserTypes();
+    fetchRecords();
   };
 
   const onGlobalFilterChange = (e: any) => {
@@ -92,10 +95,12 @@ export default function UserTypePage() {
     setGlobalFilterValue(value);
   };
 
-  const indexTemplate = (_: UserType, { rowIndex }: { rowIndex: number }) =>
-    rowIndex + 1;
+  const indexTemplate = (
+    _: UserScreenAction,
+    { rowIndex }: { rowIndex: number }
+  ) => rowIndex + 1;
 
-  const actionTemplate = (row: UserType) => (
+  const actionButtonsTemplate = (row: UserScreenAction) => (
     <div className="flex gap-2 justify-center">
       <button
         title="Edit"
@@ -115,22 +120,19 @@ export default function UserTypePage() {
     </div>
   );
 
-  const statusTemplate = (row: UserType) => {
+  const statusTemplate = (row: UserScreenAction) => {
     const updateStatus = async (value: boolean) => {
-      await userTypeapi.update(row.unique_id, {
-        name: row.name,         // correct field name
+      await api.update(row.unique_id, {
+        action_name: row.action_name,
+        variable_name: row.variable_name,
         is_active: value,
       });
 
-
-      fetchUserTypes();
+      fetchRecords();
     };
 
     return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
+      <Switch checked={row.is_active} onCheckedChange={updateStatus} />
     );
   };
 
@@ -141,7 +143,7 @@ export default function UserTypePage() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search user types..."
+          placeholder="Search actions..."
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -149,41 +151,65 @@ export default function UserTypePage() {
   );
 
   return (
-    <div className="px-3 py-3 w-full ">
+    <div className="px-3 py-3 w-full">
       <div className="bg-white rounded-lg shadow-lg p-6">
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">User Types</h1>
-            <p className="text-gray-500 text-sm">Manage your user type records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              User Screen Actions
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Manage your user screen action records
+            </p>
           </div>
 
           <Button
-            label="Add User Type"
+            label="Add Action"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
           />
         </div>
 
+        {/* Table */}
         <DataTable
-          value={userTypes}
+          value={records}
           paginator
           rows={10}
           loading={loading}
           filters={filters}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          globalFilterFields={["name"]}
+          globalFilterFields={["action_name", "variable_name"]}
           header={header}
-          emptyMessage="No user types found."
+          emptyMessage="No actions found."
           stripedRows
           showGridlines
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
-          <Column field="name" header="User Type" sortable style={{ minWidth: "200px" }} />
-          <Column header="Status" body={statusTemplate} style={{ width: "150px" }} />
-          <Column header="Actions" body={actionTemplate} style={{ width: "150px" }} />
+          <Column
+            field="action_name"
+            header="Action Name"
+            sortable
+            style={{ minWidth: "200px" }}
+          />
+          <Column
+            field="variable_name"
+            header="Variable Name"
+            sortable
+            style={{ minWidth: "200px" }}
+          />
+          <Column
+            header="Status"
+            body={statusTemplate}
+            style={{ width: "150px" }}
+          />
+          <Column
+            header="Actions"
+            body={actionButtonsTemplate}
+            style={{ width: "150px" }}
+          />
         </DataTable>
       </div>
     </div>

@@ -71,6 +71,10 @@ import MainComplaintCategoryList from "@/pages/admin/modules/citizienGrievance/c
 import { MainComplaintCategoryForm } from "@/pages/admin/modules/citizienGrievance/complaints/mainCategory/main-categoryForm";
 import SubCategoryComplaintList from "@/pages/admin/modules/citizienGrievance/complaints/subCategory/sub-categoryList";
 import SubCategoryComplaintForm from "@/pages/admin/modules/citizienGrievance/complaints/subCategory/sub-categoryForm";
+import MainScreenTypeList from "@/pages/admin/modules/admin/mainScreenType/mainScreenTypeList";
+import MainScreenTypeForm from "@/pages/admin/modules/admin/mainScreenType/mainScreenTypeForm";
+import UserScreenActionList from "@/pages/admin/modules/admin/userScreenAction/userScreenActionList";
+import UserScreenActionForm from "@/pages/admin/modules/admin/userScreenAction/userScreenActionForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -91,6 +95,8 @@ const ROUTES: RouteMap = {
     "user-creation": { list: UserCreationList, form: UserCreationForm },
     "user-permission": { list: UserPermissionList, form: UserPermissionForm },
     "staff-user-type": { list: StaffUserTypeList, form: StaffUserTypeForm },
+    "mainscreen-type": {list: MainScreenTypeList, form: MainScreenTypeForm},
+    "userscreen-action": {list:UserScreenActionList, form: UserScreenActionForm }
   },
   masters: {
     continents: { list: ContinentList, form: ContinentForm },
