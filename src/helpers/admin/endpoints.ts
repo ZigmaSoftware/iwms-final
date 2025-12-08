@@ -25,6 +25,8 @@ export const adminEndpoints = {
   users: "user",
   staffUserTypes: "staffusertypes",
   userPermissions: "userpermissions",
+  mainscreentype: "mainscreentype",
+  userscreenaction: "userscreen-action"
 } as const;
 
 export type AdminEntity = keyof typeof adminEndpoints;

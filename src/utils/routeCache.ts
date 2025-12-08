@@ -41,6 +41,8 @@ export type EncryptedRoutes = {
   encWorkforceManagement: string;
   encZones: string;
   encTransportMaster: string;
+  encMainScreenType: string;
+  encUserScreenAction: string
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -84,6 +86,8 @@ const plainRoutes: EncryptedRoutes = {
   encWorkforceManagement: "workforce-management",
   encZones: "zones",
   encTransportMaster: "transport-master",
+  encMainScreenType: "mainscreen-type",
+  encUserScreenAction: "userscreen-action"
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {
