@@ -1,22 +1,45 @@
 import { useEffect, useMemo, useState } from "react";
+import { Pie } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import type { ChartData } from "chart.js";
+
+ChartJS.register(ArcElement, Tooltip, Legend);
+
+// shadcn components
 import {
   Card,
-  CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
+  CardContent,
+  CardDescription,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsContent, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
-  TableBody,
-  TableCell,
   TableHead,
   TableHeader,
   TableRow,
+  TableBody,
+  TableCell,
 } from "@/components/ui/table";
+import { Progress } from "@/components/ui/progress";
+
+// lucide icons
 import {
   Trash2,
   TrendingUp,
@@ -27,9 +50,10 @@ import {
   Recycle,
   BarChart3,
   MapPin,
+  ArrowLeft,
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 
+// ---------------------- API Types ----------------------
 type ApiWasteRow = {
   date?: string;
   dry_weight?: number;
@@ -57,6 +81,7 @@ type MonthlyStat = {
   avgDaily: number;
 };
 
+// ---------------------- Fallback Samples ----------------------
 const FALLBACK_DAILY_DATA: DailyRow[] = [
   {
     date: "2025-10-15",
@@ -68,6 +93,16 @@ const FALLBACK_DAILY_DATA: DailyRow[] = [
     households: 1200,
   },
 ];
+const ZONE_WASTE_SUMMARY: Record<
+  string,
+  { household: number; ewaste: number; medical: number }
+> = {
+  "Zone A": { household: 120, ewaste: 15, medical: 8 },
+  "Zone B": { household: 80, ewaste: 10, medical: 5 },
+  "Zone C": { household: 150, ewaste: 12, medical: 7 },
+  "Zone X": { household: 60, ewaste: 5, medical: 3 },
+  "Zone Y": { household: 90, ewaste: 7, medical: 4 },
+};
 
 const FALLBACK_MONTHLY_STATS: MonthlyStat[] = [
   { month: "October 2025", wet: 245, dry: 156, total: 401, avgDaily: 13.4 },
@@ -76,139 +111,210 @@ const FALLBACK_MONTHLY_STATS: MonthlyStat[] = [
 const WEIGHMENT_API_URL =
   "https://zigma.in/d2d/folders/waste_collected_summary_report/waste_collected_data_api.php";
 const WEIGHMENT_API_KEY = "ZIGMA-DELHI-WEIGHMENT-2025-SECURE";
-const FALLBACK_FROM_DATE = "2025-10-01";
 
-const toTons = (value: number | undefined | null): number => {
-  if (value === undefined || value === null) return 0;
-  const num = Number(value);
-  if (Number.isNaN(num)) return 0;
-  return Number((num / 1000).toFixed(2));
-};
+// ---------------------- Utility ----------------------
+const toTons = (v: number | undefined | null) =>
+  Number(((v ?? 0) / 1000).toFixed(2));
 
 const formatMonthLabel = (isoDate: string) => {
-  const date = new Date(isoDate);
-  if (Number.isNaN(date.getTime())) return "Current Month";
-  return date.toLocaleString("en-US", { month: "long", year: "numeric" });
+  const d = new Date(isoDate);
+  if (Number.isNaN(d.getTime())) return "Current Month";
+  return d.toLocaleString("en-US", { month: "long", year: "numeric" });
 };
 
-export default function WasteCollection() {
-  const [dailyData, setDailyData] = useState<DailyRow[]>(FALLBACK_DAILY_DATA);
-  const [monthlyStats, setMonthlyStats] =
-    useState<MonthlyStat[]>(FALLBACK_MONTHLY_STATS);
+// ---------------------- Drilldown Dummy Data ----------------------
+const CITY_DATA: Record<string, { zones: Record<string, string[]> }> = {
+  Delhi: {
+    zones: {
+      "Zone A": ["Ward 1", "Ward 2", "Ward 3"],
+      "Zone B": ["Ward 4", "Ward 5"],
+      "Zone C": ["Ward 6", "Ward 7", "Ward 8"],
+    },
+  },
+  Chennai: {
+    zones: {
+      "Zone X": ["Ward 10", "Ward 11"],
+      "Zone Y": ["Ward 12"],
+    },
+  },
+};
 
+const PROPERTY_OPTIONS = {
+  All: ["All"],
+  Household: ["Apartments", "Residents"],
+  Commercial: ["Hospitals", "Theatres", "Shops"],
+};
+
+const WASTE_TYPES = [
+  {
+    type: "Wet Waste",
+    icon: <Droplets className="h-5 w-5 text-emerald-600" />,
+    value: "12.5 Tons",
+  },
+  {
+    type: "Dry Waste",
+    icon: <Recycle className="h-5 w-5 text-sky-600" />,
+    value: "6.4 Tons",
+  },
+  {
+    type: "Mixed Waste",
+    icon: <Trash2 className="h-5 w-5 text-indigo-600" />,
+    value: "4.1 Tons",
+  },
+];
+
+// ------------------------- MAIN COMPONENT -------------------------
+export default function WasteCollection() {
+  // Core data states
+  const [dailyData, setDailyData] = useState<DailyRow[]>(FALLBACK_DAILY_DATA);
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStat[]>(
+    FALLBACK_MONTHLY_STATS
+  );
+
+  // Zone → Ward → Property drilldown states
+  const [selectedCity, setSelectedCity] = useState("Delhi");
+  const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const [zoneDialog, setZoneDialog] = useState(false);
+
+  const [selectedWard, setSelectedWard] = useState<string | null>(null);
+  const [wardDialog, setWardDialog] = useState(false);
+
+  const [propertyDialog, setPropertyDialog] = useState(false);
+  const [property, setProperty] =
+    useState<keyof typeof PROPERTY_OPTIONS>("All");
+  const [subProperty, setSubProperty] = useState("All");
+
+  // ---------------------- Fetch block (same as your old code) ----------------------
   useEffect(() => {
     const today = new Date();
-    const monthValue = today.toISOString().slice(0, 7);
-    const primaryFromDate = `${monthValue}-01`;
-
-    const fetchWasteData = async (fromDate: string) => {
-      const params = new URLSearchParams({
-        from_date: fromDate,
-        key: WEIGHMENT_API_KEY,
-      });
-      try {
-        const response = await fetch(
-          `${WEIGHMENT_API_URL}?${params.toString()}`
-        );
-        if (!response.ok)
-          throw new Error(`Weighment API error (${response.status})`);
-        const data = await response.json();
-
-        const rows: ApiWasteRow[] = Array.isArray(data?.data)
-          ? data.data
-          : [];
-        if (!rows.length) return false;
-
-        const formattedDaily: DailyRow[] = rows
-          .map((row) => {
-            const wet = toTons(row.wet_weight);
-            const dry = toTons(row.dry_weight);
-            const mix = toTons(row.mix_weight);
-            const total = row.total_net_weight
-              ? toTons(row.total_net_weight)
-              : wet + dry + mix;
-            const target =
-              total > 0 ? Number((total * 1.05).toFixed(2)) : 0;
-
-            return {
-              date: row.date ?? "",
-              zone: data?.site ?? "All Zones",
-              wet,
-              dry,
-              total,
-              target,
-              households: Number(row.no_of_household ?? 0),
-            };
-          })
-          .filter((row) => row.date)
-          .sort(
-            (a, b) =>
-              new Date(b.date).getTime() -
-              new Date(a.date).getTime()
-          );
-
-        if (formattedDaily.length) {
-          setDailyData(formattedDaily);
-        }
-
-        const totals = rows.reduce(
-          (acc, row) => {
-            acc.wet += Number(row.wet_weight ?? 0);
-            acc.dry += Number(row.dry_weight ?? 0);
-            acc.total += Number(row.total_net_weight ?? 0);
-            return acc;
-          },
-          { wet: 0, dry: 0, total: 0 }
-        );
-
-        const activeDays =
-          rows.filter(
-            (row) => Number(row.total_net_weight ?? 0) > 0
-          ).length ||
-          rows.length ||
-          1;
-
-        const monthLabel = formatMonthLabel(fromDate);
-
-        setMonthlyStats([
-          {
-            month: monthLabel,
-            wet: toTons(totals.wet),
-            dry: toTons(totals.dry),
-            total: toTons(totals.total),
-            avgDaily: toTons(totals.total / activeDays),
-          },
-        ]);
-
-        return true;
-      } catch (error) {
-        console.error("Waste data fetch failed", error);
-        return false;
-      }
-    };
+    const monthVal = today.toISOString().slice(0, 7);
+    const primaryFromDate = `${monthVal}-01`;
 
     const load = async () => {
-      const ok = await fetchWasteData(primaryFromDate);
-      if (!ok) {
-        await fetchWasteData(FALLBACK_FROM_DATE);
-      }
+      const ok = await fetchWaste(primaryFromDate);
+      if (!ok) await fetchWaste("2025-10-01");
     };
 
     load();
   }, []);
 
+  const fetchWaste = async (fromDate: string) => {
+    try {
+      const params = new URLSearchParams({
+        from_date: fromDate,
+        key: WEIGHMENT_API_KEY,
+      });
+
+      const r = await fetch(`${WEIGHMENT_API_URL}?${params}`);
+      if (!r.ok) throw new Error("Bad API Response");
+      const data = await r.json();
+
+      const rows: ApiWasteRow[] = Array.isArray(data?.data) ? data.data : [];
+      if (!rows.length) return false;
+
+      // Daily
+      const formatted = rows
+        .map((row) => {
+          const wet = toTons(row.wet_weight);
+          const dry = toTons(row.dry_weight);
+          const mix = toTons(row.mix_weight);
+          const total = row.total_net_weight
+            ? toTons(row.total_net_weight)
+            : wet + dry + mix;
+
+          return {
+            date: row.date ?? "",
+            zone: data?.site ?? "All Zones",
+            wet,
+            dry,
+            total,
+            target: Number((total * 1.05).toFixed(2)),
+            households: Number(row.no_of_household ?? 0),
+          };
+        })
+        .filter((r) => r.date)
+        .sort(
+          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+        );
+
+      if (formatted.length) setDailyData(formatted);
+
+      // Monthly
+      const totals = rows.reduce(
+        (a, r) => {
+          a.wet += r.wet_weight ?? 0;
+          a.dry += r.dry_weight ?? 0;
+          a.total += r.total_net_weight ?? 0;
+          return a;
+        },
+        { wet: 0, dry: 0, total: 0 }
+      );
+
+      const actDays =
+        rows.filter((r) => Number(r.total_net_weight ?? 0) > 0).length ||
+        rows.length ||
+        1;
+
+      setMonthlyStats([
+        {
+          month: formatMonthLabel(fromDate),
+          wet: toTons(totals.wet),
+          dry: toTons(totals.dry),
+          total: toTons(totals.total),
+          avgDaily: toTons(totals.total / actDays),
+        },
+      ]);
+
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Latest KPI hooks
   const latestEntry = useMemo(
     () => (dailyData.length ? dailyData[0] : null),
     [dailyData]
   );
-
   const monthStat = useMemo(
     () => (monthlyStats.length ? monthlyStats[0] : null),
     [monthlyStats]
   );
 
-  const formatTons = (value: number) => `${value.toFixed(1)} Tons`;
+  const formatTons = (v: number) => `${v.toFixed(1)} Tons`;
+  const getPieChartData = (): ChartData<"pie", number[], string> => {
+    // If a zone is selected use its data, otherwise aggregate totals across all zones
+    const zoneData = selectedZone
+      ? ZONE_WASTE_SUMMARY[selectedZone] || {
+          household: 0,
+          ewaste: 0,
+          medical: 0,
+        }
+      : Object.values(ZONE_WASTE_SUMMARY).reduce(
+          (acc, z) => {
+            acc.household += z.household;
+            acc.ewaste += z.ewaste;
+            acc.medical += z.medical;
+            return acc;
+          },
+          { household: 0, ewaste: 0, medical: 0 }
+        );
 
+    return {
+      labels: ["Household Waste", "E-Waste", "Medical Waste"],
+      datasets: [
+        {
+          data: [zoneData.household, zoneData.ewaste, zoneData.medical],
+          backgroundColor: ["#60A5FA", "#F59E0B", "#EF4444"],
+          hoverBackgroundColor: ["#3B82F6", "#D97706", "#DC2626"],
+        },
+      ],
+    };
+  };
+
+  // -----------------------------------------------------------------------
+  // ---------------------------- RENDER START ------------------------------
+  // -----------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
       <div className="space-y-6">
@@ -230,196 +336,161 @@ export default function WasteCollection() {
 
         {/* KPI GRID */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-          {/* TODAY'S COLLECTION */}
-          {/* TODAY'S COLLECTION - Pastel Violet */}
-<Card className="border-0 bg-gradient-to-br from-[#D8B4FE] to-[#C084FC] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-    <CardTitle className="text-sm font-medium text-white/90">
-      Today's Collection
-    </CardTitle>
-    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-      <Trash2 className="h-5 w-5 text-white" />
-    </div>
-  </CardHeader>
-  <CardContent>
-    <div className="text-3xl font-bold">
-      {latestEntry ? formatTons(latestEntry.total) : "44.3 Tons"}
-    </div>
-  </CardContent>
-</Card>
+          {/* TODAY TOTAL */}
+          <Card className="border-0 bg-gradient-to-br from-[#D8B4FE] to-[#C084FC] text-white shadow-md hover:-translate-y-1 transition-all">
+            <CardHeader className="flex justify-between">
+              <CardTitle className="text-sm text-white/90">
+                Today's Collection
+              </CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Trash2 className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {latestEntry ? formatTons(latestEntry.total) : "44.3 Tons"}
+              </div>
+            </CardContent>
+          </Card>
 
-{/* WET WASTE – Pastel Mint */}
-<Card className="border-0 bg-gradient-to-br from-[#A7F3D0] to-[#6EE7B7] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-    <CardTitle className="text-sm font-medium text-white/90">
-      Wet Waste
-    </CardTitle>
-    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-      <Droplets className="h-5 w-5 text-white" />
-    </div>
-  </CardHeader>
-  <CardContent>
-    <div className="text-3xl font-bold">
-      {latestEntry ? formatTons(latestEntry.wet) : "27.2 Tons"}
-    </div>
-  </CardContent>
-</Card>
+          {/* WET */}
+          <Card className="border-0 bg-gradient-to-br from-[#A7F3D0] to-[#6EE7B7] text-white shadow-md hover:-translate-y-1 transition-all">
+            <CardHeader className="flex justify-between">
+              <CardTitle className="text-sm text-white/90">Wet Waste</CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Droplets className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {latestEntry ? formatTons(latestEntry.wet) : "27.2 Tons"}
+              </div>
+            </CardContent>
+          </Card>
 
-{/* DRY WASTE – Pastel Sky */}
-<Card className="border-0 bg-gradient-to-br from-[#BAE6FD] to-[#7DD3FC] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-    <CardTitle className="text-sm font-medium text-white/90">
-      Dry Waste
-    </CardTitle>
-    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-      <Recycle className="h-5 w-5 text-white" />
-    </div>
-  </CardHeader>
-  <CardContent>
-    <div className="text-3xl font-bold">
-      {latestEntry ? formatTons(latestEntry.dry) : "17.1 Tons"}
-    </div>
-  </CardContent>
-</Card>
+          {/* DRY */}
+          <Card className="border-0 bg-gradient-to-br from-[#BAE6FD] to-[#7DD3FC] text-white shadow-md hover:-translate-y-1 transition-all">
+            <CardHeader className="flex justify-between">
+              <CardTitle className="text-sm text-white/90">Dry Waste</CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Recycle className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {latestEntry ? formatTons(latestEntry.dry) : "17.1 Tons"}
+              </div>
+            </CardContent>
+          </Card>
 
-{/* MONTHLY TOTAL – Pastel Amber */}
-<Card className="border-0 bg-gradient-to-br from-[#FDE68A] to-[#FCD34D] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-    <CardTitle className="text-sm font-medium text-white/90">
-      Monthly Total
-    </CardTitle>
-    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-      <Calendar className="h-5 w-5 text-white" />
-    </div>
-  </CardHeader>
-  <CardContent>
-    <div className="text-3xl font-bold">
-      {monthStat ? formatTons(monthStat.total) : "401 Tons"}
-    </div>
-  </CardContent>
-</Card>
+          {/* MONTHLY */}
+          <Card className="border-0 bg-gradient-to-br from-[#FDE68A] to-[#FCD34D] text-white shadow-md hover:-translate-y-1 transition-all">
+            <CardHeader className="flex justify-between">
+              <CardTitle className="text-sm text-white/90">
+                Monthly Total
+              </CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Calendar className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {monthStat ? formatTons(monthStat.total) : "401 Tons"}
+              </div>
+            </CardContent>
+          </Card>
 
-{/* HOUSEHOLDS – Pastel Rose */}
-<Card className="border-0 bg-gradient-to-br from-[#FBCFE8] to-[#F9A8D4] text-white shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
-  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-    <CardTitle className="text-sm font-medium text-white/90">
-      Households
-    </CardTitle>
-    <div className="p-2 bg-white/20 rounded-lg backdrop-blur-sm">
-      <Home className="h-5 w-5 text-white" />
-    </div>
-  </CardHeader>
-  <CardContent>
-    <div className="text-3xl font-bold">
-      {latestEntry ? latestEntry.households.toLocaleString() : "0"}
-    </div>
-  </CardContent>
-</Card>
-
+          {/* HOUSEHOLDS */}
+          <Card className="border-0 bg-gradient-to-br from-[#FBCFE8] to-[#F9A8D4] text-white shadow-md hover:-translate-y-1 transition-all">
+            <CardHeader className="flex justify-between">
+              <CardTitle className="text-sm text-white/90">
+                Households
+              </CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Home className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {latestEntry ? latestEntry.households.toLocaleString() : "0"}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* TABS SECTION */}
         <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
           <Tabs defaultValue="daily" className="p-6">
             <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-1 rounded-xl">
-              <TabsTrigger 
-                value="daily" 
-                className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all"
+              <TabsTrigger
+                value="daily"
+                className="rounded-lg data-[state=active]:bg-white"
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Daily Data
               </TabsTrigger>
-              <TabsTrigger 
+
+              <TabsTrigger
                 value="monthly"
-                className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all"
+                className="rounded-lg data-[state=active]:bg-white"
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Monthly Summary
               </TabsTrigger>
-              <TabsTrigger 
+
+              <TabsTrigger
                 value="zone"
-                className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-md transition-all"
+                className="rounded-lg data-[state=active]:bg-white"
               >
                 <MapPin className="h-4 w-4 mr-2" />
                 Zone Analysis
               </TabsTrigger>
             </TabsList>
 
-            {/* DAILY DATA */}
+            {/* ---------------- DAILY ---------------- */}
             <TabsContent value="daily" className="mt-6">
               <div className="space-y-4">
                 <div>
-                  <h3 className="text-xl font-bold text-slate-800">Daily Collection Records</h3>
-                  <p className="text-slate-600">Comprehensive waste collection performance metrics</p>
+                  <h3 className="text-xl font-bold">
+                    Daily Collection Records
+                  </h3>
+                  <p className="text-slate-600">
+                    Comprehensive waste collection performance metrics
+                  </p>
                 </div>
-                
-                <div className="rounded-xl overflow-hidden border border-slate-200 shadow-md bg-white">
+
+                <div className="rounded-xl overflow-hidden border shadow bg-white">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100 hover:from-slate-100 hover:to-slate-200">
-                        <TableHead className="font-bold text-slate-700">Date</TableHead>
-                        <TableHead className="font-bold text-slate-700">Zone</TableHead>
-                        <TableHead className="font-bold text-slate-700">Households</TableHead>
-                        <TableHead className="font-bold text-emerald-700">
-                          <div className="flex items-center gap-2">
-                            <Droplets className="h-4 w-4" />
-                            Wet (Tons)
-                          </div>
-                        </TableHead>
-                        <TableHead className="font-bold text-sky-700">
-                          <div className="flex items-center gap-2">
-                            <Recycle className="h-4 w-4" />
-                            Dry (Tons)
-                          </div>
-                        </TableHead>
-                        <TableHead className="font-bold text-indigo-700">
-                          <div className="flex items-center gap-2">
-                            <Trash2 className="h-4 w-4" />
-                            Total (Tons)
-                          </div>
-                        </TableHead>
+                      <TableRow className="bg-slate-50">
+                        <TableHead>Date</TableHead>
+                        <TableHead>Zone</TableHead>
+                        <TableHead>Wet (Tons)</TableHead>
+                        <TableHead>Dry (Tons)</TableHead>
+                        <TableHead>Total (Tons)</TableHead>
                       </TableRow>
                     </TableHeader>
 
                     <TableBody>
                       {dailyData.map((row, index) => (
-                        <TableRow
-                          key={index}
-                          className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all cursor-pointer"
-                        >
-                          <TableCell className="font-semibold text-slate-800">
-                            {new Date(row.date).toLocaleDateString('en-US', { 
-                              month: 'short', 
-                              day: 'numeric',
-                              year: 'numeric'
-                            })}
+                        <TableRow key={index} className="hover:bg-indigo-50">
+                          <TableCell>
+                            {new Date(row.date).toLocaleDateString("en-US")}
                           </TableCell>
 
                           <TableCell>
-                            <Badge 
-                              variant="outline" 
-                              className="px-3 py-1 text-xs bg-gradient-to-r from-violet-100 to-purple-100 border-violet-300 text-violet-700 font-medium"
-                            >
-                              {row.zone}
-                            </Badge>
+                            <Badge variant="outline">{row.zone}</Badge>
                           </TableCell>
 
-                          <TableCell className="font-semibold text-slate-700">
-                            <div className="flex items-center gap-2">
-                              <Home className="h-4 w-4 text-slate-400" />
-                              {row.households.toLocaleString()}
-                            </div>
-                          </TableCell>
-
-                          <TableCell className="text-emerald-700 font-bold text-base">
+                          <TableCell className="font-bold text-emerald-700">
                             {row.wet.toFixed(1)}
                           </TableCell>
 
-                          <TableCell className="text-sky-700 font-bold text-base">
+                          <TableCell className="font-bold text-sky-700">
                             {row.dry.toFixed(1)}
                           </TableCell>
 
-                          <TableCell className="font-bold text-indigo-700 text-lg">
+                          <TableCell className="font-bold text-indigo-700">
                             {row.total.toFixed(1)}
                           </TableCell>
                         </TableRow>
@@ -430,46 +501,31 @@ export default function WasteCollection() {
               </div>
             </TabsContent>
 
-            {/* MONTHLY SUMMARY */}
+            {/* ---------------- MONTHLY ---------------- */}
             <TabsContent value="monthly" className="mt-6">
               <div className="space-y-4">
-                <div>
-                  <h3 className="text-xl font-bold text-slate-800">Monthly Summary</h3>
-                  <p className="text-slate-600">Aggregated waste collection data by month</p>
-                </div>
-                
-                <div className="rounded-xl overflow-hidden border border-slate-200 shadow-md bg-white">
+                <h3 className="text-xl font-bold">Monthly Summary</h3>
+
+                <div className="rounded-xl border shadow bg-white">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-gradient-to-r from-slate-50 to-slate-100">
-                        <TableHead className="font-bold text-slate-700">Month</TableHead>
-                        <TableHead className="font-bold text-emerald-700">Wet (Tons)</TableHead>
-                        <TableHead className="font-bold text-sky-700">Dry (Tons)</TableHead>
-                        <TableHead className="font-bold text-indigo-700">Total (Tons)</TableHead>
-                        <TableHead className="font-bold text-amber-700">Avg Daily (Tons)</TableHead>
+                      <TableRow className="bg-slate-50">
+                        <TableHead>Month</TableHead>
+                        <TableHead>Wet (Tons)</TableHead>
+                        <TableHead>Dry (Tons)</TableHead>
+                        <TableHead>Total (Tons)</TableHead>
+                        <TableHead>Avg Daily</TableHead>
                       </TableRow>
                     </TableHeader>
+
                     <TableBody>
                       {monthlyStats.map((row, index) => (
-                        <TableRow 
-                          key={index}
-                          className="hover:bg-gradient-to-r hover:from-blue-50 hover:to-indigo-50 transition-all"
-                        >
-                          <TableCell className="font-semibold text-slate-800">
-                            {row.month}
-                          </TableCell>
-                          <TableCell className="text-emerald-700 font-bold text-base">
-                            {row.wet.toFixed(1)}
-                          </TableCell>
-                          <TableCell className="text-sky-700 font-bold text-base">
-                            {row.dry.toFixed(1)}
-                          </TableCell>
-                          <TableCell className="font-bold text-indigo-700 text-lg">
-                            {row.total.toFixed(1)}
-                          </TableCell>
-                          <TableCell className="text-amber-700 font-bold text-base">
-                            {row.avgDaily.toFixed(1)}
-                          </TableCell>
+                        <TableRow key={index}>
+                          <TableCell>{row.month}</TableCell>
+                          <TableCell>{row.wet.toFixed(1)}</TableCell>
+                          <TableCell>{row.dry.toFixed(1)}</TableCell>
+                          <TableCell>{row.total.toFixed(1)}</TableCell>
+                          <TableCell>{row.avgDaily.toFixed(1)}</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -478,39 +534,219 @@ export default function WasteCollection() {
               </div>
             </TabsContent>
 
-            {/* ZONE ANALYSIS */}
+            {/* ---------------- ZONE ANALYSIS (NEW FULL UI) ---------------- */}
             <TabsContent value="zone" className="mt-6">
-              <div className="grid gap-6 md:grid-cols-3">
-                {["Zone A", "Zone B", "Zone C"].map((zone, idx) => (
-                  <Card 
-                    key={zone}
-                    className={`border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 ${
-                      idx === 0 ? 'bg-gradient-to-br from-violet-50 to-purple-50' :
-                      idx === 1 ? 'bg-gradient-to-br from-emerald-50 to-teal-50' :
-                      'bg-gradient-to-br from-amber-50 to-orange-50'
-                    }`}
-                  >
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-slate-800">
-                        <MapPin className="h-5 w-5" />
-                        {zone}
-                      </CardTitle>
-                      <CardDescription>Today's performance metrics</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                      <div className="space-y-2">
-                        <div className="flex justify-between text-sm">
-                          <span className="text-slate-600 font-medium">
-                            Total Collected
-                          </span>
-                          <span className="font-bold text-slate-800 text-base">13.7 Tons</span>
+              <div className="space-y-6">
+                {/* City Dropdown */}
+                <div className="flex items-center gap-4">
+                  <h3 className="text-xl font-bold">Zone Analysis</h3>
+
+                  <Select value={selectedCity} onValueChange={setSelectedCity}>
+                    <SelectTrigger className="w-56">
+                      <SelectValue placeholder="Select City" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.keys(CITY_DATA).map((city) => (
+                        <SelectItem key={city} value={city}>
+                          {city}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Zone Cards */}
+                <div className="grid gap-6 md:grid-cols-3">
+                  {Object.keys(CITY_DATA[selectedCity].zones).map((zone) => (
+                    <Card
+                      key={zone}
+                      onClick={() => {
+                        setSelectedZone(zone);
+                        setZoneDialog(true);
+                      }}
+                      className="cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all bg-indigo-50"
+                    >
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <MapPin className="h-5 w-5" /> {zone}
+                        </CardTitle>
+                      </CardHeader>
+
+                      <CardContent>
+                        <div className="flex justify-between">
+                          <span>Total Collected</span>
+                          <span className="font-bold">13.7 Tons</span>
                         </div>
-                        <Progress value={91} className="h-3" />
-                        <p className="text-xs text-slate-600 text-right">91% of target</p>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* DIALOG 1 — WARDS */}
+                <Dialog open={zoneDialog} onOpenChange={setZoneDialog}>
+                  <DialogContent className="h-[700px] overflow-y-auto lg:max-w-7xl">
+                    <DialogHeader>
+                      <DialogTitle>
+                        <button
+                          className="flex items-center gap-2 mb-2 text-sm text-slate-500"
+                          onClick={() => setZoneDialog(false)}
+                        >
+                          <ArrowLeft className="h-4 w-4" /> Back
+                        </button>
+                        Zone: {selectedZone}
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    {/* -------------------- PIE CHART -------------------- */}
+                    <div className="bg-white rounded-xl p-4 shadow border mb-6">
+                      <h3 className="text-lg font-semibold mb-4 text-center">
+                        Total Waste Summary for {selectedZone}
+                      </h3>
+
+                      <div className="w-full flex items-center justify-center gap-6">
+                        <div className="h-64 w-64">
+                          <Pie data={getPieChartData()} />
+                        </div>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      <div className=" items-center justify-center mt-4 flex">
+                        <div className="flex justify-between w-48">
+                          <span>Total Collected</span>
+                          <span className="font-bold">13.7 Tons</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* -------------------- WARD LIST -------------------- */}
+                    <div className="space-y-3">
+                      {selectedZone &&
+                        CITY_DATA[selectedCity].zones[selectedZone].map(
+                          (ward) => (
+                            <Button
+                              key={ward}
+                              variant="outline"
+                              className="w-full justify-between"
+                              onClick={() => {
+                                setSelectedWard(ward);
+                                setZoneDialog(false);
+                                setWardDialog(true);
+                              }}
+                            >
+                              {ward}
+                              <Home className="h-4 w-4 text-slate-500" />
+                            </Button>
+                          )
+                        )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                {/* DIALOG 2 — WARD VIEW */}
+                <Dialog open={wardDialog} onOpenChange={setWardDialog}>
+                  <DialogContent className="h-[700px]  overflow-y-auto lg:max-w-7xl">
+                    <DialogHeader>
+                      <DialogTitle>
+                        <button
+                          className="flex items-center gap-2 mb-2 text-sm text-slate-500"
+                          onClick={() => {
+                            setWardDialog(false);
+                            setZoneDialog(true);
+                          }}
+                        >
+                          <ArrowLeft className="h-4 w-4" /> Back
+                        </button>
+                        Ward: {selectedWard}
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        setWardDialog(false);
+                        setPropertyDialog(true);
+                      }}
+                    >
+                      View Waste Categories
+                    </Button>
+                  </DialogContent>
+                </Dialog>
+
+                {/* DIALOG 3 — PROPERTY → SUBPROPERTY → WASTE TYPES */}
+                <Dialog open={propertyDialog} onOpenChange={setPropertyDialog}>
+                  <DialogContent className="max-w-lg h-[600px]">
+                    <DialogHeader>
+                      <DialogTitle>
+                        <button
+                          className="flex items-center gap-2 mb-2 text-sm text-slate-500"
+                          onClick={() => {
+                            setPropertyDialog(false);
+                            setWardDialog(true);
+                          }}
+                        >
+                          <ArrowLeft className="h-4 w-4" /> Back
+                        </button>
+                        Select Property Type
+                      </DialogTitle>
+                    </DialogHeader>
+
+                    {/* Property Dropdown */}
+                    <Select
+                      value={property}
+                      onValueChange={(v) =>
+                        setProperty(v as keyof typeof PROPERTY_OPTIONS)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Property" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(
+                          Object.keys(PROPERTY_OPTIONS) as Array<
+                            keyof typeof PROPERTY_OPTIONS
+                          >
+                        ).map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {p}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Subproperty Dropdown */}
+                    <Select
+                      value={subProperty}
+                      onValueChange={(v) => setSubProperty(v)}
+                    >
+                      <SelectTrigger className="mt-4">
+                        <SelectValue placeholder="Subproperty" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROPERTY_OPTIONS[property].map((sp) => (
+                          <SelectItem key={sp} value={sp}>
+                            {sp}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
+                    {/* Waste Types */}
+                    <div className="mt-6 space-y-4">
+                      {WASTE_TYPES.map((w) => (
+                        <Card
+                          key={w.type}
+                          className="border shadow p-3 hover:shadow-md transition-all"
+                        >
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-2">
+                              {w.icon}
+                              <span className="font-semibold">{w.type}</span>
+                            </div>
+                            <Badge className="text-base">{w.value}</Badge>
+                          </div>
+                        </Card>
+                      ))}
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </TabsContent>
           </Tabs>

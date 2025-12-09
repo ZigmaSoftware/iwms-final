@@ -58,8 +58,8 @@ export default function CustomerCreationList() {
   const { encCustomerMaster, encCustomerCreation } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encCustomerMaster}/${encCustomerCreation}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
-    `/${encCustomerMaster}/${encCustomerCreation}/${id}/edit`;
+  const ENC_EDIT_PATH = (unique_id: string) =>
+    `/${encCustomerMaster}/${encCustomerCreation}/${unique_id}/edit`;
 
   const fetchCustomers = async () => {
     try {
@@ -74,7 +74,7 @@ export default function CustomerCreationList() {
     fetchCustomers();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (unique_id: number) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This customer will be permanently deleted!",
@@ -85,7 +85,7 @@ export default function CustomerCreationList() {
 
     if (!confirm.isConfirmed) return;
 
-    await desktopApi.delete(`customercreations/${id}/`);
+    await desktopApi.delete(`customercreations/${unique_id}/`);
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
@@ -157,7 +157,7 @@ Property: ${c.property_name} - ${c.sub_property_name}`;
   const statusTemplate = (row: Customer) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`customercreations/${row.id}/`, {
+        await desktopApi.put(`customercreations/${row.unique_id}/`, {
           is_active: value,
         });
         fetchCustomers();
@@ -175,7 +175,7 @@ Property: ${c.property_name} - ${c.sub_property_name}`;
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(c.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(c.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
