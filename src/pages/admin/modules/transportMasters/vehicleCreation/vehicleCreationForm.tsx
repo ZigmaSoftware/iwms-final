@@ -32,7 +32,6 @@ export default function VehicleCreationForm() {
   const [zone, setZone] = useState("");
   const [ward, setWard] = useState("");
   const [isActive, setIsActive] = useState(true);
-
   const [loading, setLoading] = useState(false);
 
   const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
@@ -45,24 +44,13 @@ export default function VehicleCreationForm() {
 
   const navigate = useNavigate();
   const { encTransportMaster, encVehicleCreation } = getEncryptedRoute();
-
   const ENC_LIST_PATH = `/${encTransportMaster}/${encVehicleCreation}`;
 
   const { id } = useParams();
   const isEdit = Boolean(id);
 
-  // Prevents cascading resets during edit mode
   const [initialLoad, setInitialLoad] = useState(true);
 
-  const parseIdValue = (value: string | number | undefined) => {
-    if (value === undefined || value === null || value === "") return null;
-    const num = Number(value);
-    return Number.isNaN(num) ? null : num;
-  };
-
-  // ===============================
-  // Load base dropdowns & edit data
-  // ===============================
   const resolveId = (item: any) => item?.unique_id ?? "";
 
   useEffect(() => {
@@ -70,59 +58,49 @@ export default function VehicleCreationForm() {
       .then(([vtypeRes, fuelRes]) => {
         setVehicleTypes(vtypeRes);
         setFuelTypes(fuelRes);
-      })
-      .catch(() => Swal.fire("Error", "Failed to load vehicle/fuel types", "error"));
+      });
 
-    stateApi
-      .list()
-      .then((res) => setStates(res))
-      .catch(() => Swal.fire("Error", "Failed to load states", "error"));
+    stateApi.list().then((res) => setStates(res));
 
     if (isEdit) {
-      vehicleApi
-        .get(id as string)
-        .then(async (v) => {
-          setVehicleNo(v.vehicle_no);
-          setChaseNo(v.chase_no);
-          setImeiNo(v.imei_no);
-          setDriverName(v.driver_name);
-          setDriverNo(v.driver_no);
-          setVehicleType(String(v.vehicle_type));
-          setFuelType(String(v.fuel_type));
+      vehicleApi.get(id as string).then(async (v) => {
+        setVehicleNo(v.vehicle_no);
+        setChaseNo(v.chase_no);
+        setImeiNo(v.imei_no);
+        setDriverName(v.driver_name);
+        setDriverNo(v.driver_no);
+        setVehicleType(String(v.vehicle_type));
+        setFuelType(String(v.fuel_type));
 
-          setState(String(v.state_id ?? v.state ?? ""));
-          setDistrict(String(v.district_id ?? v.district ?? ""));
-          setCity(String(v.city_id ?? v.city ?? ""));
-          setZone(String(v.zone_id ?? v.zone ?? ""));
-          setWard(String(v.ward_id ?? v.ward ?? ""));
-          setIsActive(v.is_active);
+        setState(String(v.state_id));
+        setDistrict(String(v.district_id));
+        setCity(String(v.city_id));
+        setZone(String(v.zone_id));
+        setWard(String(v.ward_id));
+        setIsActive(v.is_active);
 
-          const distRes = await districtApi.list({ params: { state_id: v.state_id ?? v.state } });
-          setDistricts(distRes);
+        const distRes = await districtApi.list({ params: { state_id: v.state_id } });
+        setDistricts(distRes);
 
-          const cityRes = await cityApi.list({ params: { district_id: v.district_id ?? v.district } });
-          setCities(cityRes);
+        const cityRes = await cityApi.list({ params: { district_id: v.district_id } });
+        setCities(cityRes);
 
-          const zoneRes = await zoneApi.list({ params: { city_id: v.city_id ?? v.city } });
-          setZones(zoneRes);
+        const zoneRes = await zoneApi.list({ params: { city_id: v.city_id } });
+        setZones(zoneRes);
 
-          const wardRes = await wardApi.list({ params: { zone_id: v.zone_id ?? v.zone } });
-          setWards(wardRes);
+        const wardRes = await wardApi.list({ params: { zone_id: v.zone_id } });
+        setWards(wardRes);
 
-          setInitialLoad(false);
-        })
-        .catch(() => Swal.fire("Error", "Failed to load vehicle details", "error"));
+        setInitialLoad(false);
+      });
     } else {
       setInitialLoad(false);
     }
-  }, [
-    id,
-    isEdit,
-  ]);
+  }, [id]);
 
-  // ===============================
-  // Cascading Logic – Safe for Edit
-  // ===============================
+  /* ================================
+        CASCADING DROPDOWNS
+  ================================ */
 
   useEffect(() => {
     if (!state || initialLoad) return;
@@ -136,7 +114,7 @@ export default function VehicleCreationForm() {
     setCities([]);
     setZones([]);
     setWards([]);
-  }, [initialLoad, state]);
+  }, [state]);
 
   useEffect(() => {
     if (!district || initialLoad) return;
@@ -148,7 +126,7 @@ export default function VehicleCreationForm() {
     setWard("");
     setZones([]);
     setWards([]);
-  }, [district, initialLoad]);
+  }, [district]);
 
   useEffect(() => {
     if (!city || initialLoad) return;
@@ -158,7 +136,7 @@ export default function VehicleCreationForm() {
     setZone("");
     setWard("");
     setWards([]);
-  }, [city, initialLoad]);
+  }, [city]);
 
   useEffect(() => {
     if (!zone || initialLoad) return;
@@ -166,11 +144,12 @@ export default function VehicleCreationForm() {
     wardApi.list({ params: { zone_id: zone } }).then((res) => setWards(res));
 
     setWard("");
-  }, [initialLoad, zone]);
+  }, [zone]);
 
-  // ===============================
-  // Submit
-  // ===============================
+  /* ================================
+        SUBMIT
+  ================================ */
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -191,14 +170,20 @@ export default function VehicleCreationForm() {
       Swal.fire("Missing Fields", "Please complete all required fields.", "warning");
       return;
     }
+
     if (!/^\d{10}$/.test(driverNo)) {
-      Swal.fire(
-        "Invalid Mobile Number",
-        "Driver mobile number must be exactly 10 digits.",
-        "warning"
-      );
+      Swal.fire("Invalid Mobile Number", "Driver mobile number must be 10 digits.", "warning");
       return;
     }
+
+    // Extract names for backend mapping
+    const vehicleTypeName = vehicleTypes.find((x) => resolveId(x) === vehicleType)?.vehicleType || "";
+    const fuelTypeName = fuelTypes.find((x) => resolveId(x) === fuelType)?.fuel_type || "";
+    const stateName = states.find((x) => resolveId(x) === state)?.name || "";
+    const districtName = districts.find((x) => resolveId(x) === district)?.name || "";
+    const cityName = cities.find((x) => resolveId(x) === city)?.name || "";
+    const zoneName = zones.find((x) => resolveId(x) === zone)?.name || "";
+    const wardName = wards.find((x) => resolveId(x) === ward)?.name || "";
 
     const payload = {
       vehicle_no: vehicleNo,
@@ -206,13 +191,28 @@ export default function VehicleCreationForm() {
       imei_no: imeiNo,
       driver_name: driverName,
       driver_no: driverNo,
+
       vehicle_type: vehicleType,
+      vehicle_type_name: vehicleTypeName,
+
       fuel_type: fuelType,
-      state,
-      district,
-      city,
-      zone,
-      ward,
+      fuel_type_name: fuelTypeName,
+
+      state_id: state,
+      state_name: stateName,
+
+      district_id: district,
+      district_name: districtName,
+
+      city_id: city,
+      city_name: cityName,
+
+      zone_id: zone,
+      zone_name: zoneName,
+
+      ward_id: ward,
+      ward_name: wardName,
+
       is_active: isActive,
       is_deleted: false,
     };
@@ -230,33 +230,18 @@ export default function VehicleCreationForm() {
 
       navigate(ENC_LIST_PATH);
     } catch (error: any) {
-      const message =
-        typeof error.response?.data === "object"
-          ? Object.entries(error.response.data)
-            .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
-            .join("\n")
-          : error.response?.data?.detail || "Save failed.";
-
-      Swal.fire("Error", message, "error");
+      Swal.fire("Error", "Save failed.", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // ===============================
-  // Render
-  // ===============================
-  const vehicleTypeId = parseIdValue(vehicleType);
-  const fuelTypeId = parseIdValue(fuelType);
+  /* ================================
+        RENDER
+  ================================ */
 
-  const vehicleTypeOptions = filterActiveRecords(
-    vehicleTypes,
-    vehicleTypeId !== null ? [vehicleTypeId] : []
-  );
-  const fuelTypeOptions = filterActiveRecords(
-    fuelTypes,
-    fuelTypeId !== null ? [fuelTypeId] : []
-  );
+  const vehicleTypeOptions = filterActiveRecords(vehicleTypes, []);
+  const fuelTypeOptions = filterActiveRecords(fuelTypes, []);
 
   return (
     <ComponentCard title={isEdit ? "Edit Vehicle" : "Add Vehicle"}>
@@ -265,27 +250,27 @@ export default function VehicleCreationForm() {
 
           <div>
             <Label>Vehicle No *</Label>
-            <Input value={vehicleNo} required onChange={(e) => setVehicleNo(e.target.value)} />
+            <Input value={vehicleNo} onChange={(e) => setVehicleNo(e.target.value)} required />
           </div>
 
           <div>
             <Label>Chassis No *</Label>
-            <Input value={chaseNo} required onChange={(e) => setChaseNo(e.target.value)} />
+            <Input value={chaseNo} onChange={(e) => setChaseNo(e.target.value)} required />
           </div>
 
           <div>
             <Label>IMEI No *</Label>
-            <Input value={imeiNo} required onChange={(e) => setImeiNo(e.target.value)} />
+            <Input value={imeiNo} onChange={(e) => setImeiNo(e.target.value)} required />
           </div>
 
           <div>
             <Label>Driver Name *</Label>
-            <Input value={driverName} required onChange={(e) => setDriverName(e.target.value)} />
+            <Input value={driverName} onChange={(e) => setDriverName(e.target.value)} required />
           </div>
 
           <div>
             <Label>Driver Mobile No *</Label>
-            <Input value={driverNo} required onChange={(e) => setDriverNo(e.target.value)} />
+            <Input value={driverNo} onChange={(e) => setDriverNo(e.target.value)} required />
           </div>
 
           <div>
@@ -365,7 +350,7 @@ export default function VehicleCreationForm() {
           </div>
 
           <div>
-            <Label>Active Status *</Label>
+            <Label>Status *</Label>
             <select
               value={isActive ? "Active" : "Inactive"}
               onChange={(e) => setIsActive(e.target.value === "Active")}
@@ -375,6 +360,7 @@ export default function VehicleCreationForm() {
               <option value="Inactive">Inactive</option>
             </select>
           </div>
+
         </div>
 
         <div className="flex justify-end gap-3 mt-6">

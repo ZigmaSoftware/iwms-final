@@ -6,7 +6,10 @@ import axios from "axios";
    listens on 127.0.0.1 and ignores ::1/localhost.
 -------------------------------------------------------- */
 const DEV_API_ROOT =
-  import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
+  import.meta.env.VITE_API_URL ?? "http://115.245.93.26:4216/api";
+
+// const DEV_API_ROOT =
+//   import.meta.env.VITE_API_URL ?? "http://127.0.0.1:8000/api";
 const PROD_API_ROOT = import.meta.env.VITE_API_PROD_URL ?? DEV_API_ROOT;
 const API_ROOT = import.meta.env.PROD ? PROD_API_ROOT : DEV_API_ROOT;
 
