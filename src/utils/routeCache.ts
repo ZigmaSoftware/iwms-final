@@ -14,7 +14,6 @@ export type EncryptedRoutes = {
   encFeedback: string;
   encFuel: string;
   encMainComplaintCategory: string;
-  encMainUserScreen: string;
   encMasters: string;
   encMonthlyDistance: string;
   encProperties: string;
@@ -26,8 +25,8 @@ export type EncryptedRoutes = {
   encSubProperties: string;
   encTripSummary: string;
   encUserCreation: string;
-  encUserPermission: string;
-  encUserScreen: string;
+  encUserScreenPermission: string;
+
   encUserType: string;
   encVehicleCreation: string;
   encVehicleHistory: string;
@@ -42,7 +41,9 @@ export type EncryptedRoutes = {
   encZones: string;
   encTransportMaster: string;
   encMainScreenType: string;
-  encUserScreenAction: string
+  encUserScreenAction: string;
+  encMainScreen: string;
+  encUserScreen: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -59,7 +60,6 @@ const plainRoutes: EncryptedRoutes = {
   encFeedback: "feedback",
   encFuel: "fuel",
   encMainComplaintCategory: "main-complaint-category",
-  encMainUserScreen: "main-user-screen",
   encMasters: "masters",
   encMonthlyDistance: "monthly-distance",
   encProperties: "properties",
@@ -71,8 +71,7 @@ const plainRoutes: EncryptedRoutes = {
   encSubProperties: "sub-properties",
   encTripSummary: "trip-summary",
   encUserCreation: "user-creation",
-  encUserPermission: "user-permission",
-  encUserScreen: "user-screen",
+
   encUserType: "user-type",
   encVehicleCreation: "vehicle-creation",
   encVehicleHistory: "vehicle-history",
@@ -87,7 +86,10 @@ const plainRoutes: EncryptedRoutes = {
   encZones: "zones",
   encTransportMaster: "transport-master",
   encMainScreenType: "mainscreen-type",
-  encUserScreenAction: "userscreen-action"
+  encUserScreenAction: "userscreen-action",
+  encMainScreen: "mainscreens",
+  encUserScreen: "userscreens",
+  encUserScreenPermission: "userscreenpermissions",
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {

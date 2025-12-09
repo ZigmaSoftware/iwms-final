@@ -25,17 +25,10 @@ import SubPropertyForm from "@/pages/admin/modules/masters/SubPropertyForm";
 import StaffCreationList from "@/pages/admin/modules/masters/staffcreationlist";
 import StaffCreationForm from "@/pages/admin/modules/masters/staffcreationForm";
 // Admin
-import MainUserScreenList from "@/pages/admin/modules/admin/mainUserScreen/mainUserScreenList";
-import MainUserScreenForm from "@/pages/admin/modules/admin/mainUserScreen/mainUserScreenForm";
-import UserScreenList from "@/pages/admin/modules/admin/userscreen/userscreenList";
-import UserScreenForm from "@/pages/admin/modules/admin/userscreen/userscreenForm";
 import UserTypeList from "@/pages/admin/modules/admin/userType/user-typeList";
 import UserTypeForm from "@/pages/admin/modules/admin/userType/user-typeForm";
 import UserCreationList from "@/pages/admin/modules/admin/userCreation/user-creationList";
 import UserCreationForm from "@/pages/admin/modules/admin/userCreation/user-creationForm";
-import UserPermissionList from "@/pages/admin/modules/admin/userpermission/userpermissionForm";
-import UserPermissionForm from "@/pages/admin/modules/admin/userpermission/userpermissionList";
-
 // Customer Master
 import CustomerCreationList from "@/pages/admin/modules/customerMasters/customerCreations/customerCreationListPage";
 import CustomerCreationForm from "@/pages/admin/modules/customerMasters/customerCreations/customerCreationForm";
@@ -75,6 +68,10 @@ import MainScreenTypeList from "@/pages/admin/modules/admin/mainScreenType/mainS
 import MainScreenTypeForm from "@/pages/admin/modules/admin/mainScreenType/mainScreenTypeForm";
 import UserScreenActionList from "@/pages/admin/modules/admin/userScreenAction/userScreenActionList";
 import UserScreenActionForm from "@/pages/admin/modules/admin/userScreenAction/userScreenActionForm";
+import MainScreenList from "@/pages/admin/modules/admin/mainScreen/mainScreenList";
+import MainScreenForm from "@/pages/admin/modules/admin/mainScreen/mainScreenForm";
+import UserScreenList from "@/pages/admin/modules/admin/userScreen/userScreenList";
+import UserScreenForm from "@/pages/admin/modules/admin/userScreen/userScreenForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -89,14 +86,13 @@ type RouteMap = Record<string, Record<string, RouteConfig>>;
 
 const ROUTES: RouteMap = {
   admins: {
-    "main-user-screen": { list: MainUserScreenList, form: MainUserScreenForm },
-    "user-screen": { list: UserScreenList, form: UserScreenForm },
     "user-type": { list: UserTypeList, form: UserTypeForm },
     "user-creation": { list: UserCreationList, form: UserCreationForm },
-    "user-permission": { list: UserPermissionList, form: UserPermissionForm },
     "staff-user-type": { list: StaffUserTypeList, form: StaffUserTypeForm },
     "mainscreen-type": {list: MainScreenTypeList, form: MainScreenTypeForm},
-    "userscreen-action": {list:UserScreenActionList, form: UserScreenActionForm }
+    "userscreen-action": {list:UserScreenActionList, form: UserScreenActionForm },
+    "mainscreens": {list: MainScreenList, form: MainScreenForm},
+    "userscreens": {list: UserScreenList, form: UserScreenForm}
   },
   masters: {
     continents: { list: ContinentList, form: ContinentForm },
