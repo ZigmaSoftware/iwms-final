@@ -18,12 +18,11 @@ const {
   encProperties,
   encSubProperties,
   encStaffCreation,
-  encMainUserScreen,
   encAdmins,
   encUserScreen,
   encUserType,
   encUserCreation,
-  encUserPermission,
+  encUserScreenPermission,
   encCustomerMaster,
   encCustomerCreation,
   encReport,
@@ -48,7 +47,8 @@ const {
   encMainComplaintCategory,
   encSubComplaintCategory,
   encMainScreenType,
-  encUserScreenAction
+  encUserScreenAction,
+  encMainScreen
 } = getEncryptedRoute();
 
 type NavItem = {
@@ -65,11 +65,11 @@ const adminItems: NavItem[] = [
     name: "Admin",
     icon: <File size={18} />,
     subItems: [
-      { name: "MainScreen", path: `/${encAdmins}/${encMainUserScreen}` },
+      { name: "MainScreen", path: `/${encAdmins}/${encMainScreen}` },
       { name: "User Screen", path: `/${encAdmins}/${encUserScreen}` },
       { name: "User Type", path: `/${encAdmins}/${encUserType}` },
       { name: "User Creation", path: `/${encAdmins}/${encUserCreation}` },
-      { name: "User Permission", path: `/${encAdmins}/${encUserPermission}` },
+      { name: "User Screen Permission", path: `/${encAdmins}/${encUserScreenPermission}` },
       { name: "Staff User Type", path: `/${encAdmins}/${encStaffUserType}` },
       { name: "MainScreen Type", path: `/${encAdmins}/${encMainScreenType}` },
       { name: "UserScreen Action", path: `/${encAdmins}/${encUserScreenAction}` }

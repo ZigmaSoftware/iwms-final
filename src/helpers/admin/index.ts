@@ -6,9 +6,9 @@ type AdminApiRegistry = {
 };
 
 export const adminApi: AdminApiRegistry = Object.entries(adminEndpoints).reduce(
-  (registry, [key, path]) => {
-    registry[key as AdminEntity] = createCrudHelpers(path);
-    return registry;
+  (map, [key, path]) => {
+    map[key as AdminEntity] = createCrudHelpers(path);
+    return map;
   },
   {} as AdminApiRegistry
 );
