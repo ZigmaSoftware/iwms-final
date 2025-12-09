@@ -72,6 +72,8 @@ import MainScreenList from "@/pages/admin/modules/admin/mainScreen/mainScreenLis
 import MainScreenForm from "@/pages/admin/modules/admin/mainScreen/mainScreenForm";
 import UserScreenList from "@/pages/admin/modules/admin/userScreen/userScreenList";
 import UserScreenForm from "@/pages/admin/modules/admin/userScreen/userScreenForm";
+import UserScreenPermissionForm from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionForm";
+import UserScreenPermissionList from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionList";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -92,7 +94,8 @@ const ROUTES: RouteMap = {
     "mainscreen-type": {list: MainScreenTypeList, form: MainScreenTypeForm},
     "userscreen-action": {list:UserScreenActionList, form: UserScreenActionForm },
     "mainscreens": {list: MainScreenList, form: MainScreenForm},
-    "userscreens": {list: UserScreenList, form: UserScreenForm}
+    "userscreens": {list: UserScreenList, form: UserScreenForm},
+    "userscreenpermissions": {list: UserScreenPermissionList,form: UserScreenPermissionForm}
   },
   masters: {
     continents: { list: ContinentList, form: ContinentForm },
