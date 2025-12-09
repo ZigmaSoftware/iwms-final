@@ -25,9 +25,13 @@ type Vehicles = {
   vehicle_no: string;
   driver_name: string;
   driver_no: string;
+  vehicle_type: number;
   vehicle_type_name: string;
+  fuel_type: number;
   fuel_type_name: string;
+  zone_id: number;
   zone_name: string;
+  ward_id: number;
   ward_name: string;
   is_active: boolean;
 };
@@ -103,7 +107,7 @@ export default function VehicleCreation() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  /* -------------------- 🔥 STATUS TOGGLE -------------------- */
+  /* -------------------- FIXED STATUS TOGGLE -------------------- */
   const statusTemplate = (row: Vehicles) => {
     const updateStatus = async (value: boolean) => {
       try {
@@ -111,8 +115,17 @@ export default function VehicleCreation() {
           vehicle_no: row.vehicle_no,
           driver_name: row.driver_name,
           driver_no: row.driver_no,
+          vehicle_type: row.vehicle_type,
+          vehicle_type_name: row.vehicle_type_name,
+          fuel_type: row.fuel_type,
+          fuel_type_name: row.fuel_type_name,
+          zone_id: row.zone_id,
+          zone_name: row.zone_name,
+          ward_id: row.ward_id,
+          ward_name: row.ward_name,
           is_active: value,
         });
+
         fetchVehicles();
       } catch (error) {
         console.error("Status update failed:", error);
@@ -132,23 +145,17 @@ export default function VehicleCreation() {
       <button
         onClick={() => navigate(ENC_EDIT_PATH(resolveId(row)))}
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
-        title="Edit"
       >
         <PencilIcon className="size-5" />
       </button>
-
       <button
         onClick={() => handleDelete(resolveId(row))}
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
-        title="Delete"
       >
         <TrashBinIcon className="size-5" />
       </button>
     </div>
   );
-
-  const indexTemplate = (_: Vehicles, { rowIndex }: { rowIndex: number }) =>
-    rowIndex + 1;
 
   const header = (
     <div className="flex justify-end items-center">
@@ -167,7 +174,7 @@ export default function VehicleCreation() {
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        {/* Page Header */}
+
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
@@ -186,7 +193,6 @@ export default function VehicleCreation() {
           />
         </div>
 
-        {/* Table */}
         <DataTable
           value={vehicles}
           dataKey="unique_id"
@@ -200,60 +206,20 @@ export default function VehicleCreation() {
           stripedRows
           showGridlines
           emptyMessage="No vehicle records found."
-          className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header="S.No" body={(_, { rowIndex }) => rowIndex + 1} style={{ width: "80px" }} />
 
           <Column field="vehicle_no" header="Vehicle No" sortable />
-          <Column
-            field="driver_name"
-            header="Driver Name"
-            sortable
-            body={(r: Vehicles) => cap(r.driver_name)}
-          />
+          <Column field="driver_name" header="Driver Name" sortable />
           <Column field="driver_no" header="Driver No" sortable />
+          <Column field="vehicle_type_name" header="Vehicle Type" sortable />
+          <Column field="fuel_type_name" header="Fuel Type" sortable />
+          <Column field="zone_name" header="Zone" sortable />
+          <Column field="ward_name" header="Ward" sortable />
 
-          <Column
-            field="vehicle_type_name"
-            header="Vehicle Type"
-            sortable
-            body={(r: Vehicles) => cap(r.vehicle_type_name)}
-          />
+          <Column field="is_active" header="Status" body={statusTemplate} style={{ width: "150px" }} />
 
-          <Column
-            field="fuel_type_name"
-            header="Fuel Type"
-            sortable
-            body={(r: Vehicles) => cap(r.fuel_type_name)}
-          />
-
-          <Column
-            field="zone_name"
-            header="Zone"
-            sortable
-            body={(r: Vehicles) => cap(r.zone_name)}
-          />
-
-          <Column
-            field="ward_name"
-            header="Ward"
-            sortable
-            body={(r: Vehicles) => cap(r.ward_name)}
-          />
-
-          {/* 🔥 Replace Tag with Real Toggle */}
-          <Column
-            field="is_active"
-            header="Status"
-            body={statusTemplate}
-            style={{ width: "150px" }}
-          />
-
-          <Column
-            header="Actions"
-            body={actionTemplate}
-            style={{ width: "150px" }}
-          />
+          <Column header="Actions" body={actionTemplate} style={{ width: "150px" }} />
         </DataTable>
       </div>
     </div>
