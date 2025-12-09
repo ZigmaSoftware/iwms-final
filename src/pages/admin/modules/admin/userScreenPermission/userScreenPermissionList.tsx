@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { desktopApi } from "@/api";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
@@ -15,109 +16,137 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin";
 
-type UserScreenPermission = {
+type StaffUserType = {
   unique_id: string;
-
-  userscreen_name: string;
-  userscreenaction_name: string;
-  userscreenaction_id: string;
-
-  usertype_id: string | null;
-  staffusertype_id: string | null;
-
-  mainscreen_id: string;
-  userscreen_id: string;
-
-  order_no: number;
-  description: string;
+  name: string;
   is_active: boolean;
+  usertype?: { unique_id?: string; name?: string } | string | null;
+  usertype_name?: string; // computed for display
+  usertype_id?: string | null;
 };
 
 export default function UserScreenPermissionList() {
-  const [permissions, setPermissions] = useState<UserScreenPermission[]>([]);
+  const [records, setRecords] = useState<StaffUserType[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [filters, setFilters] = useState({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
-  });
   const [globalFilterValue, setGlobalFilterValue] = useState("");
 
-  const { encAdmins, encUserScreenPermission } = getEncryptedRoute();
+  const [filters, setFilters] = useState<any>({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    usertype_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+  });
+
   const navigate = useNavigate();
-  const permissionApi = adminApi.userscreenpermissions;
+  const { encAdmins, encStaffUserType } = getEncryptedRoute();
 
-  const ENC_NEW_PATH = `/${encAdmins}/${encUserScreenPermission}/new`;
+  const ENC_NEW_PATH = `/${encAdmins}/${encStaffUserType}/new`;
   const ENC_EDIT_PATH = (id: string) =>
-    `/${encAdmins}/${encUserScreenPermission}/${id}/edit`;
+    `/${encAdmins}/${encStaffUserType}/${id}/edit`;
 
-  const extractData = (res: any) => {
-    if (Array.isArray(res)) return res;
-    if (Array.isArray(res?.data)) return res.data;
-    return res?.data?.results ?? [];
-  };
-
-  const fetchPermissions = async () => {
+  /* -----------------------------------------------------------
+     FETCH DATA
+  ----------------------------------------------------------- */
+  const fetchRecords = async () => {
     try {
-      const res = await permissionApi.list();
-      setPermissions(extractData(res));
+      const res = await desktopApi.get("staffusertypes/");
+      const list = Array.isArray(res.data) ? res.data : res.data.results ?? [];
+
+      const normalized = list.map((item: any) => ({
+  ...item,
+
+  // backend might return foreign key as string
+  usertype_id:
+    item.usertype_id ??
+    item.usertype?.unique_id ??
+    null,
+
+  // backend might return name nested or flat
+  usertype_name:
+    item.usertype_name ??
+    item.usertype?.name ??
+    "Unknown",
+}));
+
+      setRecords(normalized);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPermissions();
+    fetchRecords();
   }, []);
 
-  const handleDelete = async (id: string) => {
-    const confirm = await Swal.fire({
+  /* -----------------------------------------------------------
+     DELETE RECORD
+  ----------------------------------------------------------- */
+  const handleDelete = async (unique_id: string) => {
+    const confirmDelete = await Swal.fire({
       title: "Are you sure?",
-      text: "This permission will be permanently deleted!",
+      text: "This staff user type will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete!"
     });
 
-    if (!confirm.isConfirmed) return;
+    if (!confirmDelete.isConfirmed) return;
 
-    await permissionApi.remove(id);
+    await desktopApi.delete(`staffusertypes/${unique_id}/`);
 
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
-      timer: 1400,
-      showConfirmButton: false
+      timer: 1500,
+      showConfirmButton: false,
     });
 
-    fetchPermissions();
+    fetchRecords();
   };
 
-  const statusTemplate = (row: UserScreenPermission) => {
-    const updateStatus = async (value: boolean) => {
-      await permissionApi.update(row.unique_id, {
-        usertype_id: row.usertype_id,
-        staffusertype_id: row.staffusertype_id,
-        mainscreen_id: row.mainscreen_id,
-        userscreen_id: row.userscreen_id,
-        userscreenaction_id: row.userscreenaction_id,
-        order_no: row.order_no,
-        description: row.description,
-        is_active: value
-      });
+  /* -----------------------------------------------------------
+     STATUS SWITCH
+  ----------------------------------------------------------- */
+  const statusTemplate = (row: StaffUserType) => {
+  const updateStatus = async (value: boolean) => {
+    console.log("=== STATUS TOGGLE TRIGGERED ===");
+    console.log("Row Data:", row);
+    console.log("New Status:", value);
 
-      fetchPermissions();
+    const payload = {
+      usertype_id: row.usertype_id,   // required for backend
+      name: row.name,
+      is_active: value,
     };
 
-    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
+    console.log("Payload Sent to API:", payload);
+
+    try {
+      const response = await desktopApi.put(
+        `staffusertypes/${row.unique_id}/`,
+        payload
+      );
+
+      console.log("API Response:", response.data);
+
+      fetchRecords();
+    } catch (error: any) {
+      console.error("Update Status Error:", error.response?.data || error);
+      Swal.fire("Error", "Failed to update status", "error");
+    }
   };
 
-  const actionTemplate = (row: UserScreenPermission) => (
+  return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
+};
+
+
+  /* -----------------------------------------------------------
+     ACTION BUTTONS
+  ----------------------------------------------------------- */
+  const actionTemplate = (row: StaffUserType) => (
     <div className="flex gap-2 justify-center">
       <button
+        title="Edit"
         className="text-blue-600 hover:text-blue-800"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
       >
@@ -125,6 +154,7 @@ export default function UserScreenPermissionList() {
       </button>
 
       <button
+        title="Delete"
         className="text-red-600 hover:text-red-800"
         onClick={() => handleDelete(row.unique_id)}
       >
@@ -133,21 +163,27 @@ export default function UserScreenPermissionList() {
     </div>
   );
 
-  const indexTemplate = (_: UserScreenPermission, { rowIndex }: any) =>
+  /* -----------------------------------------------------------
+     INDEX COLUMN
+  ----------------------------------------------------------- */
+  const indexTemplate = (_: StaffUserType, { rowIndex }: any) =>
     rowIndex + 1;
 
+  /* -----------------------------------------------------------
+     GLOBAL FILTER
+  ----------------------------------------------------------- */
   const onGlobalFilterChange = (e: any) => {
     const value = e.target.value;
-    setFilters({
-      ...filters,
-      global: { value, matchMode: FilterMatchMode.CONTAINS }
-    });
+    const updated = { ...filters };
+    updated["global"].value = value;
+
+    setFilters(updated);
     setGlobalFilterValue(value);
   };
 
   const header = (
     <div className="flex justify-end items-center">
-      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border shadow-sm">
+      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
         <i className="pi pi-search text-gray-500" />
         <InputText
           value={globalFilterValue}
@@ -159,22 +195,21 @@ export default function UserScreenPermissionList() {
     </div>
   );
 
+  /* -----------------------------------------------------------
+     RENDER
+  ----------------------------------------------------------- */
   return (
-    <div className="px-3 py-3 w-full">
+    <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        
+
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              User Screen Permissions
-            </h1>
-            <p className="text-gray-500 text-sm">
-              Manage UserScreen permissions for user and staff roles
-            </p>
+            <h1 className="text-3xl font-bold text-gray-800">User Screen Permissions for Staff</h1>
+            <p className="text-gray-500 text-sm">Manage staff user type records</p>
           </div>
 
           <Button
-            label="Add Permission"
+            label="Add Staff User Type"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -182,39 +217,49 @@ export default function UserScreenPermissionList() {
         </div>
 
         <DataTable
-          value={permissions}
+          value={records}
           paginator
           rows={10}
           loading={loading}
           filters={filters}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          globalFilterFields={[
-            "userscreen_name",
-            "userscreenaction_name",
-            "description"
-          ]}
+          globalFilterFields={["name", "usertype_name"]}
           header={header}
-          emptyMessage="No permissions found."
           stripedRows
           showGridlines
+          emptyMessage="No staff user types found."
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header="S.No" body={indexTemplate} style={{ width: 80 }} />
+          <Column
+            field="usertype_name"
+            header="User Type"
+            sortable
+            style={{ minWidth: 150 }}
+          />
 
-          <Column field="userscreen_name" header="User Screen" sortable />
-          <Column field="userscreenaction_name" header="Action" sortable />
+          <Column
+            field="name"
+            header="Staff User Type"
+            sortable
+            style={{ minWidth: 180 }}
+          />
 
-          <Column field="usertype_id" header="UserType ID" sortable />
-          <Column field="staffusertype_id" header="StaffUserType ID" sortable />
+          
 
-          <Column field="order_no" header="Order" sortable style={{ width: "120px" }} />
+          <Column
+            header="Status"
+            body={statusTemplate}
+            style={{ width: 120 }}
+          />
 
-          <Column field="description" header="Description" sortable />
+          <Column
+            header="Actions"
+            body={actionTemplate}
+            style={{ width: 150 }}
+          />
 
-          <Column header="Status" body={statusTemplate} style={{ width: "150px" }} />
-          <Column header="Actions" body={actionTemplate} style={{ width: "150px" }} />
         </DataTable>
-
       </div>
     </div>
   );
