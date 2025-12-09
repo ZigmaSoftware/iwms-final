@@ -16,7 +16,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 
 type Staff = {
-  id: number;
+  unique_id: number;
   employee_name: string;
   staff_unique_id: string;
   designation?: string;
@@ -24,14 +24,15 @@ type Staff = {
   site_name?: string;
   active_status: boolean;
   salary_type?: string;
-  contact_details?: {
-    mobile_no?: string;
-  };
+ contact_mobile?: number;
   department?: string;
 };
 
-const cap = (val?: string) =>
-  val ? val.charAt(0).toUpperCase() + val.slice(1).toLowerCase() : "";
+const cap = (val?: string | number | null) => {
+  if (val === undefined || val === null || val === "") return "";
+  const s = String(val);
+  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+};
 
 export default function StaffCreationList() {
   const navigate = useNavigate();
@@ -55,14 +56,15 @@ export default function StaffCreationList() {
 
   const { encMasters, encStaffCreation } = getEncryptedRoute();
   const ENC_NEW_PATH = `/${encMasters}/${encStaffCreation}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
-    `/${encMasters}/${encStaffCreation}/${id}/edit`;
+  const ENC_EDIT_PATH = (unique_id: number) =>
+    `/${encMasters}/${encStaffCreation}/${unique_id}/edit`;
 
   const globalFilterFields = [
     "employee_name",
     "employee_id",
     "designation",
     "site_name",
+    "contact_mobile",
   ];
 
   const fetchStaffs = async (params = filterParams) => {
@@ -70,6 +72,7 @@ export default function StaffCreationList() {
     try {
       const response = await desktopApi.get("staffcreation/", { params });
       setStaffs(response.data);
+      console.log("Fetched staffs:", response.data);
     } catch (err) {
       Swal.fire("Error", "Unable to load staff list", "error");
     } finally {
@@ -123,7 +126,7 @@ export default function StaffCreationList() {
         const formData = new FormData();
         formData.append("active_status", String(value));
 
-        await desktopApi.put(`staffcreation/${row.id}/`, formData, {
+        await desktopApi.put(`staffcreation/${row.unique_id}/`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
@@ -148,7 +151,7 @@ export default function StaffCreationList() {
       className="cursor-pointer flex justify-center"
       onClick={() => {
         const qrText = `
-Zigma ID: ${row.staff_unique_id}
+Zigma ID: ${row.unique_id}
 Name: ${row.employee_name}
 Designation: ${row.designation || "-"}
 Site: ${row.site_name || "-"}
@@ -166,7 +169,7 @@ Status: ${row.active_status ? "Active" : "Inactive"}
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -174,7 +177,7 @@ Status: ${row.active_status ? "Active" : "Inactive"}
 
       <button
         title="Delete"
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
@@ -328,8 +331,8 @@ Status: ${row.active_status ? "Active" : "Inactive"}
             className="p-datatable-sm"
           >
             <Column header="S.No" body={indexTemplate} style={{ width: 70 }} />
-            <Column field="staff_unique_id" header="Zigma ID" sortable
-              body={(row: Staff) => cap(row.staff_unique_id)}
+            <Column field="unique_id" header="Zigma ID" sortable
+              body={(row: Staff) => cap(row.unique_id)}
             
             />
             <Column
@@ -343,7 +346,7 @@ Status: ${row.active_status ? "Active" : "Inactive"}
             <Column field="site_name" header="Site Name" sortable />
             <Column
               header="Contact"
-              body={(row: Staff) => row.contact_details?.mobile_no || "-"}
+              body={(row: Staff) => row.contact_mobile || "-"}
             />
 
             {/* 🔥 Toggle with FormData */}
