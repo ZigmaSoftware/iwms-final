@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -15,7 +14,7 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { Switch } from "@/components/ui/switch";   // 🔥 Toggle
+import { Switch } from "@/components/ui/switch"; // 🔥 Toggle
 import { adminApi } from "@/helpers/admin";
 
 type SubProperty = {
@@ -23,6 +22,7 @@ type SubProperty = {
   sub_property_name: string;
   property_name?: string;
   is_active: boolean;
+  property_id?: string;
 };
 
 export default function SubPropertyList() {
@@ -114,20 +114,15 @@ export default function SubPropertyList() {
   const statusTemplate = (row: SubProperty) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await subPropertiesApi.update(row.unique_id, { is_active: value });
-        
+        await subPropertiesApi.update(row.unique_id, { sub_property_name: row.sub_property_name, is_active: value , property_id: row.property_id});
+
         fetchSubProperties();
       } catch (err) {
         console.error("Status update failed:", err);
       }
     };
 
-    return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   const actionTemplate = (row: SubProperty) => (
@@ -156,10 +151,11 @@ export default function SubPropertyList() {
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Sub Property</h1>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              Sub Property
+            </h1>
             <p className="text-gray-500 text-sm">Manage sub-property records</p>
           </div>
 
@@ -185,7 +181,11 @@ export default function SubPropertyList() {
           globalFilterFields={["sub_property_name", "property_name"]}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column
+            header="S.No"
+            body={indexTemplate}
+            style={{ width: "80px" }}
+          />
 
           <Column
             field="property_name"

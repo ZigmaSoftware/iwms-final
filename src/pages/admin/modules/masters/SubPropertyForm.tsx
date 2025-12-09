@@ -25,7 +25,7 @@ const propertiesApi = adminApi.properties;
 
 export default function SubPropertyForm() {
   const [subPropertyName, setSubPropertyName] = useState("");
-  const [propertyId, setPropertyId] = useState<string>("");  // ALWAYS controlled
+  const [propertyId, setPropertyId] = useState<string>(""); // ALWAYS controlled
   const [properties, setProperties] = useState<
     { unique_id: string; property_name: string; is_active?: boolean }[]
   >([]);
@@ -96,7 +96,7 @@ export default function SubPropertyForm() {
 
     const payload = {
       sub_property_name: subPropertyName,
-      property_id: propertyId,   // FIXED → backend expects this
+      property_id: propertyId, // FIXED → backend expects this
       is_active: isActive,
     };
 
@@ -148,30 +148,28 @@ export default function SubPropertyForm() {
     <ComponentCard title={isEdit ? "Edit Sub Property" : "Add Sub Property"}>
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
           {/* Property dropdown */}
           <div>
             <Label htmlFor="property">Parent Property *</Label>
 
-           <Select
-  value={propertyId || ""}
-  onValueChange={(val) => setPropertyId(val)}
->
-  <SelectTrigger id="property" className="input-validate w-full">
-    <SelectValue placeholder="Select Property" />
-  </SelectTrigger>
+            <Select
+              value={propertyId || ""}
+              onValueChange={(val) => setPropertyId(val)}
+            >
+              <SelectTrigger id="property" className="input-validate w-full">
+                <SelectValue placeholder="Select Property" />
+              </SelectTrigger>
 
-  <SelectContent>
-    {properties
-      .filter((p) => p.is_active === true)     // 🔥 Only active properties
-      .map((p) => (
-        <SelectItem key={p.unique_id} value={p.unique_id}>
-          {p.property_name}
-        </SelectItem>
-      ))}
-  </SelectContent>
-</Select>
-
+              <SelectContent>
+                {properties
+                  .filter((p) => p.is_active === true) // 🔥 Only active properties
+                  .map((p) => (
+                    <SelectItem key={p.unique_id} value={p.unique_id}>
+                      {p.property_name}
+                    </SelectItem>
+                  ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Sub-property Name */}
@@ -214,7 +212,13 @@ export default function SubPropertyForm() {
             disabled={loading}
             className="bg-green-custom text-white px-4 py-2 rounded disabled:opacity-50"
           >
-            {loading ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update" : "Save"}
+            {loading
+              ? isEdit
+                ? "Updating..."
+                : "Saving..."
+              : isEdit
+              ? "Update"
+              : "Save"}
           </button>
 
           <button

@@ -49,9 +49,9 @@ export default function VehicleTypeCreationForm() {
 
     const payload = {
       vehicleType,
-      description,
+     
       is_active: isActive,
-      is_deleted: false,
+     
     };
     console.log("Payload:", payload);
 

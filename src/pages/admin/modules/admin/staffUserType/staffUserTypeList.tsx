@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
 import Swal from "sweetalert2";
+import { desktopApi } from "@/api";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -15,48 +15,73 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-
 import { Switch } from "@/components/ui/switch";
 
 type StaffUserType = {
-  id: number;
-  staffusertype_id: string;
+  unique_id: string;
   name: string;
   is_active: boolean;
+  usertype?: { unique_id?: string; name?: string } | string | null;
+  usertype_name?: string; // computed for display
+  usertype_id?: string | null;
 };
 
 export default function StaffUserTypeList() {
-  const [staffUserTypes, setStaffUserTypes] = useState<StaffUserType[]>([]);
+  const [records, setRecords] = useState<StaffUserType[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [globalFilterValue, setGlobalFilterValue] = useState("");
+
   const [filters, setFilters] = useState<any>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    usertype_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
   const navigate = useNavigate();
   const { encAdmins, encStaffUserType } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encAdmins}/${encStaffUserType}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encAdmins}/${encStaffUserType}/${id}/edit`;
 
-  const fetchStaffUserTypes = async () => {
+  /* -----------------------------------------------------------
+     FETCH DATA
+  ----------------------------------------------------------- */
+  const fetchRecords = async () => {
     try {
       const res = await desktopApi.get("staffusertypes/");
-      const data = Array.isArray(res.data) ? res.data : res.data.results || [];
-      setStaffUserTypes(data);
+      const list = Array.isArray(res.data) ? res.data : res.data.results ?? [];
+
+      const normalized = list.map((item: any) => ({
+  ...item,
+
+  // backend might return foreign key as string
+  usertype_id:
+    item.usertype_id ??
+    item.usertype?.unique_id ??
+    null,
+
+  // backend might return name nested or flat
+  usertype_name:
+    item.usertype_name ??
+    item.usertype?.name ??
+    "Unknown",
+}));
+
+      setRecords(normalized);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchStaffUserTypes();
+    fetchRecords();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  /* -----------------------------------------------------------
+     DELETE RECORD
+  ----------------------------------------------------------- */
+  const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
       text: "This staff user type will be permanently deleted!",
@@ -67,7 +92,8 @@ export default function StaffUserTypeList() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await desktopApi.delete(`staffusertypes/${id}/`);
+    await desktopApi.delete(`staffusertypes/${unique_id}/`);
+
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
@@ -75,61 +101,85 @@ export default function StaffUserTypeList() {
       showConfirmButton: false,
     });
 
-    fetchStaffUserTypes();
+    fetchRecords();
   };
 
-  const onGlobalFilterChange = (e: any) => {
-    const updated = { ...filters };
-    updated["global"].value = e.target.value;
-    setFilters(updated);
-    setGlobalFilterValue(e.target.value);
-  };
-
-  const cap = (str?: string) =>
-    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
-
-  /* -------------------- STATUS TOGGLE -------------------- */
+  /* -----------------------------------------------------------
+     STATUS SWITCH
+  ----------------------------------------------------------- */
   const statusTemplate = (row: StaffUserType) => {
-    const updateStatus = async (value: boolean) => {
-      try {
-        await desktopApi.put(`staffusertypes/${row.id}/`, { is_active: value });
-        fetchStaffUserTypes();
-      } catch (err) {
-        console.error("Failed to update status:", err);
-      }
+  const updateStatus = async (value: boolean) => {
+    console.log("=== STATUS TOGGLE TRIGGERED ===");
+    console.log("Row Data:", row);
+    console.log("New Status:", value);
+
+    const payload = {
+      usertype_id: row.usertype_id,   // required for backend
+      name: row.name,
+      is_active: value,
     };
 
-    return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
-    );
+    console.log("Payload Sent to API:", payload);
+
+    try {
+      const response = await desktopApi.put(
+        `staffusertypes/${row.unique_id}/`,
+        payload
+      );
+
+      console.log("API Response:", response.data);
+
+      fetchRecords();
+    } catch (error: any) {
+      console.error("Update Status Error:", error.response?.data || error);
+      Swal.fire("Error", "Failed to update status", "error");
+    }
   };
 
-  /* --------------------- ACTION BUTTONS --------------------- */
+  return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
+};
+
+
+  /* -----------------------------------------------------------
+     ACTION BUTTONS
+  ----------------------------------------------------------- */
   const actionTemplate = (row: StaffUserType) => (
     <div className="flex gap-2 justify-center">
       <button
         title="Edit"
-        className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        className="text-blue-600 hover:text-blue-800"
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
       >
         <PencilIcon className="size-5" />
       </button>
 
       <button
         title="Delete"
-        className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
-        onClick={() => handleDelete(row.id)}
+        className="text-red-600 hover:text-red-800"
+        onClick={() => handleDelete(row.unique_id)}
       >
         <TrashBinIcon className="size-5" />
       </button>
     </div>
   );
 
-  const indexTemplate = (_: StaffUserType, { rowIndex }: { rowIndex: number }) =>
+  /* -----------------------------------------------------------
+     INDEX COLUMN
+  ----------------------------------------------------------- */
+  const indexTemplate = (_: StaffUserType, { rowIndex }: any) =>
     rowIndex + 1;
+
+  /* -----------------------------------------------------------
+     GLOBAL FILTER
+  ----------------------------------------------------------- */
+  const onGlobalFilterChange = (e: any) => {
+    const value = e.target.value;
+    const updated = { ...filters };
+    updated["global"].value = value;
+
+    setFilters(updated);
+    setGlobalFilterValue(value);
+  };
 
   const header = (
     <div className="flex justify-end items-center">
@@ -138,24 +188,24 @@ export default function StaffUserTypeList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search staff user types..."
+          placeholder="Search..."
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
     </div>
   );
 
+  /* -----------------------------------------------------------
+     RENDER
+  ----------------------------------------------------------- */
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
+
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Staff User Types
-            </h1>
-            <p className="text-gray-500 text-sm">
-              Manage your staff user type records
-            </p>
+            <h1 className="text-3xl font-bold text-gray-800">Staff User Types</h1>
+            <p className="text-gray-500 text-sm">Manage staff user type records</p>
           </div>
 
           <Button
@@ -167,42 +217,48 @@ export default function StaffUserTypeList() {
         </div>
 
         <DataTable
-          value={staffUserTypes}
+          value={records}
           paginator
           rows={10}
           loading={loading}
           filters={filters}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          globalFilterFields={["name"]}
+          globalFilterFields={["name", "usertype_name"]}
           header={header}
-          emptyMessage="No staff user types found."
           stripedRows
           showGridlines
+          emptyMessage="No staff user types found."
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header="S.No" body={indexTemplate} style={{ width: 80 }} />
+          <Column
+            field="usertype_name"
+            header="User Type"
+            sortable
+            style={{ minWidth: 150 }}
+          />
 
           <Column
             field="name"
             header="Staff User Type"
             sortable
-            body={(row: StaffUserType) => cap(row.name)}
-            style={{ minWidth: "200px" }}
+            style={{ minWidth: 180 }}
           />
 
-          {/* NEW — Toggle Status */}
+          
+
           <Column
-            field="is_active"
             header="Status"
             body={statusTemplate}
-            style={{ width: "150px" }}
+            style={{ width: 120 }}
           />
 
           <Column
             header="Actions"
             body={actionTemplate}
-            style={{ width: "150px" }}
+            style={{ width: 150 }}
           />
+
         </DataTable>
       </div>
     </div>

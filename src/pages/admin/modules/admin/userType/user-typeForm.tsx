@@ -25,6 +25,7 @@ export default function UserTypeForm() {
         .then((res) => {
           setName(res.data.name);
           setIsActive(res.data.is_active);
+          console.log("Loaded user type data:", res.data);
               
         })
       

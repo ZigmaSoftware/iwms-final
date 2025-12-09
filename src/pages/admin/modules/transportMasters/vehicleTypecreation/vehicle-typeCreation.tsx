@@ -35,8 +35,8 @@ export default function VehicleTypeCreation() {
   const { encTransportMaster, encVehicleType } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encTransportMaster}/${encVehicleType}/new`;
-  const ENC_EDIT_PATH = (id: string | number) =>
-    `/${encTransportMaster}/${encVehicleType}/${id}/edit`;
+  const ENC_EDIT_PATH = (unique_id: string | number) =>
+    `/${encTransportMaster}/${encVehicleType}/${unique_id}/edit`;
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
@@ -62,7 +62,7 @@ export default function VehicleTypeCreation() {
     fetchVehicleTypes();
   }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
       title: "Are you sure?",
       text: "This vehicle type will be permanently deleted!",
@@ -75,7 +75,7 @@ export default function VehicleTypeCreation() {
     if (!confirmDelete.isConfirmed) return;
 
     try {
-      await vehicleTypeApi.remove(id);
+      await vehicleTypeApi.remove(unique_id);
       Swal.fire({
         icon: "success",
         title: "Deleted successfully!",
