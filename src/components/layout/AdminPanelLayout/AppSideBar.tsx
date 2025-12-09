@@ -18,12 +18,11 @@ const {
   encProperties,
   encSubProperties,
   encStaffCreation,
-  encMainUserScreen,
   encAdmins,
   encUserScreen,
   encUserType,
   encUserCreation,
-  encUserPermission,
+  encUserScreenPermission,
   encCustomerMaster,
   encCustomerCreation,
   encReport,
@@ -47,6 +46,9 @@ const {
   encStaffUserType,
   encMainComplaintCategory,
   encSubComplaintCategory,
+  encMainScreenType,
+  encUserScreenAction,
+  encMainScreen
 } = getEncryptedRoute();
 
 type NavItem = {
@@ -63,12 +65,14 @@ const adminItems: NavItem[] = [
     name: "Admin",
     icon: <File size={18} />,
     subItems: [
-      { name: "MainScreen", path: `/${encAdmins}/${encMainUserScreen}` },
+      { name: "MainScreen", path: `/${encAdmins}/${encMainScreen}` },
       { name: "User Screen", path: `/${encAdmins}/${encUserScreen}` },
       { name: "User Type", path: `/${encAdmins}/${encUserType}` },
       { name: "User Creation", path: `/${encAdmins}/${encUserCreation}` },
-      { name: "User Permission", path: `/${encAdmins}/${encUserPermission}` },
+      { name: "User Screen Permission", path: `/${encAdmins}/${encUserScreenPermission}` },
       { name: "Staff User Type", path: `/${encAdmins}/${encStaffUserType}` },
+      { name: "MainScreen Type", path: `/${encAdmins}/${encMainScreenType}` },
+      { name: "UserScreen Action", path: `/${encAdmins}/${encUserScreenAction}` }
     ],
   },
 ];
@@ -253,8 +257,8 @@ const AppSidebar: React.FC = () => {
             <button
               onClick={() => handleSubmenuToggle(index, type)}
               className={`${menuButtonBase} ${openSubmenu?.type === type && openSubmenu?.index === index
-                  ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
-                  : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
+                ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
+                : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
                 }`}
             >
               <span className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}>{nav.icon}</span>
@@ -264,8 +268,8 @@ const AppSidebar: React.FC = () => {
                   <span className="text-base font-semibold">{nav.name}</span>
                   <ChevronDown
                     className={`ml-auto h-5 w-5 transition-transform ${openSubmenu?.type === type && openSubmenu?.index === index
-                        ? "rotate-180 text-[var(--admin-primary)]"
-                        : "text-[var(--admin-mutedText)]"
+                      ? "rotate-180 text-[var(--admin-primary)]"
+                      : "text-[var(--admin-mutedText)]"
                       }`}
                   />
                 </>
@@ -276,8 +280,8 @@ const AppSidebar: React.FC = () => {
               <Link
                 to={nav.path}
                 className={`${menuButtonBase} ${isActive(nav.path)
-                    ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
-                    : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
+                  ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
+                  : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
                   }`}
               >
                 <span className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}>{nav.icon}</span>
@@ -307,8 +311,8 @@ const AppSidebar: React.FC = () => {
                     <Link
                       to={subItem.path}
                       className={`block rounded-2xl px-3 py-2 text-sm font-medium transition ${isActive(subItem.path)
-                          ? "bg-[var(--admin-accentSoft)] text-[var(--admin-accent)]"
-                          : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
+                        ? "bg-[var(--admin-accentSoft)] text-[var(--admin-accent)]"
+                        : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
                         }`}
                     >
                       {subItem.name}

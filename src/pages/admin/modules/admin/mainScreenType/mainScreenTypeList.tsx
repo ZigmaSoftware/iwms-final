@@ -16,15 +16,15 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 import { adminApi } from "@/helpers/admin";
-type UserType = {
 
+type MainScreenType = {
   unique_id: string;
-  name: string;
+  type_name: string;
   is_active: boolean;
 };
 
-export default function UserTypePage() {
-  const [userTypes, setUserTypes] = useState<UserType[]>([]);
+export default function MainScreenTypeList() {
+  const [mainScreenTypes, setMainScreenTypes] = useState<MainScreenType[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState('');
@@ -34,30 +34,32 @@ export default function UserTypePage() {
   });
 
   const navigate = useNavigate();
-  const { encAdmins, encUserType } = getEncryptedRoute();
-  const userTypeapi = adminApi.userTypes;
+  const { encAdmins, encMainScreenType } = getEncryptedRoute();
+  const mainScreenTypeApi = adminApi.mainscreentype;
 
-  const ENC_NEW_PATH = `/${encAdmins}/${encUserType}/new`;
-  const ENC_EDIT_PATH = (unique_id: string) => `/${encAdmins}/${encUserType}/${unique_id}/edit`;
+  const ENC_NEW_PATH = `/${encAdmins}/${encMainScreenType}/new`;
+  const ENC_EDIT_PATH = (unique_id: string) => `/${encAdmins}/${encMainScreenType}/${unique_id}/edit`;
 
-  const fetchUserTypes = async () => {
+  const extractData = (response: any) => {
+    if (Array.isArray(response)) return response;                 // plain array
+    if (Array.isArray(response?.data)) return response.data;      // axios .data
+    return response?.data?.results ?? [];                         // DRF pagination
+  };
+
+  const fetchMainScreenTypes = async () => {
     try {
-      const res = await userTypeapi.list();
-      const payload: any = res;
-      const data = Array.isArray(payload)
-        ? payload
-        : Array.isArray(payload.data)
-          ? payload.data
-          : payload.data?.results ?? [];
-      setUserTypes(data);
+      const res = await mainScreenTypeApi.list();
+      setMainScreenTypes(extractData(res));
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchUserTypes();
+    fetchMainScreenTypes();
   }, []);
+
+  console.log(mainScreenTypes);
 
   const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
@@ -72,7 +74,7 @@ export default function UserTypePage() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await userTypeapi.remove(unique_id);
+    await mainScreenTypeApi.remove(unique_id);
 
     Swal.fire({
       icon: "success",
@@ -81,7 +83,7 @@ export default function UserTypePage() {
       showConfirmButton: false,
     });
 
-    fetchUserTypes();
+    fetchMainScreenTypes();
   };
 
   const onGlobalFilterChange = (e: any) => {
@@ -92,10 +94,10 @@ export default function UserTypePage() {
     setGlobalFilterValue(value);
   };
 
-  const indexTemplate = (_: UserType, { rowIndex }: { rowIndex: number }) =>
+  const indexTemplate = (_: MainScreenType, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
-  const actionTemplate = (row: UserType) => (
+  const actionTemplate = (row: MainScreenType) => (
     <div className="flex gap-2 justify-center">
       <button
         title="Edit"
@@ -115,15 +117,15 @@ export default function UserTypePage() {
     </div>
   );
 
-  const statusTemplate = (row: UserType) => {
+  const statusTemplate = (row: MainScreenType) => {
     const updateStatus = async (value: boolean) => {
-      await userTypeapi.update(row.unique_id, {
-        name: row.name,         // correct field name
+      await mainScreenTypeApi.update(row.unique_id, {
+        type_name: row.type_name,
         is_active: value,
       });
 
 
-      fetchUserTypes();
+      fetchMainScreenTypes();
     };
 
     return (
@@ -154,12 +156,12 @@ export default function UserTypePage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">User Types</h1>
-            <p className="text-gray-500 text-sm">Manage your user type records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">MainScreen Types</h1>
+            <p className="text-gray-500 text-sm">Manage your mainscreen type records</p>
           </div>
 
           <Button
-            label="Add User Type"
+            label="Add Screen Type"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -167,21 +169,21 @@ export default function UserTypePage() {
         </div>
 
         <DataTable
-          value={userTypes}
+          value={mainScreenTypes}
           paginator
           rows={10}
           loading={loading}
           filters={filters}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          globalFilterFields={["name"]}
+          globalFilterFields={["type_name"]}
           header={header}
-          emptyMessage="No user types found."
+          emptyMessage="No main screen types found."
           stripedRows
           showGridlines
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
-          <Column field="name" header="User Type" sortable style={{ minWidth: "200px" }} />
+          <Column field="type_name" header="MainScreen Type" sortable style={{ minWidth: "200px" }} />
           <Column header="Status" body={statusTemplate} style={{ width: "150px" }} />
           <Column header="Actions" body={actionTemplate} style={{ width: "150px" }} />
         </DataTable>

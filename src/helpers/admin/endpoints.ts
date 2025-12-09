@@ -19,12 +19,18 @@ export const adminEndpoints = {
   wasteCollections: "wastecollections",
   complaints: "complaints",
   feedbacks: "feedbacks",
-  mainUserScreens: "mainuserscreen",
-  userScreens: "userscreens",
   userTypes: "user-type",
-  users: "user",
+  usercreations: "users-creation",
   staffUserTypes: "staffusertypes",
-  userPermissions: "userpermissions",
+
+  /* NEW */
+  mainscreentype: "mainscreentype",
+  userscreenaction: "userscreen-action",
+  mainscreens: "mainscreens",
+  userscreens: "userscreens",
+
+  /* NEW — Add userscreenpermissions */
+  userscreenpermissions: "userscreenpermissions",
 } as const;
 
 export type AdminEntity = keyof typeof adminEndpoints;
