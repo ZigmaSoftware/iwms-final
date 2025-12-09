@@ -10,27 +10,29 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 
 function CustomerCreationForm() {
   const [formData, setFormData] = useState({
-    customer_name: "",
-    contact_no: "",
-    building_no: "",
-    street: "",
-    area: "",
-    pincode: "",
-    latitude: "",
-    longitude: "",
-    id_proof_type: "",
-    id_no: "",
-    is_deleted: false,
-    is_active: true,
-    ward: "",
-    zone: "",
-    city: "",
-    district: "",
-    state: "",
-    country: "",
-    property: "",
-    sub_property: "",
-  });
+  customer_name: "",
+  contact_no: "",
+  building_no: "",
+  street: "",
+  area: "",
+  pincode: "",
+  latitude: "",
+  longitude: "",
+  id_proof_type: "",
+  id_no: "",
+  is_deleted: false,
+  is_active: true,
+
+  ward_id: "",
+  zone_id: "",
+  city_id: "",
+  district_id: "",
+  state_id: "",
+  country_id: "",
+  property_id: "",
+  sub_property_id: "",
+});
+
 
   const [dropdowns, setDropdowns] = useState({
     wards: [],
@@ -140,14 +142,14 @@ function CustomerCreationForm() {
       longitude,
       id_proof_type,
       id_no,
-      ward,
-      zone,
-      city,
-      district,
-      state,
-      country,
-      property,
-      sub_property,
+      ward_id,
+      zone_id,
+      city_id,
+      district_id,
+      state_id,
+      country_id,
+      property_id,
+      sub_property_id,
     } = formData;
 
     // Required fields check
@@ -162,14 +164,14 @@ function CustomerCreationForm() {
       !longitude ||
       !id_proof_type ||
       !id_no ||
-      !ward ||
-      !zone ||
-      !city ||
-      !district ||
-      !state ||
-      !country ||
-      !property ||
-      !sub_property
+      !ward_id ||
+      !zone_id ||
+      !city_id ||
+      !district_id ||
+      !state_id ||
+      !country_id ||
+      !property_id ||
+      !sub_property_id
     ) {
       Swal.fire({
         icon: "warning",
@@ -400,7 +402,7 @@ function CustomerCreationForm() {
             <Select
               id="ward"
               required
-              value={formData.ward}
+              value={formData.ward_id}
               onChange={(val) =>
                 setFormData((prev) => ({ ...prev, ward: val }))
               }
@@ -416,9 +418,9 @@ function CustomerCreationForm() {
             <Select
               id="zone"
               required
-              value={formData.zone}
+              value={formData.zone_id}
               onChange={(val) =>
-                setFormData((prev) => ({ ...prev, zone: val }))
+                setFormData((prev) => ({ ...prev, zone_id: val }))
               }
               options={dropdowns.zones.map((z: any) => ({
                 value: z.id,
@@ -432,9 +434,9 @@ function CustomerCreationForm() {
             <Select
               id="city"
               required
-              value={formData.city}
+              value={formData.city_id}
               onChange={(val) =>
-                setFormData((prev) => ({ ...prev, city: val }))
+                setFormData((prev) => ({ ...prev, city_id: val }))
               }
               options={dropdowns.cities.map((c: any) => ({
                 value: c.id,
@@ -448,9 +450,9 @@ function CustomerCreationForm() {
             <Select
               id="district"
               required
-              value={formData.district}
+              value={formData.district_id}
               onChange={(val) =>
-                setFormData((prev) => ({ ...prev, district: val }))
+                setFormData((prev) => ({ ...prev, district_id: val }))
               }
               options={dropdowns.districts.map((d: any) => ({
                 value: d.id,
@@ -464,9 +466,9 @@ function CustomerCreationForm() {
             <Select
               id="state"
               required
-              value={formData.state}
+              value={formData.state_id}
               onChange={(val) =>
-                setFormData((prev) => ({ ...prev, state: val }))
+                setFormData((prev) => ({ ...prev, state_id: val }))
               }
               options={dropdowns.states.map((s: any) => ({
                 value: s.id,
@@ -480,9 +482,9 @@ function CustomerCreationForm() {
             <Select
               id="country"
               required
-              value={formData.country}
+              value={formData.country_id}
               onChange={(val) =>
-                setFormData((prev) => ({ ...prev, country: val }))
+                setFormData((prev) => ({ ...prev, country_id: val }))
               }
               options={dropdowns.countries.map((c: any) => ({
                 value: c.id,
@@ -496,9 +498,9 @@ function CustomerCreationForm() {
             <Select
               id="property"
               required
-              value={formData.property}
+              value={formData.property_id}
               onChange={(val) =>
-                setFormData((prev) => ({ ...prev, property: val }))
+                setFormData((prev) => ({ ...prev, property_id: val }))
               }
               options={dropdowns.properties.map((p: any) => ({
                 value: p.id,
@@ -512,9 +514,9 @@ function CustomerCreationForm() {
             <Select
               id="sub_property"
               required
-              value={formData.sub_property}
+              value={formData.sub_property_id}
               onChange={(val) =>
-                setFormData((prev) => ({ ...prev, sub_property: val }))
+                setFormData((prev) => ({ ...prev, sub_property_id: val }))
               }
               options={dropdowns.subProperties.map((sp: any) => ({
                 value: sp.id,
