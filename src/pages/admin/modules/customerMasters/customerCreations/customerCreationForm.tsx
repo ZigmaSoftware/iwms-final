@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
+import { desktopApi } from "@/api";
+import { adminApi } from "@/helpers/admin";
 import { Input } from "@/components/ui/input";
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
@@ -111,16 +112,17 @@ function CustomerCreationForm() {
   // 🔹 Load customer data for edit mode
   useEffect(() => {
     fetchDropdowns();
-    if (isEdit) {
-      desktopApi
-        .get(`customercreations/${id}/`)
-        .then((res) => setFormData(res.data))
+    if (isEdit && id) {
+      adminApi.customerCreations
+        .get(id)
+        .then((res) => setFormData(res as any))
         .catch((err) => {
           console.error("Error loading customer:", err);
           Swal.fire({
             icon: "error",
             title: "Failed to load customer",
-            text: err.response?.data?.detail || "Something went wrong!",
+            text:
+              (err as any)?.response?.data?.detail || "Something went wrong!",
           });
         });
     }
@@ -228,8 +230,8 @@ function CustomerCreationForm() {
     setLoading(true);
 
     try {
-      if (isEdit) {
-        await desktopApi.put(`customercreations/${id}/`, formData);
+      if (isEdit && id) {
+        await adminApi.customerCreations.update(id, formData);
         Swal.fire({
           icon: "success",
           title: "Customer updated successfully!",
@@ -237,7 +239,7 @@ function CustomerCreationForm() {
           showConfirmButton: false,
         });
       } else {
-        await desktopApi.post("customercreations/", formData);
+        await adminApi.customerCreations.create(formData);
         Swal.fire({
           icon: "success",
           title: "Customer added successfully!",
@@ -404,10 +406,10 @@ function CustomerCreationForm() {
               required
               value={formData.ward_id}
               onChange={(val) =>
-                setFormData((prev) => ({ ...prev, ward: val }))
+                setFormData((prev) => ({ ...prev, ward_id: val }))
               }
               options={dropdowns.wards.map((w: any) => ({
-                value: w.id,
+                value: w.unique_id || w.id,
                 label: w.name,
               }))}
             />
@@ -423,7 +425,7 @@ function CustomerCreationForm() {
                 setFormData((prev) => ({ ...prev, zone_id: val }))
               }
               options={dropdowns.zones.map((z: any) => ({
-                value: z.id,
+                value: z.unique_id || z.id,
                 label: z.name,
               }))}
             />
@@ -439,7 +441,7 @@ function CustomerCreationForm() {
                 setFormData((prev) => ({ ...prev, city_id: val }))
               }
               options={dropdowns.cities.map((c: any) => ({
-                value: c.id,
+                value: c.unique_id || c.id,
                 label: c.name,
               }))}
             />
@@ -455,7 +457,7 @@ function CustomerCreationForm() {
                 setFormData((prev) => ({ ...prev, district_id: val }))
               }
               options={dropdowns.districts.map((d: any) => ({
-                value: d.id,
+                value: d.unique_id || d.id,
                 label: d.name,
               }))}
             />
@@ -471,7 +473,7 @@ function CustomerCreationForm() {
                 setFormData((prev) => ({ ...prev, state_id: val }))
               }
               options={dropdowns.states.map((s: any) => ({
-                value: s.id,
+                value: s.unique_id || s.id,
                 label: s.name,
               }))}
             />
@@ -487,7 +489,7 @@ function CustomerCreationForm() {
                 setFormData((prev) => ({ ...prev, country_id: val }))
               }
               options={dropdowns.countries.map((c: any) => ({
-                value: c.id,
+                value: c.unique_id || c.id,
                 label: `${c.name} (${c.currency || ""})`,
               }))}
             />
@@ -503,7 +505,7 @@ function CustomerCreationForm() {
                 setFormData((prev) => ({ ...prev, property_id: val }))
               }
               options={dropdowns.properties.map((p: any) => ({
-                value: p.id,
+                value: p.unique_id || p.id,
                 label: p.property_name,
               }))}
             />
@@ -519,7 +521,7 @@ function CustomerCreationForm() {
                 setFormData((prev) => ({ ...prev, sub_property_id: val }))
               }
               options={dropdowns.subProperties.map((sp: any) => ({
-                value: sp.id,
+                value: sp.unique_id || sp.id,
                 label: sp.sub_property_name,
               }))}
             />

@@ -117,9 +117,9 @@ export function HomeDashboard() {
 
             <div style={{ height: "25%" }}>
 
-              <div className="grid grid-cols-2 gap-3 mt-4">
+              <div className="grid grid-cols-1 gap-3 mt-4">
                 <BinStatus active={84} inactive={16} />
-                <CameraStatus active={42} inactive={5} />
+                {/* <CameraStatus active={42} inactive={5} /> */}
                 {/* <TotalStatus active={126} inactive={21}/> */}
               </div>
 
