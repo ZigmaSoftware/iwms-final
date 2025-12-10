@@ -76,12 +76,13 @@ export default function DayReport() {
     currentPage * rowsPerPage
   );
 
-  const fetchData = async (targetFromDate: string) => {
+  const fetchData = async (targetFromDate: string, targetToDate: string) => {
     setLoading(true);
     setError(null);
     try {
       const params = new URLSearchParams({
         from_date: targetFromDate,
+        to_date: targetToDate,
         key: API_KEY,
       });
       const response = await fetch(`${API_URL}?${params.toString()}`);
@@ -104,18 +105,22 @@ export default function DayReport() {
   };
 
   useEffect(() => {
-    fetchData(initialFromDate);
-  }, [initialFromDate]);
+    fetchData(initialFromDate, initialToDate);
+  }, [initialFromDate, initialToDate]);
 
   const handleGo = () => {
-    fetchData(fromDate);
+    if (new Date(fromDate) > new Date(toDate)) {
+      setError("From Date cannot be later than To Date.");
+      return;
+    }
+    fetchData(fromDate, toDate);
   };
 
   const goBack = () => {
     navigate(`/${encWorkforceManagement}/${encWorkforceManagement}`);
   };
 
-  const rangeLabel = `${formatFullDate(fromDate)} ${formatFullDate(toDate)}`;
+  const rangeLabel = `${formatFullDate(fromDate)} – ${formatFullDate(toDate)}`;
 
   return (
     <div className="dr-page">
