@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { fetchWasteReport, type WasteApiRow } from "@/utils/wasteApi";
 import "./datereport.css";
 
-type ApiRow = {
-  date: string;
+type ApiRow = WasteApiRow & {
   Start_Time: string | null;
   End_Time: string | null;
   total_trip: number;
@@ -15,12 +15,7 @@ type ApiRow = {
   average_weight_per_trip: number;
 };
 
-const API_URL =
-  "/zigma-api/waste_collected_summary_report/waste_collected_data_api.php";
-const API_KEY = "ZIGMA-DELHI-WEIGHMENT-2025-SECURE";
-
 const today = new Date();
-const todayIso = today.toISOString().split("T")[0];
 
 const formatFullDate = (value: string) => {
   if (!value) return "";
@@ -76,41 +71,48 @@ export default function DateReport() {
     currentPage * rowsPerPage
   );
 
-  const fetchData = async (targetFromDate: string) => {
+  const fetchData = async (targetFromDate: string, targetToDate: string) => {
     setLoading(true);
     setError(null);
     try {
-      const params = new URLSearchParams({
-        from_date: targetFromDate,
-        key: API_KEY,
-      });
-      const response = await fetch(`${API_URL}?${params.toString()}`);
-      const payload = await response.json();
-      if (payload?.status && Array.isArray(payload.data)) {
-        const sorted = [...payload.data].sort((a, b) =>
-          compareDates(a.date, b.date)
-        );
+      const { rows: apiRows, message } = await fetchWasteReport<ApiRow>(
+        "date_wise_data",
+        targetFromDate,
+        targetToDate
+      );
+
+      if (!apiRows.length) {
+        setRows([]);
+        setError(message || "No data available for the selected range.");
+      } else {
+        const sorted = [...apiRows].sort((a, b) => compareDates(a.date, b.date));
         setRows(sorted);
         setCurrentPage(1); // reset page
-      } else {
-        setRows([]);
-        setError("No data available for the selected range.");
+        setError(null);
       }
     } catch (err) {
       console.error("Date report API error:", err);
       setRows([]);
-      setError("Unable to load data. Please try again.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to load data. Please try again."
+      );
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData(initialFromDate);
-  }, [initialFromDate]);
+    fetchData(initialFromDate, initialToDate);
+  }, [initialFromDate, initialToDate]);
 
   const handleGo = () => {
-    fetchData(fromDate);
+    if (new Date(fromDate) > new Date(toDate)) {
+      setError("From Date cannot be later than To Date.");
+      return;
+    }
+    fetchData(fromDate, toDate);
   };
 
   const goBack = () => {
@@ -138,7 +140,6 @@ export default function DateReport() {
               <input
                 type="date"
                 value={fromDate}
-                max={todayIso}
                 onChange={(event) => setFromDate(event.target.value)}
               />
             </label>
@@ -148,7 +149,6 @@ export default function DateReport() {
               <input
                 type="date"
                 value={toDate}
-                max={todayIso}
                 onChange={(event) => setToDate(event.target.value)}
               />
             </label>

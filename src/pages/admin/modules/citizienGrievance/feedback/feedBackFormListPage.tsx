@@ -20,7 +20,9 @@ import { adminApi } from "@/helpers/admin";
 
 type feedback = {
   unique_id: string;
-  customer: number;
+  customer: string;
+  customer_id?: string | number;
+  customer_unique_id?: string;
   customer_name: string;
   contact_no: string;
   building_no: string;
@@ -51,7 +53,7 @@ export default function FeedBackFormList() {
   const { encCitizenGrivence, encFeedback } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encCitizenGrivence}/${encFeedback}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encCitizenGrivence}/${encFeedback}/${id}/edit`;
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -217,7 +219,16 @@ export default function FeedBackFormList() {
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
 
-          <Column field="customer" header="Customer ID" sortable />
+          <Column
+            field="customer"
+            header="Customer ID"
+            sortable
+            body={(row: feedback) =>
+              row.customer ||
+              (row.customer_unique_id ? String(row.customer_unique_id) : "") ||
+              (row.customer_id ? String(row.customer_id) : "-")
+            }
+          />
 
           <Column
             field="customer_name"
@@ -254,13 +265,7 @@ export default function FeedBackFormList() {
             body={(row: feedback) => cap(row.city_name)}
           />
 
-          {/* 🔥 NEW Toggle Status */}
-          <Column
-            field="is_active"
-            header="Status"
-            body={statusTemplate}
-            style={{ width: "150px" }}
-          />
+          {/* Status column removed per request */}
 
           <Column
             header="Actions"

@@ -38,7 +38,8 @@ export default function SubComplaintCategoryList() {
   const fetchData = async () => {
     try {
       const res = await mobileApi.get("sub-category/");
-      setRecords(res.data.data);
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setRecords(list);
     } catch (err) {
       console.error("Error loading sub categories:", err);
     } finally {
@@ -76,7 +77,9 @@ export default function SubComplaintCategoryList() {
 
   const statusTemplate = (row: any) => {
     const updateStatus = async (value: boolean) => {
-      await mobileApi.put(`sub-category/${row.unique_id}/`, { is_active: value });
+      await mobileApi.patch(`sub-category/${row.unique_id}/`, {
+        is_active: value,
+      });
       fetchData();
     };
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;

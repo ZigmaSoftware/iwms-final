@@ -57,7 +57,8 @@ export const createCrudHelpers = <T = any>(basePath: string): CrudHelpers<T> => 
     },
 
     update: async (id, payload, config) => {
-      const { data } = await desktopApi.put<T>(`${resource}${id}/`, payload, config);
+      // Use PATCH so partial payloads (e.g., status toggles) work with ModelViewSet
+      const { data } = await desktopApi.patch<T>(`${resource}${id}/`, payload, config);
       return data;
     },
 

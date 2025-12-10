@@ -57,6 +57,9 @@ function FeedBackForm() {
     }
   }, []);
 
+  const resolveId = (c: any) =>
+    c?.unique_id ?? (c?.id !== undefined ? String(c.id) : "");
+
   useEffect(() => {
     loadCustomers(customerFallbackId ?? undefined);
   }, [customerFallbackId, loadCustomers]);
@@ -70,7 +73,9 @@ function FeedBackForm() {
       feedbackApi
         .get(id as string)
         .then((res) => {
-          const customerValue = String(res.customer ?? res.customer_id ?? "");
+          const customerValue = String(
+            res.customer ?? res.customer_id ?? res.customer_unique_id ?? ""
+          );
           setCustomerId(customerValue);
           setFeedBackCategory(res.category || "");
           setFeedBackDetails(res.feedback_details || "");
@@ -148,7 +153,7 @@ function FeedBackForm() {
   };
 
   const selectedCustomer = customers.find(
-    (c) => (c as any).unique_id === customerId
+    (c) => resolveId(c) === customerId
   );
 
   return (
@@ -165,7 +170,7 @@ function FeedBackForm() {
               value={customerId}
               onChange={(val) => setCustomerId(val)}
               options={customers.map((c: any) => ({
-                value: c.unique_id,
+                value: resolveId(c),
                 label: c.customer_name,
               }))}
               className="w-full"

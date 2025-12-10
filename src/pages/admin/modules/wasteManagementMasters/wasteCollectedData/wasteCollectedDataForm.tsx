@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
+import { adminApi } from "@/helpers/admin";
 import { Input } from "@/components/ui/input";
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
@@ -53,10 +53,10 @@ function WasteCollectedForm() {
     setTotalQuantity(wetWaste + dryWaste + mixedWaste);
   }, [wetWaste, dryWaste, mixedWaste]);
 
-  const fetchCustomers = async (includeCustomerId?: number) => {
+  const fetchCustomers = async (includeCustomerId?: number | string) => {
     try {
-      const res = await desktopApi.get("customercreations/");
-      const data = normalizeCustomerArray(res.data);
+      const res = await adminApi.customerCreations.list();
+      const data = normalizeCustomerArray(res as any);
       setCustomers(
         filterActiveCustomers(
           data,
@@ -75,19 +75,17 @@ function WasteCollectedForm() {
   // Fetch existing waste collection if editing
   useEffect(() => {
     if (isEdit) {
-      desktopApi
-        .get(`wastecollections/${id}/`)
-        .then((res) => {
-          const customerIdFromApi = Number(res.data.customer);
-          setCustomerId(customerIdFromApi.toString());
-          setWetWaste(res.data.wet_waste);
-          setDryWaste(res.data.dry_waste);
-          setMixedWaste(res.data.mixed_waste);
-          if (!Number.isNaN(customerIdFromApi)) {
-            fetchCustomers(customerIdFromApi);
-          }
+      adminApi.wasteCollections
+        .get(id as string)
+        .then((res: any) => {
+          const customerIdFromApi = res.customer ?? res.customer_id ?? "";
+          setCustomerId(String(customerIdFromApi));
+          setWetWaste(res.wet_waste);
+          setDryWaste(res.dry_waste);
+          setMixedWaste(res.mixed_waste);
+          fetchCustomers(customerIdFromApi);
         })
-        .catch((err) => {
+        .catch((err: any) => {
           console.error("Failed to fetch waste collection:", err);
           Swal.fire({
             icon: "error",
@@ -121,7 +119,7 @@ function WasteCollectedForm() {
       };
 
       if (isEdit) {
-        await desktopApi.put(`wastecollections/${id}/`, payload);
+        await adminApi.wasteCollections.update(id as string, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -129,7 +127,7 @@ function WasteCollectedForm() {
           showConfirmButton: false,
         });
       } else {
-        await desktopApi.post("wastecollections/", payload);
+        await adminApi.wasteCollections.create(payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",
@@ -155,9 +153,10 @@ function WasteCollectedForm() {
   };
 
   // Get selected customer object for display
-  const selectedCustomer = customers.find(
-    (c) => c.id === Number(customerId)
-  );
+  const resolveId = (c: any) =>
+    c?.unique_id ?? (c?.id !== undefined ? String(c.id) : "");
+
+  const selectedCustomer = customers.find((c: any) => resolveId(c) === customerId);
 
   return (
     <ComponentCard
@@ -174,8 +173,8 @@ function WasteCollectedForm() {
               id="customer"
               value={customerId}                          // string
               onChange={(val) => setCustomerId(val)}      // keep as string
-              options={customers.map((c) => ({
-                value: c.id.toString(),                   // string
+              options={customers.map((c: any) => ({
+                value: resolveId(c),
                 label: c.customer_name,
               }))}
               className="w-full"
