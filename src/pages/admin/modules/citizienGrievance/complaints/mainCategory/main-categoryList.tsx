@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
-import { mobileAPI } from "@/api";
+import { mobileApi } from "@/api";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -42,7 +42,7 @@ export default function MainComplaintCategoryList() {
 
   const fetchData = async () => {
     try {
-      const res = await mobileAPI.get("main-category/");
+      const res = await mobileApi.get("main-category/");
       setRecords(res.data);
     } finally {
       setLoading(false);
@@ -66,7 +66,7 @@ export default function MainComplaintCategoryList() {
 
     if (!confirm.isConfirmed) return;
 
-    await mobileAPI.delete(`main-category/${id}/`);
+    await mobileApi.delete(`main-category/${id}/`);
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
@@ -78,7 +78,7 @@ export default function MainComplaintCategoryList() {
 
   const statusTemplate = (row: MainCategory) => {
     const updateStatus = async (value: boolean) => {
-      await mobileAPI.put(`main-category/${row.unique_id}/`, { is_active: value });
+      await mobileApi.put(`main-category/${row.unique_id}/`, { is_active: value });
       fetchData();
     };
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;

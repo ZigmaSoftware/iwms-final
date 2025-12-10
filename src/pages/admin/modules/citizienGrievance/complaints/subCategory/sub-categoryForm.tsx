@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
-import { mobileAPI } from "@/api";
+import { mobileApi } from "@/api";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,7 @@ export default function SubComplaintCategoryForm() {
 
   // Load dropdown
   useEffect(() => {
-    mobileAPI.get("main-category/").then(res => {
+    mobileApi.get("main-category/").then(res => {
       setMainList(res.data.data);
     });
   }, []);
@@ -40,7 +40,7 @@ export default function SubComplaintCategoryForm() {
   // Load edit data
   useEffect(() => {
     if (isEdit) {
-      mobileAPI.get(`sub-category/${id}/`).then(res => {
+      mobileApi.get(`sub-category/${id}/`).then(res => {
         const d = res.data.data;
         setName(d.name);
         setMainCategory(d.mainCategory);
@@ -61,7 +61,7 @@ export default function SubComplaintCategoryForm() {
 
     try {
       if (isEdit) {
-        await mobileAPI.put(`sub-category/${id}/`, payload);
+        await mobileApi.put(`sub-category/${id}/`, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -69,7 +69,7 @@ export default function SubComplaintCategoryForm() {
           showConfirmButton: false,
         });
       } else {
-        await mobileAPI.post("sub-category/", payload);
+        await mobileApi.post("sub-category/", payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",
