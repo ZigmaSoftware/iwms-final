@@ -1,17 +1,15 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { desktopApi } from "@/api";
 import Swal from "sweetalert2";
 import ComponentCard from "@/components/common/ComponentCard";
 import Select from "@/components/form/Select";
 import Label from "@/components/form/Label";
-import { Input } from "@/components/ui/input";
+import Input from "@/components/form/input/InputField";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { adminApi } from "@/helpers/admin";
 
 const FILE_ICON =
   "https://cdn-icons-png.flaticon.com/512/337/337946.png";
-
-const complaintApi = adminApi.complaints;
 
 export default function ComplaintEditForm() {
   const { id } = useParams();
@@ -26,6 +24,10 @@ export default function ComplaintEditForm() {
   const [previewName, setPreviewName] = useState<string>("");
 
   const [data, setData] = useState<any>(null);
+
+  useEffect(() => {
+    load();
+  }, []);
 
   const { encCitizenGrivence, encComplaint } = getEncryptedRoute();
 
@@ -45,24 +47,20 @@ export default function ComplaintEditForm() {
   const isImageFile = (f: File) =>
     f.type.startsWith("image/") || isImageUrl(f.name || "");
 
-  useEffect(() => {
-    const load = async () => {
-      if (!id) return;
-      const c = await complaintApi.get(id);
+  const load = async () => {
+    const res = await desktopApi.get(`/complaints/${id}/`);
+    const c = res.data;
 
-      setData(c);
-      setStatus(c.status);
-      setRemarks(c.action_remarks || "");
+    setData(c);
+    setStatus(c.status);
+    setRemarks(c.action_remarks || "");
 
-      if (c.close_image_url) {
-        setPreviewUrl(isImageUrl(c.close_image_url) ? c.close_image_url : FILE_ICON);
-        setIsPreviewImage(isImageUrl(c.close_image_url));
-        setPreviewName(c.close_image_url.split("/").pop() || "file");
-      }
-    };
-
-    load();
-  }, [id]);
+    if (c.close_image_url) {
+      setPreviewUrl(isImageUrl(c.close_image_url) ? c.close_image_url : FILE_ICON);
+      setIsPreviewImage(isImageUrl(c.close_image_url));
+      setPreviewName(c.close_image_url.split("/").pop() || "file");
+    }
+  };
 
   const upload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -94,12 +92,22 @@ export default function ComplaintEditForm() {
     fd.append("action_remarks", remarks);
     if (closeFile) fd.append("close_image", closeFile);
 
-    if (!id) return;
-    await complaintApi.update(id, fd, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-    Swal.fire("Updated", "Complaint updated", "success");
-    navigate(ENC_LIST_PATH);
+    try {
+      await desktopApi.patch(`/complaints/${id}/`, fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      Swal.fire("Updated", "Complaint updated", "success");
+      navigate(ENC_LIST_PATH);
+    } catch (error: any) {
+      console.error("Complaint update failed:", error);
+      const message =
+        error?.response?.data &&
+        typeof error.response.data === "object" &&
+        !Array.isArray(error.response.data)
+          ? JSON.stringify(error.response.data)
+          : "Failed to update complaint";
+      Swal.fire("Error", message, "error");
+    }
   };
 
   if (!data) return <div>Loading…</div>;

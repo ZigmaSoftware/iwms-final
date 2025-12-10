@@ -17,8 +17,14 @@ const API_KEY =
   import.meta.env.VITE_WASTE_COLLECTION_KEY ??
   "ZIGMA-DELHI-WEIGHMENT-2025-SECURE";
 
-const CORS_PROXY =
+const RAW_PROXY_TEMPLATES =
   import.meta.env.VITE_WASTE_COLLECTION_CORS_PROXY ?? "";
+
+const DEFAULT_PROXY_TEMPLATES = [
+  "https://cors.isomorphic-git.org/{url}",
+  "https://thingproxy.freeboard.io/fetch/{url}",
+  "https://corsproxy.io/?",
+];
 
 export type WasteReportAction = "date_wise_data" | "day_wise_data";
 
@@ -71,19 +77,35 @@ const findArray = (node: any): any[] | null => {
   return null;
 };
 
-const buildProxyUrl = (target: string): string | null => {
-  const proxy = CORS_PROXY?.trim();
-  if (!proxy) return null;
+const parseProxyTemplates = (): string[] => {
+  const fromEnv = RAW_PROXY_TEMPLATES.split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
 
-  if (/\{url\}/i.test(proxy)) {
-    return proxy.replace(/\{url\}/gi, encodeURIComponent(target));
+  return fromEnv.length > 0 ? fromEnv : DEFAULT_PROXY_TEMPLATES;
+};
+
+const formatProxyUrl = (template: string, target: string): string => {
+  const encoded = encodeURIComponent(target);
+  if (/\{url\}/i.test(template)) {
+    return template.replace(/\{url\}/gi, encoded);
   }
 
-  if (proxy.endsWith("?") || proxy.endsWith("&")) {
-    return `${proxy}${target}`;
+  if (template.endsWith("?") || template.endsWith("&")) {
+    return `${template}${encoded}`;
   }
 
-  return `${proxy}${target}`;
+  if (template.includes("?")) {
+    return `${template}&url=${encoded}`;
+  }
+
+  return `${template}${encoded}`;
+};
+
+const buildProxyUrls = (target: string): string[] => {
+  return parseProxyTemplates().map((template) =>
+    formatProxyUrl(template, target)
+  );
 };
 
 const fetchWithFallback = async (url: string): Promise<string> => {
@@ -97,27 +119,40 @@ const fetchWithFallback = async (url: string): Promise<string> => {
 
     if (!response.ok) {
       const snippet = raw.slice(0, 200);
-      throw new Error(`HTTP ${response.status}: ${snippet}`);
+      const err = new Error(`HTTP ${response.status}: ${snippet}`);
+      (err as any).status = response.status;
+      throw err;
     }
 
     return raw;
   };
 
+  let lastError: unknown;
+
   try {
     return await attempt(url);
   } catch (error) {
-    if (!(error instanceof TypeError)) {
-      throw error;
-    }
-
-    const proxied = buildProxyUrl(url);
-    if (!proxied) {
-      throw error;
-    }
-
-    console.warn("Waste report request failed, retrying via proxy.");
-    return await attempt(proxied);
+    lastError = error;
   }
+
+  for (const proxiedUrl of buildProxyUrls(url)) {
+    try {
+      console.warn("Waste report request failed, retrying via proxy.", lastError);
+      return await attempt(proxiedUrl);
+    } catch (error) {
+      lastError = error;
+    }
+  }
+
+  if (lastError instanceof Error) {
+    throw lastError;
+  }
+
+  throw new Error(
+    typeof lastError === "string"
+      ? lastError
+      : "Unknown error fetching waste report."
+  );
 };
 
 export async function fetchWasteReport<T = WasteApiRow>(
