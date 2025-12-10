@@ -76,6 +76,8 @@
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  --green-custom: #0f9d58;
+  --green-custom-hover: #0b7a43;
 }
 
 .dark {
@@ -110,6 +112,8 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  --green-custom: #22c55e;
+  --green-custom-hover: #16a34a;
 }
 
 
@@ -136,5 +140,24 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer utilities {
+  .bg-green-custom {
+    background-color: var(--green-custom);
+  }
+
+  .bg-green-custom:hover {
+    background-color: var(--green-custom-hover);
+  }
+
+  .border-green-custom {
+    border-color: var(--green-custom);
+  }
+
+  .focus\:border-green-custom:focus {
+    border-color: var(--green-custom);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--green-custom) 60%, transparent);
   }
 }

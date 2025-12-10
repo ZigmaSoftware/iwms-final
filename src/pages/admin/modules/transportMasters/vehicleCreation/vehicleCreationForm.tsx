@@ -51,7 +51,18 @@ export default function VehicleCreationForm() {
 
   const [initialLoad, setInitialLoad] = useState(true);
 
-  const resolveId = (item: any) => item?.unique_id ?? "";
+  const resolveId = (item: any) => {
+    if (!item) return "";
+    const raw =
+      item.unique_id ??
+      item.uniqueId ??
+      item.id ??
+      item.value ??
+      item.code ??
+      item.pk ??
+      "";
+    return raw === null || raw === undefined ? "" : String(raw);
+  };
 
   useEffect(() => {
     Promise.all([vehicleTypeApi.list(), fuelTypeApi.list()]).then(
