@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import { desktopApi } from "@/api";
+import { adminApi } from "@/helpers/admin";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -21,10 +22,12 @@ type StaffUserType = {
   unique_id: string;
   name: string;
   is_active: boolean;
-  usertype?: { unique_id?: string; name?: string } | string | null;
-  usertype_name?: string; // computed for display
+  usertype_name?: string;
   usertype_id?: string | null;
+  screens?: any[];
 };
+
+const userScreenPermissionApi = adminApi.userscreenpermissions;
 
 export default function UserScreenPermissionList() {
   const [records, setRecords] = useState<StaffUserType[]>([]);
@@ -34,41 +37,69 @@ export default function UserScreenPermissionList() {
   const [filters, setFilters] = useState<any>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
-    usertype_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    usertype_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH }
   });
 
   const navigate = useNavigate();
-  const { encAdmins, encStaffUserType } = getEncryptedRoute();
+  const { encAdmins, encUserScreenPermission } = getEncryptedRoute();
 
-  const ENC_NEW_PATH = `/${encAdmins}/${encStaffUserType}/new`;
+  const ENC_NEW_PATH = `/${encAdmins}/${encUserScreenPermission}/new`;
   const ENC_EDIT_PATH = (id: string) =>
-    `/${encAdmins}/${encStaffUserType}/${id}/edit`;
+    `/${encAdmins}/${encUserScreenPermission}/${id}/edit`;
 
   /* -----------------------------------------------------------
-     FETCH DATA
+     FETCH DATA — FIXED WITH SAFE NORMALIZATION
   ----------------------------------------------------------- */
   const fetchRecords = async () => {
     try {
-      const res = await desktopApi.get("staffusertypes/");
-      const list = Array.isArray(res.data) ? res.data : res.data.results ?? [];
+      const res: unknown = await userScreenPermissionApi.list();
 
-      const normalized = list.map((item: any) => ({
-  ...item,
+      // SAFELY normalize response into an array
+      let data: any[] = [];
 
-  // backend might return foreign key as string
-  usertype_id:
-    item.usertype_id ??
-    item.usertype?.unique_id ??
-    null,
+      if (Array.isArray(res)) {
+        data = res;
+      } else if (
+        res &&
+        typeof res === "object" &&
+        Array.isArray((res as any).data)
+      ) {
+        data = (res as any).data;
+      } else {
+        data = [];
+      }
 
-  // backend might return name nested or flat
-  usertype_name:
-    item.usertype_name ??
-    item.usertype?.name ??
-    "Unknown",
-}));
+      console.log("Normalized API Data:", data);
 
-      setRecords(normalized);
+      // Group by staff usertype
+      const grouped = Object.values(
+        data.reduce((acc: any, item: any) => {
+          const uid = item.staffusertype_id;
+
+          if (!acc[uid]) {
+            acc[uid] = {
+              unique_id: uid,
+              usertype_name: item.usertype_name ?? "Unknown",
+              name: item.userscreen_name,
+              is_active: item.is_active,
+              screens: []
+            };
+          }
+
+          acc[uid].screens.push({
+            screen: item.userscreen_name,
+            action: item.userscreenaction_name,
+            order: item.order_no
+          });
+
+          return acc;
+        }, {})
+      );
+
+      setRecords(grouped);
+    } catch (err) {
+      console.error("Fetch failed:", err);
+      setRecords([]);
     } finally {
       setLoading(false);
     }
@@ -87,58 +118,68 @@ export default function UserScreenPermissionList() {
       text: "This staff user type will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#d33",
+      confirmButtonColor: "#d33"
     });
 
     if (!confirmDelete.isConfirmed) return;
 
-    await desktopApi.delete(`staffusertypes/${unique_id}/`);
+    try {
+      const record = await userScreenPermissionApi.get(unique_id);
+      const data: any = (record as any)?.data ?? record;
 
-    Swal.fire({
-      icon: "success",
-      title: "Deleted successfully!",
-      timer: 1500,
-      showConfirmButton: false,
-    });
+      const staffTypeId =
+        data?.staffusertype_id ?? data?.staffusertype?.unique_id ?? unique_id;
+      const mainScreenId =
+        data?.mainscreen_id ?? data?.mainscreen?.unique_id ?? null;
+      const userTypeId = data?.usertype_id ?? data?.usertype?.unique_id ?? null;
 
-    fetchRecords();
+      if (!staffTypeId || !mainScreenId || !userTypeId) {
+        throw new Error("Missing permission identifiers");
+      }
+
+      await userScreenPermissionApi.action(`bulk-sync-multi/${staffTypeId}`, {
+        usertype_id: userTypeId,
+        staffusertype_id: staffTypeId,
+        mainscreen_id: mainScreenId,
+        screens: [],
+        description: data?.description ?? ""
+      });
+
+      Swal.fire({
+        icon: "success",
+        title: "Deleted successfully!",
+        timer: 1500,
+        showConfirmButton: false
+      });
+
+      fetchRecords();
+    } catch (error: any) {
+      console.error("Delete Error:", error.response?.data || error);
+      Swal.fire("Error", "Failed to delete permissions", "error");
+    }
   };
 
   /* -----------------------------------------------------------
      STATUS SWITCH
   ----------------------------------------------------------- */
   const statusTemplate = (row: StaffUserType) => {
-  const updateStatus = async (value: boolean) => {
-    console.log("=== STATUS TOGGLE TRIGGERED ===");
-    console.log("Row Data:", row);
-    console.log("New Status:", value);
+    const updateStatus = async (value: boolean) => {
+      const payload = {
+        usertype_id: row.usertype_id,
+        name: row.name,
+        is_active: value
+      };
 
-    const payload = {
-      usertype_id: row.usertype_id,   // required for backend
-      name: row.name,
-      is_active: value,
+      try {
+        await desktopApi.put(`staffusertypes/${row.unique_id}/`, payload);
+        fetchRecords();
+      } catch (error: any) {
+        Swal.fire("Error", "Failed to update status", "error");
+      }
     };
 
-    console.log("Payload Sent to API:", payload);
-
-    try {
-      const response = await desktopApi.put(
-        `staffusertypes/${row.unique_id}/`,
-        payload
-      );
-
-      console.log("API Response:", response.data);
-
-      fetchRecords();
-    } catch (error: any) {
-      console.error("Update Status Error:", error.response?.data || error);
-      Swal.fire("Error", "Failed to update status", "error");
-    }
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
-
-  return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
-};
-
 
   /* -----------------------------------------------------------
      ACTION BUTTONS
@@ -163,20 +204,12 @@ export default function UserScreenPermissionList() {
     </div>
   );
 
-  /* -----------------------------------------------------------
-     INDEX COLUMN
-  ----------------------------------------------------------- */
-  const indexTemplate = (_: StaffUserType, { rowIndex }: any) =>
-    rowIndex + 1;
+  const indexTemplate = (_: StaffUserType, { rowIndex }: any) => rowIndex + 1;
 
-  /* -----------------------------------------------------------
-     GLOBAL FILTER
-  ----------------------------------------------------------- */
   const onGlobalFilterChange = (e: any) => {
     const value = e.target.value;
     const updated = { ...filters };
     updated["global"].value = value;
-
     setFilters(updated);
     setGlobalFilterValue(value);
   };
@@ -195,17 +228,17 @@ export default function UserScreenPermissionList() {
     </div>
   );
 
-  /* -----------------------------------------------------------
-     RENDER
-  ----------------------------------------------------------- */
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">User Screen Permissions for Staff</h1>
-            <p className="text-gray-500 text-sm">Manage staff user type records</p>
+            <h1 className="text-3xl font-bold text-gray-800">
+              User Screen Permissions for Staff
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Manage staff user type records
+            </p>
           </div>
 
           <Button
@@ -231,34 +264,10 @@ export default function UserScreenPermissionList() {
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: 80 }} />
-          <Column
-            field="usertype_name"
-            header="User Type"
-            sortable
-            style={{ minWidth: 150 }}
-          />
-
-          <Column
-            field="name"
-            header="Staff User Type"
-            sortable
-            style={{ minWidth: 180 }}
-          />
-
-          
-
-          <Column
-            header="Status"
-            body={statusTemplate}
-            style={{ width: 120 }}
-          />
-
-          <Column
-            header="Actions"
-            body={actionTemplate}
-            style={{ width: 150 }}
-          />
-
+          <Column field="usertype_name" header="User Type" sortable />
+          <Column field="name" header="Staff User Type" sortable />
+          <Column header="Status" body={statusTemplate} style={{ width: 120 }} />
+          <Column header="Actions" body={actionTemplate} style={{ width: 150 }} />
         </DataTable>
       </div>
     </div>
