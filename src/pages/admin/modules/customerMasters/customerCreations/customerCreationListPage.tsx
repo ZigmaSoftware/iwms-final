@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi}from "@/api";
+import { adminApi } from "@/helpers/admin";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -20,7 +20,6 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 
 type Customer = {
-  id: number;
   unique_id: string;
   customer_name: string;
   contact_no: string;
@@ -40,6 +39,8 @@ type Customer = {
   id_no: string;
   is_active: boolean;
 };
+
+const customerApi = adminApi.customerCreations;
 
 export default function CustomerCreationList() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -63,8 +64,8 @@ export default function CustomerCreationList() {
 
   const fetchCustomers = async () => {
     try {
-      const res = await desktopApi.get("customercreations/");
-      setCustomers(res.data);
+      const res = await customerApi.list();
+      setCustomers(res as Customer[]);
     } finally {
       setLoading(false);
     }
@@ -74,7 +75,7 @@ export default function CustomerCreationList() {
     fetchCustomers();
   }, []);
 
-  const handleDelete = async (unique_id: number) => {
+  const handleDelete = async (unique_id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This customer will be permanently deleted!",
@@ -85,7 +86,7 @@ export default function CustomerCreationList() {
 
     if (!confirm.isConfirmed) return;
 
-    await desktopApi.delete(`customercreations/${unique_id}/`);
+    await customerApi.remove(unique_id);
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
@@ -157,7 +158,7 @@ Property: ${c.property_name} - ${c.sub_property_name}`;
   const statusTemplate = (row: Customer) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`customercreations/${row.unique_id}/`, {
+        await customerApi.update(row.unique_id, {
           is_active: value,
         });
         fetchCustomers();
@@ -183,7 +184,7 @@ Property: ${c.property_name} - ${c.sub_property_name}`;
 
       <button
         title="Delete"
-        onClick={() => handleDelete(c.id)}
+        onClick={() => handleDelete(c.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />

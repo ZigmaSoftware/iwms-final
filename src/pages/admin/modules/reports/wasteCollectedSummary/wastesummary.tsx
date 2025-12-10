@@ -8,6 +8,36 @@ import {
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
 
+const ZIGMA_API_BASE = (
+  import.meta.env.VITE_ZIGMA_API_BASE ||
+  "https://zigma.in/d2d/folders"
+).replace(/\/$/, "");
+
+const VEHICLE_TRACKING_API =
+  "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM";
+
+const pickVehicleId = (record: Record<string, any>): string | null => {
+  const keys = [
+    "vehicleId",
+    "vehicle_id",
+    "vehicleNo",
+    "regNo",
+    "vehicle_number",
+    "vehicle",
+    "vehiclenumber",
+    "shortName",
+  ];
+
+  for (const key of keys) {
+    const value = record?.[key];
+    if (value !== undefined && value !== null) {
+      const str = String(value).trim();
+      if (str) return str;
+    }
+  }
+  return null;
+};
+
 type ApiRow = {
   date: string;
   total_vehicle?: number | string;
@@ -42,6 +72,7 @@ export default function WasteSummary() {
   );
   const [totalWasteCollectedCount, setTotalWasteCollectedCount] =
     useState<number | null>(null);
+  const [vehicleTrackingCount, setVehicleTrackingCount] = useState<number | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -102,10 +133,20 @@ export default function WasteSummary() {
         key: "ZIGMA-DELHI-WEIGHMENT-2025-SECURE",
       });
 
-      const response = await fetch(
-        `/zigma-api/waste_collected_summary_report/waste_collected_data_api.php?${params}`
-      );
-      const data = await response.json();
+      const url = `${ZIGMA_API_BASE}/waste_collected_summary_report/waste_collected_data_api.php?${params}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`API returned ${response.status}`);
+      }
+
+      const raw = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        throw new Error(`Non-JSON response: ${raw.slice(0, 200)}`);
+      }
 
       if (data.status && Array.isArray(data.data)) {
         setRows(data.data);
@@ -150,8 +191,39 @@ export default function WasteSummary() {
       }
     };
 
+    const fetchVehicleTrackingCount = async () => {
+      try {
+        const response = await fetch(VEHICLE_TRACKING_API);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const body = await response.json();
+        const records = Array.isArray(body)
+          ? body
+          : Array.isArray(body?.data)
+          ? body.data
+          : [];
+
+        if (Array.isArray(records) && records.length) {
+          const unique = new Set<string>();
+          records.forEach((record) => {
+            const id = pickVehicleId(record);
+            if (id) unique.add(id);
+          });
+          setVehicleTrackingCount(unique.size || records.length);
+        } else {
+          setVehicleTrackingCount(null);
+        }
+      } catch (error) {
+        console.error("Vehicle tracking count fetch failed:", error);
+        setVehicleTrackingCount(null);
+      }
+    };
+
     fetchHouseholdCount();
     fetchWasteCollectionCount();
+    fetchVehicleTrackingCount();
   }, []);
 
   const filteredRows = useMemo(() => {
@@ -187,19 +259,23 @@ export default function WasteSummary() {
   }, [filteredRows, currentPage]);
 
   const handleDownload = () => {
-    const exportRows = filteredRows.map((row) => ({
-      Date: row.date,
-      "Total Household": totalHouseholdCount ?? row.total_household ?? null,
-      "Wt Collected": totalWasteCollectedCount ?? row.wt_collected ?? null,
-      "Wt Not Collected": computedNotCollected ?? row.wt_not_collected ?? null,
-      "No. of Vehicle": getVehicleCount(row),
-      "No. of Trip": parseNumberValue(row.total_trip),
-      "Dry Wt/kg": parseNumberValue(row.dry_weight),
-      "Wet Wt/kg": parseNumberValue(row.wet_weight),
-      "Mixed Wt/kg": parseNumberValue(row.mix_weight),
-      "Weighment/kg": parseNumberValue(row.total_net_weight),
-      "Avg/Per Trip": parseNumberValue(row.average_weight_per_trip),
-    }));
+    const exportRows = filteredRows.map((row) => {
+      const vehicleCount = getVehicleCount(row) ?? vehicleTrackingCount ?? null;
+
+      return {
+        Date: row.date,
+        "Total Household": totalHouseholdCount ?? row.total_household ?? null,
+        "Wt Collected": totalWasteCollectedCount ?? row.wt_collected ?? null,
+        "Wt Not Collected": computedNotCollected ?? row.wt_not_collected ?? null,
+        "No. of Vehicle": vehicleCount,
+        "No. of Trip": parseNumberValue(row.total_trip),
+        "Dry Wt/kg": parseNumberValue(row.dry_weight),
+        "Wet Wt/kg": parseNumberValue(row.wet_weight),
+        "Mixed Wt/kg": parseNumberValue(row.mix_weight),
+        "Weighment/kg": parseNumberValue(row.total_net_weight),
+        "Avg/Per Trip": parseNumberValue(row.average_weight_per_trip),
+      };
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(exportRows);
     const workbook = XLSX.utils.book_new();
@@ -301,7 +377,11 @@ export default function WasteSummary() {
                           computedNotCollected ?? row.wt_not_collected
                         )}
                       </td>
-                      <td>{formatOptionalNumber(getVehicleCount(row))}</td>
+                      <td>
+                        {formatOptionalNumber(
+                          getVehicleCount(row) ?? vehicleTrackingCount
+                        )}
+                      </td>
                       <td>{formatOptionalNumber(row.total_trip)}</td>
                       <td>{row.dry_weight.toLocaleString()}</td>
                       <td>{row.wet_weight.toLocaleString()}</td>

@@ -1,6 +1,5 @@
-import { type JSX, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import L from "leaflet";
-import type { LatLngTuple } from "leaflet";
+import { JSX, useCallback, useEffect, useRef, useState } from "react";
+import L, { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./vehiclehistory.css";
 import { FiCalendar, FiAlertTriangle } from "react-icons/fi";
@@ -82,6 +81,27 @@ function pickRaw(source: RawRecord, keys: string[]): any {
   }
   return undefined;
 }
+
+const firstArray = (candidates: any[]): any[] => {
+  for (const c of candidates) {
+    if (Array.isArray(c) && c.length) return c;
+  }
+  return [];
+};
+
+const fetchJsonSafe = async (url: string) => {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const snippet = (await res.text()).slice(0, 160);
+    throw new Error(`HTTP ${res.status}: ${snippet}`);
+  }
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`Non-JSON response: ${text.slice(0, 160)}`);
+  }
+};
 
 const HISTORY_TIMESTAMP_KEYS = [
   "deviceTime", "timestamp", "gpsTime", "time", "serverTime",
@@ -225,22 +245,96 @@ export default function VehicleHistory(): JSX.Element {
     setHistoryError("");
     setTrack([]);
 
+    if (!vehicleId) {
+      setHistoryError("Select a vehicle to load history.");
+      return;
+    }
+
     try {
       const fromMs = new Date(fromDate).getTime();
       const toMs = new Date(toDate).getTime();
 
-      const params = new URLSearchParams({
-        ...HISTORY_DEFAULT_PARAMS,
-        vehicleId,
-        fromDateUTC: fromMs.toString(),
-        toDateUTC: toMs.toString(),
-      });
+      if (Number.isNaN(fromMs) || Number.isNaN(toMs)) {
+        setHistoryError("Invalid date range selected.");
+        return;
+      }
 
-      const res = await fetch(`${HISTORY_API_BASE}?${params.toString()}`);
-      const json = await res.json();
+      if (fromMs >= toMs) {
+        setHistoryError("From date must be earlier than To date.");
+        return;
+      }
 
-      const source = json.vehicleLocations || json.data || json.track || [];
-      const normalized = normalizeHistory(source);
+      const baseParams = { ...HISTORY_DEFAULT_PARAMS, vehicleId };
+      const fromMsStr = Math.floor(fromMs).toString();
+      const toMsStr = Math.floor(toMs).toString();
+      const fromSecStr = Math.floor(fromMs / 1000).toString();
+      const toSecStr = Math.floor(toMs / 1000).toString();
+
+      const strategies = [
+        {
+          label: "utc-ms",
+          params: {
+            ...baseParams,
+            fromDateUTC: fromMsStr,
+            toDateUTC: toMsStr,
+          },
+        },
+        {
+          label: "datetime-ms",
+          params: {
+            ...baseParams,
+            fromDateTimeUTC: fromMsStr,
+            toDateTimeUTC: toMsStr,
+          },
+        },
+        {
+          label: "utc-sec",
+          params: {
+            ...baseParams,
+            fromDateUTC: fromSecStr,
+            toDateUTC: toSecStr,
+          },
+        },
+        {
+          label: "latest",
+          params: {
+            ...baseParams,
+          },
+        },
+      ];
+
+      let normalized: any[] = [];
+      let lastError = "";
+
+      for (const strat of strategies) {
+        const params = new URLSearchParams(strat.params as Record<string, string>);
+        const url = `${HISTORY_API_BASE}?${params.toString()}`;
+        try {
+          const json = await fetchJsonSafe(url);
+          const source =
+            firstArray([
+              json.vehicleLocations,
+              json.history4Mobile,
+              json.totalRecordList,
+              json.data,
+              json.track,
+              json.records,
+              json.locations,
+            ]) || [];
+
+          normalized = normalizeHistory(source);
+          if (normalized.length) {
+            lastError = "";
+            break;
+          }
+          lastError = `No data returned (${strat.label})`;
+        } catch (err) {
+          lastError = `Strategy ${strat.label} failed: ${
+            err instanceof Error ? err.message : String(err)
+          }`;
+          continue;
+        }
+      }
 
       const pts: TrackPoint[] = normalized.map((p) => ({
         lat: p.lat,
@@ -252,12 +346,16 @@ export default function VehicleHistory(): JSX.Element {
       }));
 
       setTrack(pts);
+      setPlaybackIndex(0);
+      setIsPlaying(false);
 
       if (!pts.length) {
-        setHistoryError("No history available in this range.");
+        setHistoryError(lastError || "No history available in this range.");
       }
-    } catch {
-      setHistoryError("Unable to load vehicle history.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Unable to load vehicle history.";
+      console.error("History fetch failed:", err);
+      setHistoryError(message);
     }
   }, [vehicleId, fromDate, toDate]);
 
@@ -317,7 +415,9 @@ export default function VehicleHistory(): JSX.Element {
           <label>Vehicle</label>
           <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
             {vehicles.map((v) => (
-              <option key={v.id}>{v.label}</option>
+              <option key={v.id} value={v.id}>
+                {v.label}
+              </option>
             ))}
           </select>
         </div>

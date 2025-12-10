@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { desktopApi } from "@/api";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -177,7 +176,7 @@ export default function WardList() {
   const statusTemplate = (row: WardRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`wards/${row.unique_id}/`, { is_active: value });
+        await wardApi.update(row.unique_id, { is_active: value });
         fetchWards();
       } catch (err) {
         console.error("Status update failed:", err);
