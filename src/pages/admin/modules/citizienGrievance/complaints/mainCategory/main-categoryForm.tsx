@@ -52,10 +52,18 @@ export function MainComplaintCategoryForm() {
     e.preventDefault();
     setLoading(true);
 
-    const payload = {
-      main_categoryName: mainCategoryName,
-      is_active: isActive,
-    };
+    const name = mainCategoryName.trim();
+    if (!name) {
+      Swal.fire({
+        icon: "warning",
+        title: "Missing category name",
+        text: "Please enter a main category name.",
+      });
+      setLoading(false);
+      return;
+    }
+
+    const payload = { main_categoryName: name, is_active: isActive };
 
     try {
       if (isEdit) {
@@ -79,7 +87,18 @@ export function MainComplaintCategoryForm() {
       navigate(ENC_LIST_PATH);
 
     } catch (err) {
-      Swal.fire("Error", "Unable to save data", "error");
+      const respData = (err as any)?.response?.data;
+      const message =
+        typeof respData === "string"
+          ? respData
+          : respData && typeof respData === "object"
+            ? Object.entries(respData)
+              .map(([k, v]) =>
+                Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
+              )
+              .join("\n")
+            : "Unable to save data";
+      Swal.fire("Error", message, "error");
     } finally {
       setLoading(false);
     }

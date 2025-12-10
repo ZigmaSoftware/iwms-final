@@ -54,11 +54,12 @@ export default function VehicleCreationForm() {
   const resolveId = (item: any) => item?.unique_id ?? "";
 
   useEffect(() => {
-    Promise.all([vehicleTypeApi.list(), fuelTypeApi.list()])
-      .then(([vtypeRes, fuelRes]) => {
+    Promise.all([vehicleTypeApi.list(), fuelTypeApi.list()]).then(
+      ([vtypeRes, fuelRes]) => {
         setVehicleTypes(vtypeRes);
         setFuelTypes(fuelRes);
-      });
+      }
+    );
 
     stateApi.list().then((res) => setStates(res));
 
@@ -69,26 +70,26 @@ export default function VehicleCreationForm() {
         setImeiNo(v.imei_no);
         setDriverName(v.driver_name);
         setDriverNo(v.driver_no);
-        setVehicleType(String(v.vehicle_type));
-        setFuelType(String(v.fuel_type));
+        setVehicleType(String((v as any).vehicle_type_id ?? v.vehicle_type ?? ""));
+        setFuelType(String((v as any).fuel_type_id ?? v.fuel_type ?? ""));
 
-        setState(String(v.state_id));
-        setDistrict(String(v.district_id));
-        setCity(String(v.city_id));
-        setZone(String(v.zone_id));
-        setWard(String(v.ward_id));
+        setState(String((v as any).state_id ?? v.state ?? ""));
+        setDistrict(String((v as any).district_id ?? v.district ?? ""));
+        setCity(String((v as any).city_id ?? v.city ?? ""));
+        setZone(String((v as any).zone_id ?? v.zone ?? ""));
+        setWard(String((v as any).ward_id ?? v.ward ?? ""));
         setIsActive(v.is_active);
 
-        const distRes = await districtApi.list({ params: { state_id: v.state_id } });
+        const distRes = await districtApi.list({ params: { state_id: v.state_id ?? v.state } });
         setDistricts(distRes);
 
-        const cityRes = await cityApi.list({ params: { district_id: v.district_id } });
+        const cityRes = await cityApi.list({ params: { district_id: v.district_id ?? v.district } });
         setCities(cityRes);
 
-        const zoneRes = await zoneApi.list({ params: { city_id: v.city_id } });
+        const zoneRes = await zoneApi.list({ params: { city_id: v.city_id ?? v.city } });
         setZones(zoneRes);
 
-        const wardRes = await wardApi.list({ params: { zone_id: v.zone_id } });
+        const wardRes = await wardApi.list({ params: { zone_id: v.zone_id ?? v.zone } });
         setWards(wardRes);
 
         setInitialLoad(false);
@@ -103,7 +104,7 @@ export default function VehicleCreationForm() {
   ================================ */
 
   useEffect(() => {
-    if (!state || initialLoad) return;
+    if (!state || (isEdit && initialLoad)) return;
 
     districtApi.list({ params: { state_id: state } }).then((res) => setDistricts(res));
 
@@ -117,7 +118,7 @@ export default function VehicleCreationForm() {
   }, [state]);
 
   useEffect(() => {
-    if (!district || initialLoad) return;
+    if (!district || (isEdit && initialLoad)) return;
 
     cityApi.list({ params: { district_id: district } }).then((res) => setCities(res));
 
@@ -129,7 +130,7 @@ export default function VehicleCreationForm() {
   }, [district]);
 
   useEffect(() => {
-    if (!city || initialLoad) return;
+    if (!city || (isEdit && initialLoad)) return;
 
     zoneApi.list({ params: { city_id: city } }).then((res) => setZones(res));
 
@@ -139,7 +140,7 @@ export default function VehicleCreationForm() {
   }, [city]);
 
   useEffect(() => {
-    if (!zone || initialLoad) return;
+    if (!zone || (isEdit && initialLoad)) return;
 
     wardApi.list({ params: { zone_id: zone } }).then((res) => setWards(res));
 
@@ -153,37 +154,20 @@ export default function VehicleCreationForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (
-      !vehicleNo ||
-      !chaseNo ||
-      !imeiNo ||
-      !driverName ||
-      !driverNo ||
-      !vehicleType ||
-      !fuelType ||
-      !state ||
-      !district ||
-      !city ||
-      !zone ||
-      !ward
-    ) {
-      Swal.fire("Missing Fields", "Please complete all required fields.", "warning");
+    if (!vehicleNo || !vehicleType || !fuelType) {
+      Swal.fire("Missing Fields", "Vehicle number, vehicle type, and fuel type are required.", "warning");
       return;
     }
 
-    if (!/^\d{10}$/.test(driverNo)) {
+    if (!state || !district || !city || !zone || !ward) {
+      Swal.fire("Missing Fields", "Please select state, district, city, zone, and ward.", "warning");
+      return;
+    }
+
+    if (driverNo && !/^\d{10}$/.test(driverNo)) {
       Swal.fire("Invalid Mobile Number", "Driver mobile number must be 10 digits.", "warning");
       return;
     }
-
-    // Extract names for backend mapping
-    const vehicleTypeName = vehicleTypes.find((x) => resolveId(x) === vehicleType)?.vehicleType || "";
-    const fuelTypeName = fuelTypes.find((x) => resolveId(x) === fuelType)?.fuel_type || "";
-    const stateName = states.find((x) => resolveId(x) === state)?.name || "";
-    const districtName = districts.find((x) => resolveId(x) === district)?.name || "";
-    const cityName = cities.find((x) => resolveId(x) === city)?.name || "";
-    const zoneName = zones.find((x) => resolveId(x) === zone)?.name || "";
-    const wardName = wards.find((x) => resolveId(x) === ward)?.name || "";
 
     const payload = {
       vehicle_no: vehicleNo,
@@ -192,26 +176,14 @@ export default function VehicleCreationForm() {
       driver_name: driverName,
       driver_no: driverNo,
 
-      vehicle_type: vehicleType,
-      vehicle_type_name: vehicleTypeName,
-
-      fuel_type: fuelType,
-      fuel_type_name: fuelTypeName,
+      vehicle_type_id: vehicleType,
+      fuel_type_id: fuelType,
 
       state_id: state,
-      state_name: stateName,
-
       district_id: district,
-      district_name: districtName,
-
       city_id: city,
-      city_name: cityName,
-
       zone_id: zone,
-      zone_name: zoneName,
-
       ward_id: ward,
-      ward_name: wardName,
 
       is_active: isActive,
       is_deleted: false,
@@ -230,7 +202,14 @@ export default function VehicleCreationForm() {
 
       navigate(ENC_LIST_PATH);
     } catch (error: any) {
-      Swal.fire("Error", "Save failed.", "error");
+      const detail =
+        error?.response?.data?.detail ||
+        (error?.response?.data &&
+          Object.entries(error.response.data)
+            .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(", ") : v}`)
+            .join("\n")) ||
+        "Save failed.";
+      Swal.fire("Error", detail, "error");
     } finally {
       setLoading(false);
     }
