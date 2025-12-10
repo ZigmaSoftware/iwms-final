@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
-import { mobileAPI } from "@/api";
+import { mobileApi } from "@/api";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -37,7 +37,7 @@ export default function SubComplaintCategoryList() {
 
   const fetchData = async () => {
     try {
-      const res = await mobileAPI.get("sub-category/");
+      const res = await mobileApi.get("sub-category/");
       setRecords(res.data.data);
     } catch (err) {
       console.error("Error loading sub categories:", err);
@@ -62,7 +62,7 @@ export default function SubComplaintCategoryList() {
 
     if (!confirmation.isConfirmed) return;
 
-    await mobileAPI.delete(`sub-category/${id}/`);
+    await mobileApi.delete(`sub-category/${id}/`);
 
     Swal.fire({
       icon: "success",
@@ -76,7 +76,7 @@ export default function SubComplaintCategoryList() {
 
   const statusTemplate = (row: any) => {
     const updateStatus = async (value: boolean) => {
-      await mobileAPI.put(`sub-category/${row.unique_id}/`, { is_active: value });
+      await mobileApi.put(`sub-category/${row.unique_id}/`, { is_active: value });
       fetchData();
     };
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
