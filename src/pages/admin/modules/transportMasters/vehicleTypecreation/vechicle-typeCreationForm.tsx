@@ -41,19 +41,29 @@ export default function VehicleTypeCreationForm() {
         });
     }
   }, [id, isEdit]);
-  console.log("Fetched vehicle type data:", { vehicleType, description, isActive });
   //  Submit logic
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
+    const normalizedVehicleType = vehicleType.trim();
+    const normalizedDescription = description.trim();
+
+    if (!normalizedVehicleType) {
+      Swal.fire({
+        icon: "warning",
+        title: "Vehicle type is required",
+        text: "Please enter a valid vehicle type name.",
+      });
+      setLoading(false);
+      return;
+    }
+
     const payload = {
-      vehicleType,
-     
+      vehicleType: normalizedVehicleType,
+      description: normalizedDescription ? normalizedDescription : null,
       is_active: isActive,
-     
     };
-    console.log("Payload:", payload);
 
     try {
       if (isEdit) {
@@ -76,10 +86,15 @@ export default function VehicleTypeCreationForm() {
 
       navigate(ENC_LIST_PATH);
     } catch (error: any) {
+      const responseMessage =
+        error?.response?.data?.vehicleType?.[0] ??
+        error?.response?.data?.detail ??
+        error?.message ??
+        "Unable to save vehicle type.";
       Swal.fire({
         icon: "error",
-        title: "Duplicate Vehicle Type",
-        text: "Vehicle type name already exists!",
+        title: "Save Failed",
+        text: responseMessage,
       });
     } finally {
       setLoading(false);

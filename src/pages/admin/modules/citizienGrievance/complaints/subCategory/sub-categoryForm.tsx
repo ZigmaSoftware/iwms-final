@@ -21,7 +21,7 @@ const ENC_LIST_PATH = `/${encCitizenGrivence}/${encSubComplaintCategory}`;
 
 export default function SubComplaintCategoryForm() {
   const [name, setName] = useState("");
-  const [mainCategory, setMainCategory] = useState("");
+  const [mainCategory, setMainCategory] = useState<string>("");
   const [isActive, setIsActive] = useState(true);
   const [mainList, setMainList] = useState<any[]>([]);
 
@@ -32,8 +32,9 @@ export default function SubComplaintCategoryForm() {
 
   // Load dropdown
   useEffect(() => {
-    mobileApi.get("main-category/").then(res => {
-      setMainList(res.data.data);
+    mobileApi.get("main-category/").then((res) => {
+      const list = Array.isArray(res.data) ? res.data : res.data?.data || [];
+      setMainList(list);
     });
   }, []);
 
@@ -41,9 +42,9 @@ export default function SubComplaintCategoryForm() {
   useEffect(() => {
     if (isEdit) {
       mobileApi.get(`sub-category/${id}/`).then(res => {
-        const d = res.data.data;
+        const d = res.data.data || res.data;
         setName(d.name);
-        setMainCategory(d.mainCategory);
+        setMainCategory(String(d.mainCategory));
         setIsActive(d.is_active);
       });
     }
@@ -55,13 +56,13 @@ export default function SubComplaintCategoryForm() {
 
     const payload = {
       name,
-      mainCategory,
+      mainCategory: mainCategory ? Number(mainCategory) : null,
       is_active: isActive,
     };
 
     try {
       if (isEdit) {
-        await mobileApi.put(`sub-category/${id}/`, payload);
+        await mobileApi.patch(`sub-category/${id}/`, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -106,8 +107,8 @@ export default function SubComplaintCategoryForm() {
               </SelectTrigger>
               <SelectContent>
                 {mainList.map((m: any) => (
-                  <SelectItem key={m.unique_id} value={m.unique_id}>
-                    {m.name}
+                  <SelectItem key={m.id ?? m.unique_id} value={String(m.id ?? m.unique_id)}>
+                    {m.main_categoryName || m.name}
                   </SelectItem>
                 ))}
               </SelectContent>

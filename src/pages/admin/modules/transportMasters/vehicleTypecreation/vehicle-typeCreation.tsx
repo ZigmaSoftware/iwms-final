@@ -27,6 +27,29 @@ type VehicleType = {
   is_active: boolean;
 };
 
+const normalizeVehicleTypes = (payload: any): VehicleType[] => {
+  const rawList: VehicleType[] = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.results)
+      ? payload.results
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
+
+  const seen = new Set<string>();
+  return rawList.filter((item) => {
+    const key = (item?.unique_id ?? item?.vehicleType)?.toString();
+    if (!key) {
+      return false;
+    }
+    if (seen.has(key)) {
+      return false;
+    }
+    seen.add(key);
+    return true;
+  });
+};
+
 export default function VehicleTypeCreation() {
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -49,10 +72,14 @@ export default function VehicleTypeCreation() {
   const fetchVehicleTypes = async () => {
     try {
       const res = await vehicleTypeApi.list();
-      const data = Array.isArray(res) ? res : (res as any)?.results || [];
-      setVehicleTypes(data);
+      setVehicleTypes(normalizeVehicleTypes(res));
     } catch (error) {
       console.error("Failed to fetch vehicle types:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Unable to load vehicle types",
+        text: "Please try again in a moment.",
+      });
     } finally {
       setLoading(false);
     }

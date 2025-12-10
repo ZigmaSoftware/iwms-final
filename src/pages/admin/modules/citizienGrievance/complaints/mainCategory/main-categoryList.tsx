@@ -18,7 +18,7 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 type MainCategory = {
-  id: number;
+  unique_id: string;
   main_categoryName: string;
   is_active: boolean;
 };
@@ -78,7 +78,9 @@ export default function MainComplaintCategoryList() {
 
   const statusTemplate = (row: MainCategory) => {
     const updateStatus = async (value: boolean) => {
-      await mobileApi.put(`main-category/${row.unique_id}/`, { is_active: value });
+      await mobileApi.patch(`main-category/${row.unique_id}/`, {
+        is_active: value,
+      });
       fetchData();
     };
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;

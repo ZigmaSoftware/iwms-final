@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
+import { adminApi } from "@/helpers/admin";
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -19,9 +19,10 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 
 type WasteCollection = {
-  id: number;
   unique_id: string;
-  customer: number;
+  customer: string;
+  customer_id?: string | number;
+  customer_unique_id?: string;
   customer_name: string;
   contact_no: string;
   building_no: string;
@@ -56,8 +57,10 @@ export default function WasteCollectedDataList() {
     getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encWasteManagementMaster}/${encWasteCollectedData}/new`;
-  const ENC_EDIT_PATH = (id: number) =>
+  const ENC_EDIT_PATH = (id: string) =>
     `/${encWasteManagementMaster}/${encWasteCollectedData}/${id}/edit`;
+
+  const wasteApi = adminApi.wasteCollections;
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
 
@@ -68,8 +71,8 @@ export default function WasteCollectedDataList() {
 
   const fetchWasteCollectedData = async () => {
     try {
-      const res = await desktopApi.get("wastecollections/");
-      setWasteCollectedDatas(res.data);
+      const res = await wasteApi.list();
+      setWasteCollectedDatas(res as any);
     } catch (error) {
       console.error("Failed to fetch waste collected data", error);
     } finally {
@@ -82,7 +85,7 @@ export default function WasteCollectedDataList() {
   }, []);
 
   // Delete Record
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
       text: "This wastecollection will be permanently deleted!",
@@ -96,7 +99,7 @@ export default function WasteCollectedDataList() {
     if (!confirm.isConfirmed) return;
 
     try {
-      await desktopApi.delete(`wastecollections/${id}/`);
+      await wasteApi.remove(id);
       Swal.fire({
         icon: "success",
         title: "Deleted successfully!",
@@ -138,29 +141,23 @@ export default function WasteCollectedDataList() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  /* ------------------ NEW: TOGGLE STATUS ------------------ */
   const statusTemplate = (row: WasteCollection) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await desktopApi.put(`wastecollections/${row.id}/`, { is_active: value });
+        await wasteApi.update(row.unique_id, { is_active: value });
         fetchWasteCollectedData();
       } catch (error) {
-        console.error("Failed to update status", error);
+        console.error("Status update failed:", error);
       }
     };
 
-    return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   const actionTemplate = (row: WasteCollection) => (
     <div className="flex gap-3 justify-center">
       <button
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
         title="Edit"
       >
@@ -168,7 +165,7 @@ export default function WasteCollectedDataList() {
       </button>
 
       <button
-        onClick={() => handleDelete(row.id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
         title="Delete"
       >
@@ -224,7 +221,16 @@ export default function WasteCollectedDataList() {
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
 
-          <Column field="customer" header="Customer ID" sortable />
+          <Column
+            field="customer"
+            header="Customer ID"
+            sortable
+            body={(r: WasteCollection) =>
+              r.customer ||
+              (r.customer_unique_id ? String(r.customer_unique_id) : "") ||
+              (r.customer_id ? String(r.customer_id) : "-")
+            }
+          />
           <Column
             field="customer_name"
             header="Customer Name"

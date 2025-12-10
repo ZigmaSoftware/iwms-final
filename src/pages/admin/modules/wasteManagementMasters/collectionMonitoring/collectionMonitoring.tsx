@@ -143,25 +143,20 @@ const WasteCollectionMonitor: React.FC = () => {
       ? filteredByZone.filter((customer) => customer.ward_name === ward)
       : filteredByZone;
     return filteredByWard.map((customer) => ({
-      value: customer.id.toString(),
+      value: String(customer.unique_id ?? customer.id ?? ""),
       label: customer.customer_name,
     }));
   }, [allCustomers, zone, ward]);
 
-  const selectedCustomerIdNum = customerId ? Number(customerId) : null;
-  const hasSelectedCustomer =
-    selectedCustomerIdNum !== null && !Number.isNaN(selectedCustomerIdNum);
+  const hasSelectedCustomer = !!customerId;
 
   const selectedCustomerLocation = useMemo(() => {
     if (!hasSelectedCustomer) return null;
-    return (
-      customerLocations.find((location) => location.id === selectedCustomerIdNum) ??
-      null
-    );
-  }, [customerLocations, hasSelectedCustomer, selectedCustomerIdNum]);
+    return customerLocations.find((location) => location.id === customerId) ?? null;
+  }, [customerLocations, hasSelectedCustomer, customerId]);
 
   const selectedCustomerStatusLabel = hasSelectedCustomer
-    ? collectedCustomerIds.includes(selectedCustomerIdNum!)
+    ? collectedCustomerIds.includes(customerId)
       ? "Collected"
       : "Not Collected"
     : null;
@@ -217,6 +212,7 @@ const WasteCollectionMonitor: React.FC = () => {
   const fetchSummaryCounts = useCallback(async () => {
     let households = 0;
     let customerData: CustomerRecord[] = [];
+    const resolveId = (c: any) => String(c?.unique_id ?? c?.id ?? "");
 
     try {
       const response = await desktopApi.get("customercreations/");
@@ -233,7 +229,7 @@ const WasteCollectionMonitor: React.FC = () => {
         const lat = parseFloat(customer.latitude);
         const lon = parseFloat(customer.longitude);
         return {
-          id: customer.id,
+          id: resolveId(customer),
           name: customer.customer_name,
           lat,
           lon,
@@ -244,6 +240,7 @@ const WasteCollectionMonitor: React.FC = () => {
       })
       .filter(
         (loc) =>
+          loc.id &&
           !Number.isNaN(loc.lat) &&
           !Number.isNaN(loc.lon) &&
           typeof loc.lat === "number" &&
@@ -254,7 +251,7 @@ const WasteCollectionMonitor: React.FC = () => {
     setTotalHouseholdCount(households);
     setAllCustomers(customerData);
 
-    let collectedIds: number[] = [];
+    let collectedIds: string[] = [];
     try {
       const params: Record<string, string> = {};
       if (fromDate) {
@@ -265,8 +262,15 @@ const WasteCollectionMonitor: React.FC = () => {
         collectedIds = Array.from(
           new Set(
             response.data
-              .map((entry: any) => entry.customer)
-              .filter((id: any) => typeof id === "number")
+              .map((entry: any) =>
+                String(
+                  entry.customer ??
+                  entry.customer_id ??
+                  entry.customer_unique_id ??
+                  ""
+                )
+              )
+              .filter((id: string) => id.trim())
           )
         );
       }

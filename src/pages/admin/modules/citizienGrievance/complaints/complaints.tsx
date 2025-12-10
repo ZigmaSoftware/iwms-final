@@ -110,8 +110,8 @@ export default function ComplaintsList() {
   const { encCitizenGrivence, encComplaint } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encCitizenGrivence}/${encComplaint}/new`;
-  const ENC_EDIT_PATH = (id: string) =>
-    `/${encCitizenGrivence}/${encComplaint}/${id}/edit`;
+  const ENC_EDIT_PATH = (unique_id: string) =>
+    `/${encCitizenGrivence}/${encComplaint}/${unique_id}/edit`;
 
   const fetchComplaints = useCallback(async () => {
     try {
