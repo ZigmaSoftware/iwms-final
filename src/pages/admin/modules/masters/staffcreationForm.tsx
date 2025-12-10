@@ -1,4 +1,5 @@
-import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import {desktopApi} from "@/api";
@@ -99,8 +100,8 @@ const initialFormData = {
   permanent_pincode: "",
   contact_mobile: "",
   contact_email: "",
-  emergency_contact: "",
-  emergency_mobile: "",
+  // emergency_contact: "",
+  // emergency_mobile: "",
 };
 
 export default function StaffCreationForm() {
@@ -131,50 +132,58 @@ export default function StaffCreationForm() {
       .then((response) => {
         const staff = response.data;
         setFormData((prev) => ({
-          ...prev,
-          employee_name: staff.employee_name ?? "",
-          // employee_id: staff.employee_id ?? "",
-          doj: staff.doj ?? "",
-          department: staff.department ?? "",
-          designation: staff.designation ?? "",
-          department_id: staff.department_id ?? "",
-          designation_id: staff.designation_id ?? "",
-          grade: staff.grade ?? "",
-          site_name: staff.site_name ?? "",
-          biometric_id: staff.biometric_id ?? "",
-          staff_head: staff.staff_head ?? "",
-          staff_head_id: staff.staff_head_id ?? "",
-          employee_known: staff.employee_known ?? "",
-          salary_type: staff.salary_type ?? "",
-          active_status: staff.active_status ? "1" : "0",
-          marital_status: staff.marital_status ?? "",
-          dob: staff.dob ?? "",
-          blood_group: staff.blood_group ?? "",
-          gender: staff.gender ?? "",
-          physically_challenged: staff.physically_challenged ?? "",
-          extra_curricular: staff.extra_curricular ?? "",
-          present_country: staff.present_address?.country ?? "",
-          present_state: staff.present_address?.state ?? "",
-          present_district: staff.present_address?.district ?? "",
-          present_city: staff.present_address?.city ?? "",
-          present_building_no: staff.present_address?.building_no ?? "",
-          present_street: staff.present_address?.street ?? "",
-          present_area: staff.present_address?.area ?? "",
-          present_pincode: staff.present_address?.pincode ?? "",
-          permanent_country: staff.permanent_address?.country ?? "",
-          permanent_state: staff.permanent_address?.state ?? "",
-          permanent_district: staff.permanent_address?.district ?? "",
-          permanent_city: staff.permanent_address?.city ?? "",
-          permanent_building_no: staff.permanent_address?.building_no ?? "",
-          permanent_street: staff.permanent_address?.street ?? "",
-          permanent_area: staff.permanent_address?.area ?? "",
-          permanent_pincode: staff.permanent_address?.pincode ?? "",
-          contact_mobile: staff.contact_details?.mobile_no ?? "",
-          contact_email: staff.contact_details?.email_id ?? "",
-          emergency_contact: staff.contact_details?.emergency_contact ?? "",
-          emergency_mobile: staff.contact_details?.emergency_mobile ?? "",
-        }));
+  ...prev,
 
+  // Office details
+  employee_name: staff.employee_name ?? "",
+  doj: staff.doj ?? "",
+  department: staff.department ?? "",
+  designation: staff.designation ?? "",
+  department_id: staff.department_id ?? "",
+  designation_id: staff.designation_id ?? "",
+  grade: staff.grade ?? "",
+  site_name: staff.site_name ?? "",
+  biometric_id: staff.biometric_id ?? "",
+  staff_head: staff.staff_head ?? "",
+  staff_head_id: staff.staff_head_id ?? "",
+  employee_known: staff.employee_known ?? "",
+  salary_type: staff.salary_type ?? "",
+  active_status: staff.active_status ? "1" : "0",
+
+  // Personal details (FLAT — NOT nested)
+  marital_status: staff.marital_status ?? "",
+  dob: staff.dob ?? "",
+  blood_group: staff.blood_group ?? "",
+  gender: staff.gender ?? "",
+  physically_challenged: staff.physically_challenged ?? "",
+  extra_curricular: staff.extra_curricular ?? "",
+
+  // JSON Address — Present
+  present_country: staff.present_address?.country ?? "",
+  present_state: staff.present_address?.state ?? "",
+  present_district: staff.present_address?.district ?? "",
+  present_city: staff.present_address?.city ?? "",
+  present_building_no: staff.present_address?.building_no ?? "",
+  present_street: staff.present_address?.street ?? "",
+  present_area: staff.present_address?.area ?? "",
+  present_pincode: staff.present_address?.pincode ?? "",
+
+  // JSON Address — Permanent
+  permanent_country: staff.permanent_address?.country ?? "",
+  permanent_state: staff.permanent_address?.state ?? "",
+  permanent_district: staff.permanent_address?.district ?? "",
+  permanent_city: staff.permanent_address?.city ?? "",
+  permanent_building_no: staff.permanent_address?.building_no ?? "",
+  permanent_street: staff.permanent_address?.street ?? "",
+  permanent_area: staff.permanent_address?.area ?? "",
+  permanent_pincode: staff.permanent_address?.pincode ?? "",
+
+  // Contact details (FLAT — NOT nested)
+  contact_mobile: staff.contact_mobile ?? "",
+  contact_email: staff.contact_email ?? "",
+}));
+
+console.log("Fetched staff data:", response.data);
         if (staff.photo) {
           setPhotoPreview(
             staff.photo.startsWith("http")
@@ -183,6 +192,7 @@ export default function StaffCreationForm() {
           );
         }
       })
+      
       .catch((error) => {
         console.error("Failed to load staff", error);
         Swal.fire({
@@ -269,29 +279,35 @@ export default function StaffCreationForm() {
     setSubmitting(true);
 
     try {
-      const payload: Record<string, any> = {
-        employee_name: formData.employee_name,
-        // employee_id: formData.employee_id,
-        doj: formData.doj || null,
-        department: formData.department,
-        designation: formData.designation,
-        department_id: formData.department_id,
-        designation_id: formData.designation_id,
-        grade: formData.grade,
-        site_name: formData.site_name,
-        biometric_id: formData.biometric_id,
-        staff_head: formData.staff_head,
-        staff_head_id: formData.staff_head_id,
-        employee_known: formData.employee_known,
-        salary_type: formData.salary_type,
-        active_status: formData.active_status === "1",
-        marital_status: formData.marital_status,
-        dob: formData.dob || null,
-        blood_group: formData.blood_group,
-        gender: formData.gender,
-        physically_challenged: formData.physically_challenged,
-        extra_curricular: formData.extra_curricular,
-      };
+    const payload: Record<string, any> = {
+  employee_name: formData.employee_name,
+  doj: formData.doj || null,
+  department: formData.department,
+  designation: formData.designation,
+  department_id: formData.department_id,
+  designation_id: formData.designation_id,
+  grade: formData.grade,
+  site_name: formData.site_name,
+  biometric_id: formData.biometric_id,
+  staff_head: formData.staff_head,
+  staff_head_id: formData.staff_head_id,
+  employee_known: formData.employee_known,
+  salary_type: formData.salary_type,
+  active_status: formData.active_status === "1",
+
+  // Personal flat fields
+  marital_status: formData.marital_status,
+  dob: formData.dob || null,
+  blood_group: formData.blood_group,
+  gender: formData.gender,
+  physically_challenged: formData.physically_challenged,
+  extra_curricular: formData.extra_curricular,
+  contact_mobile: formData.contact_mobile,
+  contact_email: formData.contact_email,
+  
+  
+};
+
 
       const presentPayload = buildAddressPayload("present");
       const permanentPayload = buildAddressPayload("permanent");
@@ -303,16 +319,16 @@ export default function StaffCreationForm() {
         payload.permanent_address = permanentPayload;
       }
 
-      const contactPayload = {
-        mobile_no: formData.contact_mobile,
-        email_id: formData.contact_email,
-        emergency_contact: formData.emergency_contact,
-        emergency_mobile: formData.emergency_mobile,
-      };
+      // const contactPayload = {
+      //   mobile_no: formData.contact_mobile,
+      //   email_id: formData.contact_email,
+      //   // emergency_contact: formData.emergency_contact,
+      //   // emergency_mobile: formData.emergency_mobile,
+      // };
 
-      if (Object.values(contactPayload).some((value) => Boolean(value))) {
-        payload.contact_details = contactPayload;
-      }
+      // if (Object.values(contactPayload).some((value) => Boolean(value))) {
+      //   payload.contact_details = contactPayload;
+      // }
 
       const formBody = new FormData();
       Object.entries(payload).forEach(([key, value]) => {
@@ -788,7 +804,7 @@ export default function StaffCreationForm() {
               onChange={handleInputChange}
             />
           </div>
-          <div>
+          {/* <div>
             <Label htmlFor="emergency_contact">Emergency Contact</Label>
             <Input
               id="emergency_contact"
@@ -803,7 +819,7 @@ export default function StaffCreationForm() {
               value={formData.emergency_mobile}
               onChange={handleInputChange}
             />
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
