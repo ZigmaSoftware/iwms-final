@@ -13,7 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { adminApi } from "@/helpers/admin/registry";
+
+import { continentApi } from "@/helpers/admin";
+
 import { encryptSegment } from "@/utils/routeCrypto";
 
 
@@ -21,7 +23,6 @@ const encMasters = encryptSegment("masters");
 const encContinents = encryptSegment("continents");
 
 const ENC_LIST_PATH = `/${encMasters}/${encContinents}`;
-const continentApi = adminApi.continents;
 
 function ContinentForm() {
   const [name, setName] = useState("");

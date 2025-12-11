@@ -13,7 +13,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { adminApi } from "@/helpers/admin/registry";
+
+import { continentApi, countryApi } from "@/helpers/admin";
+
 
 const encMasters = encryptSegment("masters");
 const encCountries = encryptSegment("countries");
@@ -45,9 +47,6 @@ type ErrorWithResponse = {
     data?: unknown;
   };
 };
-
-const continentApi = adminApi.continents;
-const countryApi = adminApi.countries;
 
 const normalizeNullableId = (
   value: string | number | null | undefined
