@@ -346,13 +346,15 @@ console.log("Fetched staff data:", response.data);
         formBody.append("photo", photoFile);
       }
 
+      const multipartConfig = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      };
+
       const request = isEdit
-        ? desktopApi.put(`staffcreation/${id}/`, formBody, {
-            headers: { "Content-Type": "multipart/form-data" },
-          })
-        : desktopApi.post("staffcreation/", formBody, {
-            headers: { "Content-Type": "multipart/form-data" },
-          });
+        ? desktopApi.put(`staffcreation/${id}/`, formBody, multipartConfig)
+        : desktopApi.post("staffcreation/", formBody, multipartConfig);
 
       const response = await request;
 

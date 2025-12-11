@@ -22,8 +22,8 @@ import PropertyList from "@/pages/admin/modules/masters/property/PropertyListPag
 import PropertyForm from "@/pages/admin/modules/masters/property/PropertyForm";
 import SubPropertyList from "@/pages/admin/modules/masters/subproperty/SubPropertyListPage";
 import SubPropertyForm from "@/pages/admin/modules/masters/subproperty/SubPropertyForm";
-import StaffCreationList from "@/pages/admin/modules/masters/staffcreationlist";
-import StaffCreationForm from "@/pages/admin/modules/masters/staffcreationForm";
+import StaffCreationList from "@/pages/admin/modules/masters/staffCreation/staffcreationlist";
+import StaffCreationForm from "@/pages/admin/modules/masters/staffCreation/staffcreationForm";
 // Admin
 import UserTypeList from "@/pages/admin/modules/admin/userType/user-typeList";
 import UserTypeForm from "@/pages/admin/modules/admin/userType/user-typeForm";

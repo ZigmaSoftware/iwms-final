@@ -2,6 +2,7 @@ import { type ChangeEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {desktopApi} from "@/api";
 import Swal from "sweetalert2";
+import ReactDOM from "react-dom/client";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -45,9 +46,6 @@ export default function StaffCreationList() {
     site_name: "",
     employee_name: "",
   });
-
-  const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [qrData, setQrData] = useState("");
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [datatableFilters, setDatatableFilters] = useState<any>({
@@ -126,7 +124,7 @@ export default function StaffCreationList() {
         const formData = new FormData();
         formData.append("active_status", String(value));
 
-        await desktopApi.put(`staffcreation/${row.unique_id}/`, formData, {
+        await desktopApi.patch(`staffcreation/${row.unique_id}/`, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
@@ -146,24 +144,42 @@ export default function StaffCreationList() {
     );
   };
 
-  const qrTemplate = (row: Staff) => (
-    <div
-      className="cursor-pointer flex justify-center"
-      onClick={() => {
-        const qrText = `
-Zigma ID: ${row.unique_id}
-Name: ${row.employee_name}
-Designation: ${row.designation || "-"}
-Site: ${row.site_name || "-"}
-Status: ${row.active_status ? "Active" : "Inactive"}
-`;
-        setQrData(qrText);
-        setQrModalOpen(true);
-      }}
-    >
-      <QRCode value={JSON.stringify(row)} size={50} />
-    </div>
-  );
+  const buildStaffQrPayload = (row: Staff) => ({
+    id: row.staff_unique_id || row.unique_id,
+    name: row.employee_name,
+    designation: row.designation || "-",
+    site: row.site_name || "-",
+    status: row.active_status ? "Active" : "Inactive",
+    contact: row.contact_mobile || "-",
+  });
+
+  const openQrPopup = (data: any) => {
+    Swal.fire({
+      title: "Staff QR",
+      html: `<div id="staff-qr-holder" class="flex justify-center"></div>`,
+      width: 350,
+      didOpen: () => {
+        const div = document.getElementById("staff-qr-holder");
+        if (div) {
+          const root = ReactDOM.createRoot(div);
+          root.render(<QRCode value={JSON.stringify(data)} size={200} />);
+        }
+      },
+    });
+  };
+
+  const qrTemplate = (row: Staff) => {
+    const payload = buildStaffQrPayload(row);
+    return (
+      <button
+        className="p-1 border rounded hover:bg-gray-50 flex justify-center"
+        onClick={() => openQrPopup(payload)}
+        title="Show QR"
+      >
+        <QRCode value={JSON.stringify(payload)} size={48} />
+      </button>
+    );
+  };
 
   const actionTemplate = (row: Staff) => (
     <div className="flex gap-3 justify-center">
@@ -290,31 +306,6 @@ Status: ${row.active_status ? "Active" : "Inactive"}
 
   return (
     <>
-      {/* QR Modal */}
-      {qrModalOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
-          onClick={() => setQrModalOpen(false)}
-        >
-          <div
-            className="bg-white p-6 rounded-lg shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-center text-lg font-semibold mb-4">
-              Staff QR
-            </h2>
-            <div className="flex justify-center mb-4">
-              <QRCode value={qrData} size={200} />
-            </div>
-            <Button
-              label="Close"
-              className="p-button-success w-full"
-              onClick={() => setQrModalOpen(false)}
-            />
-          </div>
-        </div>
-      )}
-
       <div className="p-3">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <DataTable

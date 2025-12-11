@@ -28,7 +28,17 @@ const TRACKING_API_URL =
   "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM";
 
 const HISTORY_API_BASE =
-  import.meta.env.VITE_VEHICLE_HISTORY_API ?? "/vamosys/getVehicleHistory";
+  import.meta.env.VITE_VEHICLE_HISTORY_API ??
+  "https://api.vamosys.com/getVehicleHistory";
+
+const HISTORY_PROXY_TEMPLATES =
+  import.meta.env.VITE_VEHICLE_HISTORY_PROXY ?? "";
+
+const HISTORY_DEFAULT_PROXIES = [
+  "https://cors.isomorphic-git.org/{url}",
+  "https://thingproxy.freeboard.io/fetch/{url}",
+  "https://corsproxy.io/?",
+];
 
 const HISTORY_DEFAULT_PARAMS = {
   userId: "BLUEPLANET",
@@ -89,18 +99,55 @@ const firstArray = (candidates: any[]): any[] => {
   return [];
 };
 
+const parseProxyList = (raw: string) =>
+  raw
+    .split(",")
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+
+const formatProxyUrl = (template: string, target: string) => {
+  const encoded = encodeURIComponent(target);
+  if (/\{url\}/i.test(template)) {
+    return template.replace(/\{url\}/gi, encoded);
+  }
+  if (template.endsWith("?") || template.endsWith("&")) {
+    return `${template}${encoded}`;
+  }
+  if (template.includes("?")) {
+    return `${template}&url=${encoded}`;
+  }
+  return `${template}${encoded}`;
+};
+
+const buildHistoryUrls = (baseUrl: string): string[] => {
+  const proxies = parseProxyList(HISTORY_PROXY_TEMPLATES);
+  const templates =
+    proxies.length > 0 ? proxies : HISTORY_DEFAULT_PROXIES;
+  const proxyUrls = templates.map((tpl) => formatProxyUrl(tpl, baseUrl));
+  return [baseUrl, ...proxyUrls];
+};
+
 const fetchJsonSafe = async (url: string) => {
-  const res = await fetch(url);
-  if (!res.ok) {
-    const snippet = (await res.text()).slice(0, 160);
-    throw new Error(`HTTP ${res.status}: ${snippet}`);
+  const candidates = buildHistoryUrls(url);
+  let lastError: any = null;
+
+  for (const endpoint of candidates) {
+    try {
+      const res = await fetch(endpoint);
+      if (!res.ok) {
+        const snippet = (await res.text()).slice(0, 160);
+        throw new Error(`HTTP ${res.status}: ${snippet}`);
+      }
+      const text = await res.text();
+      return JSON.parse(text);
+    } catch (err) {
+      lastError = err;
+      console.warn("Vehicle history request failed", endpoint, err);
+    }
   }
-  const text = await res.text();
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`Non-JSON response: ${text.slice(0, 160)}`);
-  }
+
+  if (lastError instanceof Error) throw lastError;
+  throw new Error("Unable to load vehicle history.");
 };
 
 const HISTORY_TIMESTAMP_KEYS = [
