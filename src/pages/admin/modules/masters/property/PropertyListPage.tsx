@@ -14,54 +14,52 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { Switch } from "@/components/ui/switch"; // 🔥 Toggle
-import { adminApi } from "@/helpers/admin";
+import { Switch } from "@/components/ui/switch";   // 
 
-type SubProperty = {
+
+import { propertiesApi } from "@/helpers/admin";
+
+type Property = {
   unique_id: string;
-  sub_property_name: string;
-  property_name?: string;
+  property_name: string;
   is_active: boolean;
-  property_id?: string;
 };
 
-export default function SubPropertyList() {
-  const [subProperties, setSubProperties] = useState<SubProperty[]>([]);
+export default function PropertyList() {
+  const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    sub_property_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    property_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
   const navigate = useNavigate();
 
-  const { encMasters, encSubProperties } = getEncryptedRoute();
+  const { encMasters, encProperties } = getEncryptedRoute();
 
-  const ENC_NEW_PATH = `/${encMasters}/${encSubProperties}/new`;
+  const ENC_NEW_PATH = `/${encMasters}/${encProperties}/new`;
   const ENC_EDIT_PATH = (unique_id: string) =>
-    `/${encMasters}/${encSubProperties}/${unique_id}/edit`;
+    `/${encMasters}/${encProperties}/${unique_id}/edit`;
 
-  const subPropertiesApi = adminApi.subProperties;
-
-  const fetchSubProperties = async () => {
+  const fetchProperties = async () => {
     try {
-      const res = await subPropertiesApi.list();
-      setSubProperties(res);
+      const res = await propertiesApi.list();
+      setProperties(res);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchSubProperties();
+    fetchProperties();
   }, []);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (unique_id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
-      text: "This sub property will be permanently deleted!",
+      text: "This property will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -71,7 +69,7 @@ export default function SubPropertyList() {
 
     if (!confirm.isConfirmed) return;
 
-    await subPropertiesApi.remove(id as string);
+    await propertiesApi.remove(unique_id);
 
     Swal.fire({
       icon: "success",
@@ -80,7 +78,7 @@ export default function SubPropertyList() {
       showConfirmButton: false,
     });
 
-    fetchSubProperties();
+    fetchProperties();
   };
 
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +96,7 @@ export default function SubPropertyList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Sub Properties..."
+          placeholder="Search Properties..."
           className="p-inputtext-sm !border-0 !shadow-none !outline-none"
         />
       </div>
@@ -111,21 +109,30 @@ export default function SubPropertyList() {
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
   // 🔥 Toggle (PATCH)
-  const statusTemplate = (row: SubProperty) => {
+  const statusTemplate = (row: Property) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await subPropertiesApi.update(row.unique_id, { sub_property_name: row.sub_property_name, is_active: value , property_id: row.property_id});
+        
+       await propertiesApi.update(row.unique_id, {
+  property_name: row.property_name,   // required
+  is_active: value,                      // toggle
+});
 
-        fetchSubProperties();
+        fetchProperties();
       } catch (err) {
         console.error("Status update failed:", err);
       }
     };
 
-    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
+    return (
+      <Switch
+        checked={row.is_active}
+        onCheckedChange={updateStatus}
+      />
+    );
   };
 
-  const actionTemplate = (row: SubProperty) => (
+  const actionTemplate = (row: Property) => (
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
@@ -145,22 +152,21 @@ export default function SubPropertyList() {
     </div>
   );
 
-  const indexTemplate = (_: SubProperty, { rowIndex }: { rowIndex: number }) =>
+  const indexTemplate = (_: Property, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
+
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Sub Property
-            </h1>
-            <p className="text-gray-500 text-sm">Manage sub-property records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">Properties</h1>
+            <p className="text-gray-500 text-sm">Manage property records</p>
           </div>
 
           <Button
-            label="Add Sub Property"
+            label="Add Property"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -168,7 +174,7 @@ export default function SubPropertyList() {
         </div>
 
         <DataTable
-          value={subProperties}
+          value={properties}
           dataKey="unique_id"
           paginator
           rows={10}
@@ -177,28 +183,17 @@ export default function SubPropertyList() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No sub properties found."
-          globalFilterFields={["sub_property_name", "property_name"]}
+          emptyMessage="No properties found."
+          globalFilterFields={["property_name"]}
           className="p-datatable-sm"
         >
-          <Column
-            header="S.No"
-            body={indexTemplate}
-            style={{ width: "80px" }}
-          />
+          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
             field="property_name"
-            header="Property"
+            header="Property Name"
             sortable
-            body={(row: SubProperty) => cap(row.property_name)}
-          />
-
-          <Column
-            field="sub_property_name"
-            header="Sub Property"
-            sortable
-            body={(row: SubProperty) => cap(row.sub_property_name)}
+            body={(row: Property) => cap(row.property_name)}
           />
 
           {/* 🔥 Toggle */}

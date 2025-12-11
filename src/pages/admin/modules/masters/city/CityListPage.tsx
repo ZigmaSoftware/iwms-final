@@ -14,18 +14,19 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch";   // Toggle component
-import { adminApi } from "@/helpers/admin";
+import { Switch } from "@/components/ui/switch"; //  Toggle import
 
-type WardRecord = {
+
+import { cityApi } from "@/helpers/admin";
+
+
+type CityRecord = {
   unique_id: string;
   name: string;
   is_active: boolean;
-  zone_name: string;
-  city_name: string;
-  district_name: string;
-  state_name: string;
   country_name: string;
+  state_name: string;
+  district_name: string;
 };
 
 type ErrorWithResponse = {
@@ -72,42 +73,37 @@ const extractErrorMessage = (error: unknown) => {
   return "Something went wrong while processing the request.";
 };
 
-const wardApi = adminApi.wards;
 
-export default function WardList() {
-  const [wards, setWards] = useState<WardRecord[]>([]);
+export default function CityList() {
+  const [cities, setCities] = useState<CityRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
   });
 
   const navigate = useNavigate();
 
   const encMasters = encryptSegment("masters");
-  const encWards = encryptSegment("wards");
+  const encCities = encryptSegment("cities");
 
-  const ENC_NEW_PATH = `/${encMasters}/${encWards}/new`;
+  const ENC_NEW_PATH = `/${encMasters}/${encCities}/new`;
   const ENC_EDIT_PATH = (id: string) =>
-    `/${encMasters}/${encWards}/${id}/edit`;
+    `/${encMasters}/${encCities}/${id}/edit`;
 
-  // ===========================
-  //   Load Data
-  // ===========================
+  //Fetch cities
 
-
-  const fetchWards = useCallback(async () => {
+  const fetchCities = useCallback(async () => {
     setLoading(true);
     try {
-      const data = (await wardApi.list()) as WardRecord[];
-      setWards(data);
+      const data = (await cityApi.list()) as CityRecord[];
+      setCities(data);
     } catch (error) {
-      console.error("Failed loading wards:", error);
+      console.error("Failed loading cities:", error);
       Swal.fire({
         icon: "error",
-        title: "Unable to load wards",
+        title: "Unable to load cities",
         text: extractErrorMessage(error),
       });
     } finally {
@@ -116,86 +112,90 @@ export default function WardList() {
   }, []);
 
   useEffect(() => {
-    fetchWards();
+    fetchCities();
   }, []);
 
+  // Delete
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
-      text: "This ward will be permanently deleted!",
+      text: "This city will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Delete",
+      confirmButtonText: "Yes, delete it!"
     });
 
     if (!confirm.isConfirmed) return;
 
-    await wardApi.remove(id);
+
+    await cityApi.remove(id);
+
+
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
       timer: 1500,
-      showConfirmButton: false,
+      showConfirmButton: false
     });
 
-    fetchWards();
+    fetchCities();
   };
 
+  // Search
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const _filters = { ...filters };
-    _filters["global"].value = value;
-    setFilters(_filters);
+
+    setFilters({
+      ...filters,
+      global: { ...filters.global, value }
+    });
+
     setGlobalFilterValue(value);
   };
 
-  const renderHeader = () => {
-    return (
-      <div className="flex justify-end items-center">
-        <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
-          <i className="pi pi-search text-gray-500" />
-          <InputText
-            value={globalFilterValue}
-            onChange={onGlobalFilterChange}
-            placeholder="Search Wards..."
-            className="p-inputtext-sm !border-0 !shadow-none !outline-none"
-          />
-        </div>
+  const renderHeader = () => (
+    <div className="flex justify-end items-center">
+      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
+        <i className="pi pi-search text-gray-500" />
+        <InputText
+          value={globalFilterValue}
+          onChange={onGlobalFilterChange}
+          placeholder="Search Cities..."
+          className="p-inputtext-sm !border-0 !shadow-none"
+        />
       </div>
-    );
-  };
+    </div>
+  );
 
   const header = renderHeader();
 
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // Toggle Status (PATCH)
-  const statusTemplate = (row: WardRecord) => {
+
+  const statusTemplate = (city: CityRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await wardApi.update(row.unique_id, { is_active: value });
-        fetchWards();
-      } catch (err) {
-        console.error("Status update failed:", err);
+
+        await cityApi.update(city.unique_id, { is_active: value });
+
+        fetchCities();
+      } catch (error) {
+        console.error("Status update failed:", error);
       }
     };
 
-    return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
-    );
+    return <Switch checked={city.is_active} onCheckedChange={updateStatus} />;
   };
 
-  const actionTemplate = (row: WardRecord) => (
-    <div className="flex gap-3 justify-center">
+  // Actions
+  const actionTemplate = (city: CityRecord) => (
+    <div className="flex gap-3">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
+        onClick={() => navigate(ENC_EDIT_PATH(city.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -203,7 +203,7 @@ export default function WardList() {
 
       <button
         title="Delete"
-        onClick={() => handleDelete(row.unique_id)}
+        onClick={() => handleDelete(city.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
@@ -211,22 +211,21 @@ export default function WardList() {
     </div>
   );
 
-  const indexTemplate = (_: WardRecord, { rowIndex }: { rowIndex: number }) =>
+  const indexTemplate = (_: CityRecord, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-
-        {/* Page Header */}
+        {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Wards</h1>
-            <p className="text-gray-500 text-sm">Manage ward records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">Cities</h1>
+            <p className="text-gray-500 text-sm">Manage city records</p>
           </div>
 
           <Button
-            label="Add Ward"
+            label="Add City"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -235,7 +234,7 @@ export default function WardList() {
 
         {/* Table */}
         <DataTable
-          value={wards}
+          value={cities}
           paginator
           rows={10}
           loading={loading}
@@ -243,41 +242,45 @@ export default function WardList() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No wards found."
+          emptyMessage="No cities found."
           globalFilterFields={[
             "name",
-            "zone_name",
-            "city_name",
-            "district_name",
-            "state_name",
             "country_name",
+            "state_name",
+            "district_name"
           ]}
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
-            field="zone_name"
-            header="Zone"
+            field="country_name"
+            header="Country"
+            body={(row: CityRecord) => cap(row.country_name)}
             sortable
-            body={(row: WardRecord) => cap(row.zone_name)}
           />
 
           <Column
-            field="city_name"
-            header="City"
+            field="state_name"
+            header="State"
+            body={(row: CityRecord) => cap(row.state_name)}
             sortable
-            body={(row: WardRecord) => cap(row.city_name)}
+          />
+
+          <Column
+            field="district_name"
+            header="District"
+            body={(row: CityRecord) => cap(row.district_name)}
+            sortable
           />
 
           <Column
             field="name"
-            header="Ward"
+            header="City"
+            body={(row: CityRecord) => cap(row.name)}
             sortable
-            body={(row: WardRecord) => cap(row.name)}
           />
 
-          {/* 🔥 ***TOGGLE REPLACED TAG*** */}
           <Column
             header="Status"
             body={statusTemplate}

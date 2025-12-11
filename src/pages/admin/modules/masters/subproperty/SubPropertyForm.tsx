@@ -7,7 +7,6 @@ import Label from "@/components/form/Label";
 import { Input } from "@/components/ui/input";
 
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { adminApi } from "@/helpers/admin";
 
 import {
   Select,
@@ -19,9 +18,11 @@ import {
 
 const { encMasters, encSubProperties } = getEncryptedRoute();
 
+import { subPropertiesApi, propertiesApi } from "@/helpers/admin";
+
+
 const ENC_LIST_PATH = `/${encMasters}/${encSubProperties}`;
-const subPropertiesApi = adminApi.subProperties;
-const propertiesApi = adminApi.properties;
+
 
 export default function SubPropertyForm() {
   const [subPropertyName, setSubPropertyName] = useState("");

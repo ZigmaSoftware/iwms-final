@@ -78,6 +78,20 @@
   --sidebar-ring: oklch(0.708 0 0);
   --green-custom: #0f9d58;
   --green-custom-hover: #0b7a43;
+  /* Admin palette defaults (light) */
+  --admin-primary: #013e7e;
+  --admin-primaryHover: #0a4f99;
+  --admin-primarySoft: #e3ecf8;
+  --admin-accent: #0a4f99;
+  --admin-accentHover: #1166c1;
+  --admin-accentSoft: #deebff;
+  --admin-surface: #f2f6fb;
+  --admin-surfaceMuted: #e7edf6;
+  --admin-surfaceAlt: #ffffff;
+  --admin-border: #d6e6ff;
+  --admin-text: #071731;
+  --admin-mutedText: #55637b;
+  --admin-cardShadow: 0 15px 40px rgba(1, 62, 126, 0.18);
 }
 
 .dark {
@@ -114,6 +128,20 @@
   --sidebar-ring: oklch(0.556 0 0);
   --green-custom: #22c55e;
   --green-custom-hover: #16a34a;
+  /* Admin palette overrides (dark) */
+  --admin-primary: #2f63a8;
+  --admin-primaryHover: #3e7ac7;
+  --admin-primarySoft: rgba(1, 62, 126, 0.25);
+  --admin-accent: #3e7ac7;
+  --admin-accentHover: #5291e6;
+  --admin-accentSoft: rgba(1, 62, 126, 0.35);
+  --admin-surface: #050b15;
+  --admin-surfaceMuted: #0d1624;
+  --admin-surfaceAlt: #0f1c31;
+  --admin-border: #1f3554;
+  --admin-text: #f3f8ff;
+  --admin-mutedText: #97b3d6;
+  --admin-cardShadow: 0 25px 45px rgba(2, 8, 20, 0.85);
 }
 
 
@@ -160,4 +188,155 @@
     border-color: var(--green-custom);
     box-shadow: 0 0 0 1px color-mix(in srgb, var(--green-custom) 60%, transparent);
   }
+}
+
+/* ============================================================
+   GLOBAL THEME BRIDGE (forms, lists, tables across the app)
+   Only active when `.dark` is applied to the root element
+   ============================================================ */
+
+.dark body,
+.dark .app-shell,
+.dark .admin-shell {
+  background: var(--admin-surface) !important;
+  color: var(--admin-text) !important;
+}
+
+.dark .themed-card,
+.dark .bg-white,
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-indigo-50,
+.dark .bg-white\/90,
+.dark .bg-white\/80,
+.dark .bg-white\/70,
+.dark .p-component,
+.dark .p-card,
+.dark .p-dialog,
+.dark .p-sidebar,
+.dark .p-panel,
+.dark .p-toast {
+  background: var(--admin-surfaceAlt) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+  box-shadow: var(--admin-cardShadow) !important;
+}
+
+.dark .text-gray-700,
+.dark .text-gray-800,
+.dark .text-black,
+.dark .text-slate-700,
+.dark .text-slate-800,
+.dark .text-slate-900,
+.dark .text-slate-950,
+.dark h1,
+.dark h2,
+.dark h3,
+.dark h4,
+.dark h5,
+.dark h6,
+.dark label,
+.dark .p-component label {
+  color: var(--admin-text) !important;
+}
+
+.dark .text-gray-500,
+.dark .text-gray-600,
+.dark .text-slate-500,
+.dark .text-slate-600,
+.dark .p-muted,
+.dark .text-muted-foreground,
+.dark .p-text-secondary,
+.dark .p-subheader {
+  color: var(--admin-mutedText) !important;
+}
+
+.dark .border,
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .p-inputtext,
+.dark .p-dropdown,
+.dark .p-multiselect,
+.dark .p-inputnumber,
+.dark .p-fieldset,
+.dark .p-panel,
+.dark .p-datatable,
+.dark .p-table,
+.dark .p-dialog,
+.dark .p-sidebar {
+  border-color: var(--admin-border) !important;
+}
+
+.dark input,
+.dark textarea,
+.dark select,
+.dark .p-inputtext,
+.dark .p-dropdown,
+.dark .p-multiselect,
+.dark .p-inputnumber,
+.dark .p-autocomplete-input,
+.dark .p-calendar input {
+  background: var(--admin-surfaceMuted) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.dark .p-datatable,
+.dark .p-datatable-header,
+.dark .p-datatable-wrapper,
+.dark .p-datatable .p-datatable-thead > tr > th,
+.dark .p-datatable .p-datatable-tbody > tr,
+.dark .p-datatable .p-datatable-tfoot > tr,
+.dark .p-datatable .p-paginator,
+.dark .p-table,
+.dark .p-gridtable {
+  background: var(--admin-surfaceAlt) !important;
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+}
+
+.dark .p-datatable .p-datatable-tbody > tr:nth-child(even) {
+  background: var(--admin-surfaceMuted) !important;
+}
+
+.dark .p-button,
+.dark .bg-green-custom,
+.dark .btn-primary,
+.dark .p-chip {
+  background-image: linear-gradient(135deg, var(--admin-primary), var(--admin-accent));
+  border: none;
+  color: #fff !important;
+}
+
+.dark .p-button.p-button-text,
+.dark .p-button.p-button-outlined,
+.dark .btn-outline,
+.dark .fuel-outline-btn,
+.dark .text-blue-600,
+.dark .text-red-600,
+.dark .bg-red-400,
+.dark .bg-red-500 {
+  color: var(--admin-text) !important;
+  border-color: var(--admin-border) !important;
+  background: transparent !important;
+}
+
+.dark .shadow,
+.dark .shadow-sm,
+.dark .shadow-md,
+.dark .shadow-lg,
+.dark .shadow-xl,
+.dark .shadow-2xl {
+  box-shadow: var(--admin-cardShadow) !important;
+}
+
+.dark .swal2-popup,
+.dark .p-dialog,
+.dark .p-confirm-dialog,
+.dark .p-sidebar {
+  background: var(--admin-surfaceAlt) !important;
+  color: var(--admin-text) !important;
 }

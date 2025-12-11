@@ -5,7 +5,7 @@ import { desktopApi } from "@/api";
 
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
-import Select from "@/components/form/Select";
+import Select, { type SelectOption } from "@/components/form/Select";
 import { Input } from "@/components/ui/input";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
@@ -70,6 +70,54 @@ const ROLE_CONFIG: any = {
   },
 };
 
+const normalizeListData = (payload: any): any[] => {
+  if (Array.isArray(payload)) return payload;
+
+  if (payload?.results && Array.isArray(payload.results)) {
+    return payload.results;
+  }
+
+  if (payload?.data && Array.isArray(payload.data)) {
+    return payload.data;
+  }
+
+  if (payload?.data?.results && Array.isArray(payload.data.results)) {
+    return payload.data.results;
+  }
+
+  return [];
+};
+
+const buildOptions = (
+  data: any,
+  getLabel: (item: any) => string
+): SelectOption[] => {
+  return normalizeListData(data)
+    .map((item: any) => {
+      const rawValue = item?.id ?? item?.unique_id;
+      const label = getLabel(item);
+
+      if (rawValue === undefined || rawValue === null || !label) {
+        return null;
+      }
+
+      return {
+        value: String(rawValue),
+        label,
+      };
+    })
+    .filter(Boolean) as SelectOption[];
+};
+
+const normalizeIdValue = (value: string | number | null | undefined) => {
+  if (value === undefined || value === null || value === "") return undefined;
+
+  if (typeof value === "number") return value;
+
+  const trimmed = value.trim();
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : trimmed;
+};
+
 export default function UserCreationForm() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -81,30 +129,30 @@ export default function UserCreationForm() {
   //  STATE
   // ----------------------------------------------------
   const [userType, setUserType] = useState("");
-  const [userTypes, setUserTypes] = useState<Array<{ value: string; label: string }>>([]);
+  const [userTypes, setUserTypes] = useState<SelectOption[]>([]);
 
   const [password, setPassword] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  const [customerList, setCustomerList] = useState<any[]>([]);
+  const [customerList, setCustomerList] = useState<SelectOption[]>([]);
   const [customerId, setCustomerId] = useState("");
 
-  const [staffUserTypes, setStaffUserTypes] = useState<any[]>([]);
+  const [staffUserTypes, setStaffUserTypes] = useState<SelectOption[]>([]);
   const [staffUserType, setStaffUserType] = useState("");
 
-  const [staffList, setStaffList] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<SelectOption[]>([]);
   const [staffId, setStaffId] = useState("");
 
-  const [districtList, setDistrictList] = useState<any[]>([]);
+  const [districtList, setDistrictList] = useState<SelectOption[]>([]);
   const [district, setDistrict] = useState("");
 
-  const [cityList, setCityList] = useState<any[]>([]);
+  const [cityList, setCityList] = useState<SelectOption[]>([]);
   const [city, setCity] = useState("");
 
-  const [zoneList, setZoneList] = useState<any[]>([]);
+  const [zoneList, setZoneList] = useState<SelectOption[]>([]);
   const [zone, setZone] = useState("");
 
-  const [wardList, setWardList] = useState<any[]>([]);
+  const [wardList, setWardList] = useState<SelectOption[]>([]);
   const [ward, setWard] = useState("");
 
   // ----------------------------------------------------
@@ -265,7 +313,9 @@ export default function UserCreationForm() {
 
       if (isEdit) {
         await desktopApi.put(`users-creation/${id}/`, payload);
+        await desktopApi.put(`users-creation/${id}/`, payload);
       } else {
+        await desktopApi.post("users-creation/", payload);
         await desktopApi.post("users-creation/", payload);
       }
 

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -14,16 +14,16 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch"; //  Toggle import
-import { adminApi } from "@/helpers/admin";
+import { Switch } from "@/components/ui/switch";
+import { stateApi } from "@/helpers/admin";
 
-type CityRecord = {
+
+type StateRecord = {
   unique_id: string;
   name: string;
-  is_active: boolean;
   country_name: string;
-  state_name: string;
-  district_name: string;
+  label: string;
+  is_active: boolean;
 };
 
 type ErrorWithResponse = {
@@ -70,39 +70,34 @@ const extractErrorMessage = (error: unknown) => {
   return "Something went wrong while processing the request.";
 };
 
-const cityApi = adminApi.cities;
-
-
-export default function CityList() {
-  const [cities, setCities] = useState<CityRecord[]>([]);
+export default function StateList() {
+  const [states, setStates] = useState<StateRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
   const navigate = useNavigate();
 
   const encMasters = encryptSegment("masters");
-  const encCities = encryptSegment("cities");
+  const encStates = encryptSegment("states");
 
-  const ENC_NEW_PATH = `/${encMasters}/${encCities}/new`;
-  const ENC_EDIT_PATH = (id: string) =>
-    `/${encMasters}/${encCities}/${id}/edit`;
+  const ENC_NEW_PATH = `/${encMasters}/${encStates}/new`;
+  const ENC_EDIT_PATH = (unique_id: string) =>
+    `/${encMasters}/${encStates}/${unique_id}/edit`;
 
-  //Fetch cities
-
-  const fetchCities = useCallback(async () => {
+  const fetchStates = useCallback(async () => {
     setLoading(true);
     try {
-      const data = (await cityApi.list()) as CityRecord[];
-      setCities(data);
+      const data = (await stateApi.list()) as StateRecord[];
+      setStates(data);
     } catch (error) {
-      console.error("Failed loading cities:", error);
+      console.error("Failed loading states:", error);
       Swal.fire({
         icon: "error",
-        title: "Unable to load cities",
+        title: "Unable to load states",
         text: extractErrorMessage(error),
       });
     } finally {
@@ -111,46 +106,49 @@ export default function CityList() {
   }, []);
 
   useEffect(() => {
-    fetchCities();
-  }, []);
+    void fetchStates();
+  }, [fetchStates]);
 
-  // Delete
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (unique_id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
-      text: "This city will be permanently deleted!",
+      text: "This state will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!"
+      confirmButtonText: "Yes, delete it!",
     });
 
-    if (!confirm.isConfirmed) return;
+    if (!confirm.isConfirmed) {
+      return;
+    }
 
-
-    await cityApi.remove(id);
-
-
-    Swal.fire({
-      icon: "success",
-      title: "Deleted successfully!",
-      timer: 1500,
-      showConfirmButton: false
-    });
-
-    fetchCities();
+    try {
+      await stateApi.remove(unique_id);
+      Swal.fire({
+        icon: "success",
+        title: "Deleted successfully!",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      void fetchStates();
+    } catch (error) {
+      console.error("Failed deleting state:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Delete failed",
+        text: extractErrorMessage(error),
+      });
+    }
   };
 
-  // Search
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-
     setFilters({
       ...filters,
-      global: { ...filters.global, value }
+      global: { ...filters.global, value },
     });
-
     setGlobalFilterValue(value);
   };
 
@@ -161,40 +159,43 @@ export default function CityList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Cities..."
+          placeholder="Search states..."
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
     </div>
   );
 
-  const header = renderHeader();
-
+  // Capitalize helper
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-
-  const statusTemplate = (city: CityRecord) => {
+  // ⚡ Toggle handler (PATCH only)
+  const statusTemplate = (row: StateRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
-
-        await cityApi.update(city.unique_id, { is_active: value });
-
-        fetchCities();
+        await stateApi.update(row.unique_id, { is_active: value });
+        void fetchStates();
       } catch (error) {
         console.error("Status update failed:", error);
+        Swal.fire({
+          icon: "error",
+          title: "Failed to update status",
+          text: extractErrorMessage(error),
+        });
       }
     };
 
-    return <Switch checked={city.is_active} onCheckedChange={updateStatus} />;
+    return (
+      <Switch checked={row.is_active} onCheckedChange={updateStatus} />
+    );
   };
 
-  // Actions
-  const actionTemplate = (city: CityRecord) => (
-    <div className="flex gap-3">
+  const actionTemplate = (row: StateRecord) => (
+    <div className="flex gap-3 justify-center">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(city.unique_id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -202,7 +203,7 @@ export default function CityList() {
 
       <button
         title="Delete"
-        onClick={() => handleDelete(city.unique_id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
@@ -210,82 +211,72 @@ export default function CityList() {
     </div>
   );
 
-  const indexTemplate = (_: CityRecord, { rowIndex }: { rowIndex: number }) =>
-    rowIndex + 1;
+  const indexTemplate = (_: StateRecord, { rowIndex }: any) => rowIndex + 1;
 
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Cities</h1>
-            <p className="text-gray-500 text-sm">Manage city records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">States</h1>
+            <p className="text-gray-500 text-sm">Manage state records</p>
           </div>
 
           <Button
-            label="Add City"
+            label="Add State"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
           />
         </div>
 
-        {/* Table */}
         <DataTable
-          value={cities}
+          value={states}
           paginator
           rows={10}
           loading={loading}
           filters={filters}
-          header={header}
+          header={renderHeader()}
           stripedRows
           showGridlines
-          emptyMessage="No cities found."
-          globalFilterFields={[
-            "name",
-            "country_name",
-            "state_name",
-            "district_name"
-          ]}
+          emptyMessage="No states found."
+          globalFilterFields={["name", "country_name", "label"]}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header="S.No" body={indexTemplate} style={{ width: "70px" }} />
 
           <Column
             field="country_name"
             header="Country"
-            body={(row: CityRecord) => cap(row.country_name)}
+            body={(row: StateRecord) => cap(row.country_name)}
             sortable
-          />
-
-          <Column
-            field="state_name"
-            header="State"
-            body={(row: CityRecord) => cap(row.state_name)}
-            sortable
-          />
-
-          <Column
-            field="district_name"
-            header="District"
-            body={(row: CityRecord) => cap(row.district_name)}
-            sortable
+            style={{ minWidth: "150px" }}
           />
 
           <Column
             field="name"
-            header="City"
-            body={(row: CityRecord) => cap(row.name)}
+            header="State"
+            body={(row: StateRecord) => cap(row.name)}
             sortable
+            style={{ minWidth: "150px" }}
           />
 
           <Column
-            header="Status"
-            body={statusTemplate}
-            style={{ width: "140px" }}
+            field="label"
+            header="Label"
+            body={(row: StateRecord) => row.label.toUpperCase()}
+            sortable
+            style={{ minWidth: "150px" }}
           />
 
+          {/* 🔥 Toggle */}
+          <Column
+            header="Status"
+            body={statusTemplate}
+            style={{ width: "150px" }}
+          />
+
+          {/* Actions */}
           <Column
             header="Actions"
             body={actionTemplate}

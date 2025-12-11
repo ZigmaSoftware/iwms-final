@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -14,15 +14,20 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin";
+import { Switch } from "@/components/ui/switch";   
+import { wardApi } from "@/helpers/admin";
 
-type StateRecord = {
+
+
+type WardRecord = {
   unique_id: string;
   name: string;
-  country_name: string;
-  label: string;
   is_active: boolean;
+  zone_name: string;
+  city_name: string;
+  district_name: string;
+  state_name: string;
+  country_name: string;
 };
 
 type ErrorWithResponse = {
@@ -69,36 +74,41 @@ const extractErrorMessage = (error: unknown) => {
   return "Something went wrong while processing the request.";
 };
 
-const stateApi = adminApi.states;
 
-export default function StateList() {
-  const [states, setStates] = useState<StateRecord[]>([]);
+export default function WardList() {
+  const [wards, setWards] = useState<WardRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
   const navigate = useNavigate();
 
   const encMasters = encryptSegment("masters");
-  const encStates = encryptSegment("states");
+  const encWards = encryptSegment("wards");
 
-  const ENC_NEW_PATH = `/${encMasters}/${encStates}/new`;
-  const ENC_EDIT_PATH = (unique_id: string) =>
-    `/${encMasters}/${encStates}/${unique_id}/edit`;
+  const ENC_NEW_PATH = `/${encMasters}/${encWards}/new`;
+  const ENC_EDIT_PATH = (id: string) =>
+    `/${encMasters}/${encWards}/${id}/edit`;
 
-  const fetchStates = useCallback(async () => {
+  // ===========================
+  //   Load Data
+  // ===========================
+
+
+  const fetchWards = useCallback(async () => {
     setLoading(true);
     try {
-      const data = (await stateApi.list()) as StateRecord[];
-      setStates(data);
+      const data = (await wardApi.list()) as WardRecord[];
+      setWards(data);
     } catch (error) {
-      console.error("Failed loading states:", error);
+      console.error("Failed loading wards:", error);
       Swal.fire({
         icon: "error",
-        title: "Unable to load states",
+        title: "Unable to load wards",
         text: extractErrorMessage(error),
       });
     } finally {
@@ -107,92 +117,82 @@ export default function StateList() {
   }, []);
 
   useEffect(() => {
-    void fetchStates();
-  }, [fetchStates]);
+    fetchWards();
+  }, []);
 
-  const handleDelete = async (unique_id: string) => {
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
-      text: "This state will be permanently deleted!",
+      text: "This ward will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: "Delete",
     });
 
-    if (!confirm.isConfirmed) {
-      return;
-    }
+    if (!confirm.isConfirmed) return;
 
-    try {
-      await stateApi.remove(unique_id);
-      Swal.fire({
-        icon: "success",
-        title: "Deleted successfully!",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      void fetchStates();
-    } catch (error) {
-      console.error("Failed deleting state:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Delete failed",
-        text: extractErrorMessage(error),
-      });
-    }
+    await wardApi.remove(id);
+    Swal.fire({
+      icon: "success",
+      title: "Deleted successfully!",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    fetchWards();
   };
 
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setFilters({
-      ...filters,
-      global: { ...filters.global, value },
-    });
+    const _filters = { ...filters };
+    _filters["global"].value = value;
+    setFilters(_filters);
     setGlobalFilterValue(value);
   };
 
-  const renderHeader = () => (
-    <div className="flex justify-end items-center">
-      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
-        <i className="pi pi-search text-gray-500" />
-        <InputText
-          value={globalFilterValue}
-          onChange={onGlobalFilterChange}
-          placeholder="Search states..."
-          className="p-inputtext-sm !border-0 !shadow-none"
-        />
+  const renderHeader = () => {
+    return (
+      <div className="flex justify-end items-center">
+        <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
+          <i className="pi pi-search text-gray-500" />
+          <InputText
+            value={globalFilterValue}
+            onChange={onGlobalFilterChange}
+            placeholder="Search Wards..."
+            className="p-inputtext-sm !border-0 !shadow-none !outline-none"
+          />
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
-  // Capitalize helper
+  const header = renderHeader();
+
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // ⚡ Toggle handler (PATCH only)
-  const statusTemplate = (row: StateRecord) => {
+  // Toggle Status (PATCH)
+  const statusTemplate = (row: WardRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await stateApi.update(row.unique_id, { is_active: value });
-        void fetchStates();
-      } catch (error) {
-        console.error("Status update failed:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Failed to update status",
-          text: extractErrorMessage(error),
-        });
+        await wardApi.update(row.unique_id, { is_active: value });
+        fetchWards();
+      } catch (err) {
+        console.error("Status update failed:", err);
       }
     };
 
     return (
-      <Switch checked={row.is_active} onCheckedChange={updateStatus} />
+      <Switch
+        checked={row.is_active}
+        onCheckedChange={updateStatus}
+      />
     );
   };
 
-  const actionTemplate = (row: StateRecord) => (
+  const actionTemplate = (row: WardRecord) => (
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
@@ -212,72 +212,79 @@ export default function StateList() {
     </div>
   );
 
-  const indexTemplate = (_: StateRecord, { rowIndex }: any) => rowIndex + 1;
+  const indexTemplate = (_: WardRecord, { rowIndex }: { rowIndex: number }) =>
+    rowIndex + 1;
 
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
+
+        {/* Page Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">States</h1>
-            <p className="text-gray-500 text-sm">Manage state records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">Wards</h1>
+            <p className="text-gray-500 text-sm">Manage ward records</p>
           </div>
 
           <Button
-            label="Add State"
+            label="Add Ward"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
           />
         </div>
 
+        {/* Table */}
         <DataTable
-          value={states}
+          value={wards}
           paginator
           rows={10}
           loading={loading}
           filters={filters}
-          header={renderHeader()}
+          header={header}
           stripedRows
           showGridlines
-          emptyMessage="No states found."
-          globalFilterFields={["name", "country_name", "label"]}
+          emptyMessage="No wards found."
+          globalFilterFields={[
+            "name",
+            "zone_name",
+            "city_name",
+            "district_name",
+            "state_name",
+            "country_name",
+          ]}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "70px" }} />
+          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
-            field="country_name"
-            header="Country"
-            body={(row: StateRecord) => cap(row.country_name)}
+            field="zone_name"
+            header="Zone"
             sortable
-            style={{ minWidth: "150px" }}
+            body={(row: WardRecord) => cap(row.zone_name)}
+          />
+
+          <Column
+            field="city_name"
+            header="City"
+            sortable
+            body={(row: WardRecord) => cap(row.city_name)}
           />
 
           <Column
             field="name"
-            header="State"
-            body={(row: StateRecord) => cap(row.name)}
+            header="Ward"
             sortable
-            style={{ minWidth: "150px" }}
+            body={(row: WardRecord) => cap(row.name)}
           />
 
-          <Column
-            field="label"
-            header="Label"
-            body={(row: StateRecord) => row.label.toUpperCase()}
-            sortable
-            style={{ minWidth: "150px" }}
-          />
-
-          {/* 🔥 Toggle */}
+          {/* 🔥 ***TOGGLE REPLACED TAG*** */}
           <Column
             header="Status"
             body={statusTemplate}
-            style={{ width: "150px" }}
+            style={{ width: "140px" }}
           />
 
-          {/* Actions */}
           <Column
             header="Actions"
             body={actionTemplate}

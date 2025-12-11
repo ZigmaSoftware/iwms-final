@@ -8,7 +8,7 @@ import { Column } from "primereact/column";
 import { DataTable } from "primereact/datatable";
 import { InputText } from "primereact/inputtext";
 
-import pdfImg from "../../../../../../public/images/pdfimage/download.png";
+const pdfImg = "/images/pdfimage/download.png";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";

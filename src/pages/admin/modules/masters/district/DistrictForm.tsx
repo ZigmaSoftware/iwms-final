@@ -13,7 +13,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { adminApi } from "@/helpers/admin";
+
+
+import { continentApi, countryApi, stateApi, districtApi } from "@/helpers/admin";
+
 
 type SelectOption = { value: string; label: string };
 
@@ -43,10 +46,7 @@ const encMasters = encryptSegment("masters");
 const encDistricts = encryptSegment("districts");
 const ENC_LIST_PATH = `/${encMasters}/${encDistricts}`;
 
-const continentApi = adminApi.continents;
-const countryApi = adminApi.countries;
-const stateApi = adminApi.states;
-const districtApi = adminApi.districts;
+
 
 const normalize = (v: any): string | null => {
   if (v === undefined || v === null) return null;

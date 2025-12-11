@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { desktopApi } from "@/api";
+
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -12,7 +12,9 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin";
+
+import { districtApi } from "@/helpers/admin";
+
 
 
 type DistrictRecord = {
@@ -67,7 +69,6 @@ const extractErrorMessage = (error: unknown) => {
   return "Something went wrong while processing the request.";
 };
 
-const districtApi = adminApi.districts;
 
 export default function DistrictListPage() {
   const [districts, setDistricts] = useState<DistrictRecord[]>([]);

@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
+
 import { Input } from "@/components/ui/input";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { userTypeApi } from "@/helpers/admin";
 
 const { encAdmins, encUserType } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encAdmins}/${encUserType}`;
@@ -18,27 +19,34 @@ export default function UserTypeForm() {
   const userTypeId = id;
   const isEdit = Boolean(userTypeId);
 
+  /* -----------------------------------------------------------
+     LOAD RECORD FOR EDIT
+  ----------------------------------------------------------- */
   useEffect(() => {
-    if (isEdit) {
-      desktopApi
-        .get(`user-type/${userTypeId}/`)
-        .then((res) => {
-          setName(res.data.name);
-          setIsActive(res.data.is_active);
-          console.log("Loaded user type data:", res.data);
-              
-        })
-      
-        .catch(() =>
-          Swal.fire({
-            icon: "error",
-            title: "Failed to load user type",
-            text: "Something went wrong!",
-          })
-        );
-    }
-  }, [userTypeId, isEdit]);
+    if (!isEdit) return;
 
+    const loadData = async () => {
+      try {
+        const res = await userTypeApi.get(userTypeId as string);
+        const data = res?.data || res;
+
+        setName(data.name);
+        setIsActive(data.is_active);
+      } catch {
+        Swal.fire({
+          icon: "error",
+          title: "Failed to load user type",
+          text: "Something went wrong!",
+        });
+      }
+    };
+
+    loadData();
+  }, [isEdit, userTypeId]);
+
+  /* -----------------------------------------------------------
+     SUBMIT HANDLER
+  ----------------------------------------------------------- */
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
@@ -50,7 +58,8 @@ export default function UserTypeForm() {
 
     try {
       if (isEdit) {
-        await desktopApi.put(`user-type/${userTypeId}/`, payload);
+        // UPDATE
+        await userTypeApi.update(userTypeId as string, payload);
         Swal.fire({
           icon: "success",
           title: "Updated successfully!",
@@ -58,7 +67,8 @@ export default function UserTypeForm() {
           showConfirmButton: false,
         });
       } else {
-        await desktopApi.post("user-type/", payload);
+        // CREATE
+        await userTypeApi.create(payload);
         Swal.fire({
           icon: "success",
           title: "Added successfully!",
@@ -84,6 +94,9 @@ export default function UserTypeForm() {
     }
   };
 
+  /* -----------------------------------------------------------
+     RENDER UI
+  ----------------------------------------------------------- */
   return (
     <div className="bg-[#f9fafb] min-h-screen p-8">
       <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">
@@ -96,7 +109,8 @@ export default function UserTypeForm() {
         <form onSubmit={handleSubmit} className="px-6 py-6 space-y-6">
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Name Field */}
+            
+            {/* User Type Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 User Type Name <span className="text-red-500">*</span>
@@ -111,7 +125,7 @@ export default function UserTypeForm() {
               />
             </div>
 
-            {/* Status Dropdown */}
+            {/* Active Status */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Active Status <span className="text-red-500">*</span>
@@ -126,6 +140,7 @@ export default function UserTypeForm() {
                 <option value="Inactive">Inactive</option>
               </select>
             </div>
+
           </div>
 
           {/* Buttons */}

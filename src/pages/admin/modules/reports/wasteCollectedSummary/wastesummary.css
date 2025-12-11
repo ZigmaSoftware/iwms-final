@@ -1,16 +1,18 @@
 /* ================= CARD & LAYOUT ================= */
 
 .ws-card {
-  background: #fff;
+  background: var(--admin-surfaceAlt);
   border-radius: 10px;
   padding: 18px 24px;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--admin-border);
+  box-shadow: var(--admin-cardShadow);
   display: flex;
   flex-direction: column;
   gap: 18px;
-  max-width: 960px;
+  /* max-width: 960px; */
   width: 100%;
   margin: 0 auto;
+  color: var(--admin-text);
 }
 
 .ws-header {
@@ -34,11 +36,12 @@
 }
 
 .ws-month-input input[type="month"] {
-  border: 1px solid #dce1ef;
+  border: 1px solid var(--admin-border);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 14px;
-  background: #fff;
+  background: var(--admin-surfaceAlt);
+  color: inherit;
   min-width: 160px;
 }
 
@@ -46,7 +49,7 @@
   border: none;
   padding: 9px 18px;
   border-radius: 10px;
-  background: #22c55e;
+  background: var(--green-custom);
   color: #fff;
   font-weight: 600;
   cursor: pointer;
@@ -63,7 +66,7 @@
 .ws-export-button {
   border: none;
   border-radius: 14px;
-  background: #22c55e;
+  background: var(--green-custom);
   color: #fff;
   font-weight: 600;
   font-size: 13px;
@@ -76,41 +79,45 @@
 }
 
 .ws-search {
-  border: 1px solid #dce1ef;
+  border: 1px solid var(--admin-border);
   border-radius: 12px;
   padding: 10px 14px;
   min-width: 200px;
   font-size: 13px;
+  background: var(--admin-surfaceAlt);
+  color: var(--admin-text);
 }
 
 /* ================= TABLE WRAPPER ================= */
 
 .ws-table-wrapper {
-  background: #fff;
+  background: var(--admin-surfaceAlt);
   border-radius: 14px;
-  border: 1px solid #e6e9ef;
+  border: 1px solid var(--admin-border);
   padding: 18px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  box-shadow: var(--admin-cardShadow);
   display: flex;
   flex-direction: column;
   gap: 12px;
+  color: var(--admin-text);
 }
 
 .ws-table-headline {
   font-size: 16px;
   font-weight: 600;
-  color: #1f2a4a;
+  color: var(--admin-text);
 }
 
 .ws-table {
   width: 100%;
   border-collapse: collapse;
   table-layout: auto;
+  color: var(--admin-text);
 }
 
 .ws-table th,
 .ws-table td {
-  border-bottom: 1px solid #edf0ff;
+  border-bottom: 1px solid var(--admin-border);
   padding: 6px 8px;
   text-align: center;
   font-size: 12px;
@@ -118,8 +125,8 @@
 }
 
 .ws-table th {
-  background: #f8f9ff;
-  color: #5c6a92;
+  background: var(--admin-primarySoft);
+  color: var(--admin-text);
   font-weight: 600;
 }
 
@@ -134,7 +141,7 @@
 }
 
 .ws-table tbody tr:hover {
-  background: #f5f7ff;
+  background: var(--admin-surfaceMuted);
 }
 
 /* ================= PAGINATION ================= */
@@ -152,14 +159,14 @@
 .ws-pagination-bar {
   width: 95%;
   height: 10px;
-  background: #d1d1d1;
+  background: var(--admin-border);
   border-radius: 20px;
   overflow: hidden;
 }
 
 .ws-pagination-progress {
   height: 100%;
-  background: #7b7b7b;
+  background: var(--admin-primary);
   border-radius: 20px;
   transition: width 0.3s ease;
 }
@@ -175,7 +182,7 @@
   background: transparent;
   border: none;
   font-size: 18px;
-  color: #7d7d7d;
+  color: var(--admin-mutedText);
   cursor: pointer;
   padding: 4px 6px;
 }
@@ -196,17 +203,20 @@
   border: none;
   cursor: pointer;
   font-size: 14px;
-  color: #555;
+  color: var(--admin-mutedText);
   transition: all 0.2s ease;
+  border: 1px solid transparent;
 }
 
 .ws-page-number:hover {
-  background: #eee;
+  background: var(--admin-surfaceMuted);
+  color: var(--admin-text);
+  border-color: var(--admin-border);
 }
 
 .ws-page-number.active {
-  background: #edf3ff;
-  color: #3567ff;
+  background: var(--admin-primarySoft);
+  color: var(--admin-primaryHover);
   font-weight: 600;
   box-shadow: 0 0 10px rgba(80, 130, 255, 0.2);
 }

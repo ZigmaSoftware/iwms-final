@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
-import { adminApi } from "@/helpers/admin";
+
+import { continentApi, countryApi, stateApi, districtApi, cityApi } from "@/helpers/admin";
 
 /* ------------------------------
     TYPES
@@ -81,14 +82,6 @@ const encMasters = encryptSegment("masters");
 const encCities = encryptSegment("cities");
 const ENC_LIST_PATH = `/${encMasters}/${encCities}`;
 
-/* ------------------------------
-    APIS
------------------------------- */
-const continentApi = adminApi.continents;
-const countryApi = adminApi.countries;
-const stateApi = adminApi.states;
-const districtApi = adminApi.districts;
-const cityApi = adminApi.cities;
 
 /* ==========================================================
     COMPONENT STARTS

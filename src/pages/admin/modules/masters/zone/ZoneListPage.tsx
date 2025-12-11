@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -15,16 +15,23 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch"; // 
-import { adminApi } from "@/helpers/admin";
 
-type CountryRecord = {
+import { zoneApi } from "@/helpers/admin";
+
+
+
+// ===========================
+//   Types
+// ===========================
+type ZoneRecord = {
   unique_id: string;
   name: string;
-  continent_name: string;
-  mob_code: string;
-  currency: string;
+  city_name: string;
+  district_name: string;
+  state_name: string;
   is_active: boolean;
 };
+
 
 type ErrorWithResponse = {
   response?: {
@@ -70,37 +77,42 @@ const extractErrorMessage = (error: unknown) => {
   return "Something went wrong while processing the request.";
 };
 
-const countryApi = adminApi.countries;
-
-export default function CountryList() {
-  const [countries, setCountries] = useState<CountryRecord[]>([]);
+// ===========================
+//   Component
+// ===========================
+export default function ZoneList() {
+  const [zones, setZones] = useState<ZoneRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
   });
 
   const navigate = useNavigate();
 
   const encMasters = encryptSegment("masters");
-  const encCountries = encryptSegment("countries");
+  const encZones = encryptSegment("zones");
 
-  const ENC_NEW_PATH = `/${encMasters}/${encCountries}/new`;
-  const ENC_EDIT_PATH = (unique_id: string) =>
-    `/${encMasters}/${encCountries}/${unique_id}/edit`;
+  const ENC_NEW_PATH = `/${encMasters}/${encZones}/new`;
+  const ENC_EDIT_PATH = (id: string) =>
+    `/${encMasters}/${encZones}/${id}/edit`;
+
+  // ===========================
+  //   Load Data
+  // ===========================
 
 
-  const fetchCountries = useCallback(async () => {
+  const fetchZones = useCallback(async () => {
     setLoading(true);
     try {
-      const data = (await countryApi.list()) as CountryRecord[];
-      setCountries(data);
+      const data = (await zoneApi.list()) as ZoneRecord[];
+      setZones(data);
     } catch (error) {
-      console.error("Failed loading countries:", error);
+      console.error("Failed loading zones:", error);
       Swal.fire({
         icon: "error",
-        title: "Unable to load countries",
+        title: "Unable to load zones",
         text: extractErrorMessage(error),
       });
     } finally {
@@ -109,54 +121,99 @@ export default function CountryList() {
   }, []);
 
   useEffect(() => {
-    void fetchCountries();
-  }, [fetchCountries]);
+    fetchZones();
+  }, []);
 
-  // Delete Record
-  const handleDelete = async (unique_id: string) => {
+  // ===========================
+  //   Delete
+  // ===========================
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
-      text: "This country will be permanently deleted!",
+      text: "This zone will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: "Yes, delete it!"
     });
 
-    if (!confirm.isConfirmed) {
-      return;
-    }
+    if (!confirm.isConfirmed) return;
 
-    try {
-      await countryApi.remove(unique_id);
-      Swal.fire({
-        icon: "success",
-        title: "Deleted successfully!",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      void fetchCountries();
-    } catch (error) {
-      console.error("Failed deleting country:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Delete failed",
-        text: extractErrorMessage(error),
-      });
-    }
+    await zoneApi.remove(id);
+
+    Swal.fire({
+      icon: "success",
+      title: "Deleted successfully!",
+      timer: 1500,
+      showConfirmButton: false
+    });
+
+    fetchZones();
   };
 
-  // Search Bar
+  // ===========================
+  //   Search
+  // ===========================
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
+
     setFilters({
       ...filters,
-      global: { ...filters.global, value },
+      global: { ...filters.global, value }
     });
+
     setGlobalFilterValue(value);
   };
 
+  const cap = (str?: string) =>
+    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
+
+  // ===========================
+  //   Toggle Status (PATCH)
+  // ===========================
+  const statusTemplate = (row: ZoneRecord) => {
+    const updateStatus = async (value: boolean) => {
+      try {
+        await zoneApi.update(row.unique_id, { is_active: value });
+        fetchZones();
+      } catch (error) {
+        console.error("Status update failed:", error);
+      }
+    };
+
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
+  };
+
+  // ===========================
+  //   Actions
+  // ===========================
+  const actionTemplate = (row: ZoneRecord) => (
+    <div className="flex gap-3 justify-center">
+      <button
+        title="Edit"
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
+        className="text-blue-600 hover:text-blue-800"
+      >
+        <PencilIcon className="size-5" />
+      </button>
+
+      <button
+        title="Delete"
+        onClick={() => handleDelete(row.unique_id)}
+        className="text-red-600 hover:text-red-800"
+      >
+        <TrashBinIcon className="size-5" />
+      </button>
+    </div>
+  );
+
+  const indexTemplate = (_: ZoneRecord, { rowIndex }: { rowIndex: number }) =>
+    rowIndex + 1;
+
+  // ===========================
+  //   Table Header
+  // ===========================
   const renderHeader = () => (
     <div className="flex justify-end items-center">
       <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
@@ -164,7 +221,7 @@ export default function CountryList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Countries..."
+          placeholder="Search Zones..."
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -173,64 +230,21 @@ export default function CountryList() {
 
   const header = renderHeader();
 
-  const cap = (str?: string) =>
-    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
-
-  // Toggle logic (PATCH only)
-  const statusTemplate = (row: CountryRecord) => {
-    const updateStatus = async (value: boolean) => {
-      try {
-        await countryApi.update(row.unique_id, { is_active: value });
-        void fetchCountries();
-      } catch (error) {
-        console.error("Status update failed:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Failed to update status",
-          text: extractErrorMessage(error),
-        });
-      }
-    };
-
-    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
-  };
-
-  // Actions
-  const actionTemplate = (c: CountryRecord) => (
-    <div className="flex gap-3 justify-center">
-      <button
-        title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(c.unique_id))}
-        className="text-blue-600 hover:text-blue-800"
-      >
-        <PencilIcon className="size-5" />
-      </button>
-
-      <button
-        title="Delete"
-        onClick={() => handleDelete(c.unique_id)}
-        className="text-red-600 hover:text-red-800"
-      >
-        <TrashBinIcon className="size-5" />
-      </button>
-    </div>
-  );
-
-  // S.No
-  const indexTemplate = (_: CountryRecord, { rowIndex }: any) => rowIndex + 1;
-
+  // ===========================
+  //   UI
+  // ===========================
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        {/* Header Section */}
+        {/* Page Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Countries</h1>
-            <p className="text-gray-500 text-sm">Manage country records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">Zones</h1>
+            <p className="text-gray-500 text-sm">Manage zone records</p>
           </div>
 
           <Button
-            label="Add Country"
+            label="Add Zone"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -239,7 +253,7 @@ export default function CountryList() {
 
         {/* Data Table */}
         <DataTable
-          value={countries}
+          value={zones}
           paginator
           rows={10}
           loading={loading}
@@ -247,46 +261,27 @@ export default function CountryList() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No countries found."
-          globalFilterFields={["name", "continent_name", "currency", "mob_code"]}
+          emptyMessage="No zones found."
+          globalFilterFields={["name", "city_name", "district_name", "state_name"]}
           className="p-datatable-sm"
         >
-          <Column
-            header="S.No"
-            body={indexTemplate}
-            style={{ width: "80px" }}
-          />
+          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
-            field="continent_name"
-            header="Continent"
+            field="city_name"
+            header="City"
             sortable
-            body={(row: CountryRecord) => cap(row.continent_name)}
-            style={{ minWidth: "150px" }}
+            body={(row: ZoneRecord) => cap(row.city_name)}
           />
 
           <Column
             field="name"
-            header="Country"
+            header="Zone"
             sortable
-            body={(row: CountryRecord) => cap(row.name)}
-            style={{ minWidth: "150px" }}
+            body={(row: ZoneRecord) => cap(row.name)}
           />
 
-          <Column
-            field="currency"
-            header="Currency"
-            sortable
-            style={{ minWidth: "130px" }}
-          />
-
-          <Column
-            field="mob_code"
-            header="Mobile Code"
-            sortable
-            style={{ minWidth: "130px" }}
-          />
-
+          {/* 🔥 Toggle Status */}
           <Column
             header="Status"
             body={statusTemplate}
@@ -298,7 +293,6 @@ export default function CountryList() {
             body={actionTemplate}
             style={{ width: "150px", textAlign: "center" }}
           />
-
         </DataTable>
       </div>
     </div>
