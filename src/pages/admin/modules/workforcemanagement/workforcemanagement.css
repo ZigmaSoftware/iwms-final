@@ -9,7 +9,7 @@
 
 .wf-content {
   width: 100%;
-  max-width: 1200px;
+  /* max-width: 1200px; */
   display: grid;
   grid-template-columns: minmax(0, 1fr) 420px;
   gap: 32px;
