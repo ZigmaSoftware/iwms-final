@@ -1,19 +1,43 @@
-import { adminEndpoints, type AdminEntity } from "./endpoints";
-import { createCrudHelpers, type CrudHelpers } from "./crudHelpers";
+// helpers/admin/index.ts
+// --------------------------------------------------------------
+// Consolidated Admin Services Export
+// --------------------------------------------------------------
 
-type AdminApiRegistry = {
-  [K in AdminEntity]: CrudHelpers;
-};
+import { adminApi } from "./registry";
 
-export const adminApi: AdminApiRegistry = Object.entries(adminEndpoints).reduce(
-  (map, [key, path]) => {
-    map[key as AdminEntity] = createCrudHelpers(path);
-    return map;
-  },
-  {} as AdminApiRegistry
-);
+// Master Data
+export const continentApi = adminApi.continents;
+export const countryApi = adminApi.countries;
+export const stateApi = adminApi.states;
+export const districtApi = adminApi.districts;
+export const cityApi = adminApi.cities;
+export const zoneApi = adminApi.zones;
+export const wardApi = adminApi.wards;
 
-export const getAdminApi = (entity: AdminEntity) => adminApi[entity];
+// Staff & User Management
+export const staffCreationApi = adminApi.staffCreation;
+export const staffUserTypeApi = adminApi.staffUserTypes;
+export const userTypeApi = adminApi.userTypes;
+export const userCreationApi = adminApi.usercreations;
 
+// Transport & Customer
+export const fuelApi = adminApi.fuels;
+export const vehicleTypeApi = adminApi.vehicleTypes;
+export const vehicleCreationApi = adminApi.vehicleCreation;
+export const customerCreationApi = adminApi.customerCreations;
+
+// Operations
+export const wasteCollectionApi = adminApi.wasteCollections;
+export const complaintApi = adminApi.complaints;
+export const feedbackApi = adminApi.feedbacks;
+
+// Screens & Permissions
+export const mainScreenTypeApi = adminApi.mainscreentype;
+export const mainScreenApi = adminApi.mainscreens;
+export const userScreenApi = adminApi.userscreens;
+export const userScreenActionApi = adminApi.userscreenaction;
+export const userScreenPermissionApi = adminApi.userscreenpermissions;
+
+// Utilities
 export * from "./endpoints";
 export * from "./crudHelpers";

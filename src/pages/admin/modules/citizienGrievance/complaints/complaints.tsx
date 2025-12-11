@@ -5,7 +5,7 @@ import { FileDown } from "lucide-react";
 
 import { PencilIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { adminApi } from "@/helpers/admin";
+import { adminApi } from "@/helpers/admin/registry";
 
 type Complaint = {
   unique_id: string;

@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
-import { adminApi } from "@/helpers/admin";
 
 /* ------------------------------
     ROUTES
@@ -27,7 +26,7 @@ const ENC_LIST_PATH = `/${encAdmins}/${encMainScreenType}`;
 /* ------------------------------
     APIS
 ------------------------------ */
-const mainScreenTypeApi = adminApi.mainscreentype;
+import { mainScreenTypeApi } from "@/helpers/admin";
 
 /* ==========================================================
     COMPONENT START
@@ -69,7 +68,11 @@ export default function MainScreenTypeForm() {
     e.preventDefault();
 
     if (!typeName.trim()) {
-      Swal.fire("Missing Field", "Main Screen Type Name is required.", "warning");
+      Swal.fire(
+        "Missing Field",
+        "Main Screen Type Name is required.",
+        "warning"
+      );
       return;
     }
 
@@ -111,7 +114,6 @@ export default function MainScreenTypeForm() {
     >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
           {/* Type Name */}
           <div>
             <Label>Main Screen Type Name *</Label>
@@ -141,7 +143,6 @@ export default function MainScreenTypeForm() {
               </SelectContent>
             </Select>
           </div>
-
         </div>
 
         {/* Buttons */}
@@ -152,8 +153,8 @@ export default function MainScreenTypeForm() {
                 ? "Updating..."
                 : "Saving..."
               : isEdit
-              ? "Update"
-              : "Save"}
+                ? "Update"
+                : "Save"}
           </Button>
 
           <Button

@@ -2,9 +2,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 
-import { desktopApi } from "@/api";
-import { adminApi } from "@/helpers/admin";
-
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { Button } from "primereact/button";
@@ -17,7 +14,10 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { Switch } from "@/components/ui/switch";
+import {
+  userScreenPermissionApi
+} from "@/helpers/admin";
+
 
 /* -----------------------------------------------------------
    TYPES
@@ -42,7 +42,6 @@ type StaffUserType = {
 
 type GroupedMap = Record<string, StaffUserType>;
 
-const userScreenPermissionApi = adminApi.userscreenpermissions;
 
 /* -----------------------------------------------------------
    COMPONENT
