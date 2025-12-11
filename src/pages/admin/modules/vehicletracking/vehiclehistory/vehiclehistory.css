@@ -4,12 +4,12 @@
 
 .vh-container {
   width: 100%;
-  max-width: 1280px;
+  /* max-width: 1280px; */
   margin: 0 auto;
   padding: 24px;
   box-sizing: border-box;
   font-family: "Inter", sans-serif;
-  color: #0f172a;
+  color: var(--admin-text);
 }
 
 /* Fade-in animation (soft professional) */
@@ -42,12 +42,12 @@
   display: flex;
   gap: 16px;
   align-items: flex-end;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
+  background: var(--admin-surfaceAlt);
+  border: 1px solid var(--admin-border);
   padding: 16px;
   border-radius: 14px;
   margin-bottom: 18px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--admin-cardShadow);
 }
 
 .vh-filter-item {
@@ -61,30 +61,31 @@
   font-size: 13px;
   font-weight: 600;
   margin-bottom: 4px;
-  color: #475569;
+  color: var(--admin-mutedText);
 }
 
 .vh-filter-item select,
 .vh-filter-item input {
   padding: 10px 12px;
   border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: #f8fafc;
+  border: 1px solid var(--admin-border);
+  background: var(--admin-surfaceAlt);
+  color: var(--admin-text);
   font-size: 14px;
   transition: all 0.2s ease;
 }
 
 .vh-filter-item input:focus,
 .vh-filter-item select:focus {
-  border-color: #2563eb;
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+  border-color: var(--admin-primary);
+  background: var(--admin-surface);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-primary) 30%, transparent);
 }
 
 /* Go Button */
 .vh-go-btn {
   padding: 12px 22px;
-  background:  #22c55e;
+  background:  var(--green-custom);
   color: #fff;
   border: none;
   border-radius: 10px;
@@ -94,7 +95,7 @@
 }
 
 .vh-go-btn:hover {
-  background: #1e3a8a;
+  background: var(--green-custom-hover);
   transform: translateY(-1px);
 }
 
@@ -110,11 +111,11 @@
   margin: 8px 0 16px 4px;
   font-size: 22px;
   font-weight: 700;
-  color: #1e293b;
+  color: var(--admin-text);
 }
 
 .vh-title span {
-  color:  #22c55e;
+  color:  var(--green-custom);
 }
 
 /* ---------------------------------------- */
@@ -124,9 +125,9 @@
 .vh-map-wrapper {
   width: 100%;
   height: 570px;
-  background: #f8fafc;
+  background: var(--admin-surfaceAlt);
   border-radius: 18px;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--admin-border);
   overflow: hidden;
   position: relative;
   animation: fadeIn 0.5s ease forwards;
@@ -151,7 +152,9 @@
   /* border: 1px solid #e2e8f0; */
   padding: 14px 18px;
   border-radius: 18px;
-  box-shadow: 0 8px 28px rgba(15, 23, 42, 0.18);
+  background: color-mix(in srgb, var(--admin-surfaceAlt) 85%, transparent);
+  border: 1px solid var(--admin-border);
+  box-shadow: var(--admin-cardShadow);
   display: flex;
   align-items: center;
   gap: 14px;
@@ -166,7 +169,7 @@
 }
 
 .vh-playback button {
-  background: #1d4ed8;
+  background: var(--admin-primary);
   color: #fff;
   border: none;
   border-radius: 12px;
@@ -177,12 +180,12 @@
 }
 
 .vh-playback button:hover {
-  background: #163eaa;
+  background: var(--admin-primaryHover);
 }
 
 .vh-playback input[type="range"] {
   flex: 1;
-  accent-color: #1d4ed8;
+  accent-color: var(--admin-primary);
 }
 
 /* ---------------------------------------- */
@@ -192,9 +195,9 @@
 .vh-error {
   margin-top: 16px;
   padding: 12px 16px;
-  background: #fee2e2;
+  background: color-mix(in srgb, #fee2e2 80%, var(--admin-surface));
   color: #b91c1c;
-  border: 1px solid #fecaca;
+  border: 1px solid color-mix(in srgb, #fecaca 80%, var(--admin-border));
   border-radius: 10px;
   font-size: 14px;
   animation: fadeIn 0.4s ease forwards;

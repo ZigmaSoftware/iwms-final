@@ -1,31 +1,27 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { desktopApi, mobileApi } from "@/api";
 import Swal from "sweetalert2";
 import ComponentCard from "@/components/common/ComponentCard";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import Label from "@/components/form/Label";
+import Select from "@/components/form/Select";
+import Input from "@/components/form/input/InputField";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import {
   filterActiveCustomers,
+  filterActiveRecords,
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
-import { adminApi } from "@/helpers/admin/registry";
+
+const listFromResponse = (payload: any) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
+};
 
 const FILE_ICON =
   "https://cdn-icons-png.flaticon.com/512/337/337946.png"; // fallback for pdf/doc
-
-const customerApi = adminApi.customerCreations;
-const zoneApi = adminApi.zones;
-const wardApi = adminApi.wards;
-const complaintApi = adminApi.complaints;
 
 export default function ComplaintAddForm() {
   const navigate = useNavigate();
@@ -33,6 +29,8 @@ export default function ComplaintAddForm() {
   const { encCitizenGrivence, encComplaint } = getEncryptedRoute();
 
   const ENC_LIST_PATH = `/${encCitizenGrivence}/${encComplaint}`;
+
+
   const [customers, setCustomers] = useState<any[]>([]);
   const [customer, setCustomer] = useState<any>(null);
   const [zones, setZones] = useState<any[]>([]);
@@ -42,47 +40,121 @@ export default function ComplaintAddForm() {
   const [ward, setWard] = useState("");
   const [contact, setContact] = useState("");
   const [address, setAddress] = useState("");
-  const [category, setCategory] = useState("");
+  const [mainCategoryId, setMainCategoryId] = useState("");
+  const [subCategoryId, setSubCategoryId] = useState("");
+  const [mainCategories, setMainCategories] = useState<any[]>([]);
+  const [allSubCategories, setAllSubCategories] = useState<any[]>([]);
+  const [subCategories, setSubCategories] = useState<any[]>([]);
   const [details, setDetails] = useState("");
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
   const [isPreviewImage, setIsPreviewImage] = useState(false);
 
+  const resolveOptionValue = (item: any) => {
+    if (!item) return "";
+    if (item.unique_id !== undefined && item.unique_id !== null) {
+      return String(item.unique_id);
+    }
+    if (item.id !== undefined && item.id !== null) {
+      return String(item.id);
+    }
+    return "";
+  };
+
   const fetchCustomers = async () => {
     try {
-      const res = await customerApi.list();
-      const normalized = normalizeCustomerArray(res);
+      const res = await desktopApi.get("/customercreations/");
+      const normalized = normalizeCustomerArray(res.data);
       setCustomers(filterActiveCustomers(normalized));
     } catch (err) {
       console.error("Failed to fetch customers:", err);
     }
   };
 
+  const loadMainCategories = async () => {
+    try {
+      const res = await mobileApi.get("main-category/");
+      const list = listFromResponse(res.data);
+      setMainCategories(filterActiveRecords(list));
+    } catch (error) {
+      console.error("Failed to load main categories:", error);
+    }
+  };
+
+  const loadSubCategoryMaster = async () => {
+    try {
+      const res = await mobileApi.get("sub-category/");
+      const list = listFromResponse(res.data);
+      setAllSubCategories(filterActiveRecords(list));
+    } catch (error) {
+      console.error("Failed to load sub categories:", error);
+    }
+  };
+
   useEffect(() => {
     fetchCustomers();
+    loadMainCategories();
+    loadSubCategoryMaster();
   }, []);
 
-  const loadZones = async (cid: string) => {
-    const res = await zoneApi.list({ params: { customer: cid } });
-    setZones(res);
+  const loadZones = async (cid: number) => {
+    const res = await desktopApi.get(`/zones/?customer=${cid}`);
+    setZones(filterActiveRecords(listFromResponse(res.data)));
   };
 
-  const loadWards = async (zid: string) => {
-    const res = await wardApi.list({ params: { zone: zid } });
-    setWards(res);
+  const loadWards = async (zid: string | number) => {
+    const res = await desktopApi.get(`/wards/?zone=${zid}`);
+    setWards(filterActiveRecords(listFromResponse(res.data)));
   };
 
-  const resolveId = (item: any) => item?.unique_id ?? "";
+  const findOptionByValue = (items: any[], value: string) =>
+    items.find((item) => {
+      const optionValue = resolveOptionValue(item);
+      if (optionValue && optionValue === value) return true;
+      const alt =
+        item?.id ??
+        item?.pk ??
+        item?.unique_id ??
+        item?.uniqueId ??
+        item?.value ??
+        item?.code;
+      return alt !== undefined && alt !== null && String(alt) === value;
+    });
+
+  const resolveSubmitValue = (items: any[], value: string) => {
+    if (!value) return "";
+    const option = findOptionByValue(items, value);
+    if (!option) return value;
+    const raw =
+      option.id ??
+      option.pk ??
+      option.unique_id ??
+      option.uniqueId ??
+      option.value ??
+      option.code ??
+      value;
+    return raw === undefined || raw === null ? value : String(raw);
+  };
 
   const onCustomerChange = (id: string) => {
-    const c = customers.find((x) => resolveId(x) === id);
+    const c = customers.find((x) => String(x.id) === id || x.id === Number(id));
     setCustomer(c);
-    setContact(c.contact_no);
+    setContact(c?.contact_no ?? "");
     setAddress(
-      `${c.building_no}, ${c.street}, ${c.area}, ${c.city_name}, ${c.district_name}, ${c.state_name}, ${c.pincode}`
+      c
+        ? `${c.building_no}, ${c.street}, ${c.area}, ${c.city_name}, ${c.district_name}, ${c.state_name}, ${c.pincode}`
+        : ""
     );
-    loadZones(resolveId(c));
+
+    setZone("");
+    setWard("");
+    setWards([]);
+    if (c) {
+      loadZones(c.id);
+    } else {
+      setZones([]);
+    }
   };
 
   const isImageFile = (f: File) =>
@@ -110,6 +182,76 @@ export default function ComplaintAddForm() {
     }
   };
 
+  const findMainCategory = (value: string) =>
+    mainCategories.find((cat) => resolveOptionValue(cat) === value);
+
+  const findSubCategory = (value: string) =>
+    allSubCategories.find((cat) => resolveOptionValue(cat) === value);
+
+  const handleMainCategoryChange = (value: string) => {
+    setMainCategoryId(value);
+  };
+
+  const getMainCategoryLabel = () =>
+    findMainCategory(mainCategoryId)?.main_categoryName ||
+    findMainCategory(mainCategoryId)?.name ||
+    "";
+
+  const getSubCategoryLabel = () =>
+    findSubCategory(subCategoryId)?.name || "";
+
+  useEffect(() => {
+    if (!mainCategoryId) {
+      setSubCategories([]);
+      setSubCategoryId("");
+      return;
+    }
+
+    const selectedMain = findMainCategory(mainCategoryId);
+    const acceptedParentValues = new Set<string>();
+    const addValue = (val: any) => {
+      if (val === undefined || val === null) return;
+      const normalized = String(val);
+      if (normalized) acceptedParentValues.add(normalized);
+    };
+
+    addValue(mainCategoryId);
+    if (selectedMain) {
+      [
+        selectedMain.id,
+        selectedMain.pk,
+        selectedMain.unique_id,
+        selectedMain.uniqueId,
+        selectedMain.value,
+        selectedMain.code,
+      ].forEach(addValue);
+    }
+
+    const filtered = allSubCategories.filter((sub) => {
+      const parentCandidates = [
+        sub.mainCategory,
+        sub.mainCategory_id,
+        sub.mainCategoryId,
+        sub.main_category,
+        sub.main_category_id,
+        sub.mainCategory_unique_id,
+        sub.main_category_unique_id,
+      ];
+
+      return parentCandidates.some((value) => {
+        if (value === undefined || value === null) return false;
+        return acceptedParentValues.has(String(value));
+      });
+    });
+
+    setSubCategories(filtered);
+    setSubCategoryId((current) =>
+      filtered.some((sub) => resolveOptionValue(sub) === current)
+        ? current
+        : ""
+    );
+  }, [mainCategoryId, allSubCategories]);
+
   const clearFile = () => {
     if (previewUrl.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
 
@@ -121,27 +263,63 @@ export default function ComplaintAddForm() {
     if (input) input.value = "";
   };
 
-  const save = async (e: any) => {
+  const save = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (
+      !customer ||
+      !zone ||
+      !ward ||
+      !mainCategoryId ||
+      !subCategoryId ||
+      !details
+    ) {
+      Swal.fire("Missing Fields", "Please fill all required fields.", "warning");
+      return;
+    }
+
+    const zoneSubmitValue = resolveSubmitValue(zones, zone);
+    const wardSubmitValue = resolveSubmitValue(wards, ward);
+
+    if (!zoneSubmitValue || !wardSubmitValue) {
+      Swal.fire(
+        "Missing Fields",
+        "Selected zone/ward is invalid. Please re-select and try again.",
+        "warning"
+      );
+      return;
+    }
+
+    const mainLabel = getMainCategoryLabel();
+    const subLabel = getSubCategoryLabel();
+
     const fd = new FormData();
-    fd.append("customer", resolveId(customer));
-    fd.append("zone", zone);
-    fd.append("ward", ward);
-    fd.append("contact_no", contact);
-    fd.append("address", address);
-    fd.append("category", category);
+    fd.append("customer", String(customer.id));
+    fd.append("zone", zoneSubmitValue);
+    fd.append("ward", wardSubmitValue);
+    fd.append("contact_no", contact || "");
+    fd.append("address", address || "");
+    fd.append("main_category", mainLabel);
+    fd.append("sub_category", subLabel);
+    fd.append("category", "OTHER");
     fd.append("details", details);
     if (file) fd.append("image", file);
 
     try {
-      await complaintApi.create(fd, {
+      await desktopApi.post("/complaints/", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       Swal.fire("Saved", "Complaint created successfully", "success");
       navigate(ENC_LIST_PATH);
-    } catch {
-      Swal.fire("Error", "Failed to save complaint", "error");
+    } catch (error: any) {
+      console.error("Complaint save failed:", error);
+      const message =
+        error?.response?.data &&
+        typeof error.response.data === "object" &&
+        !Array.isArray(error.response.data)
+          ? JSON.stringify(error.response.data)
+          : "Failed to save complaint";
+      Swal.fire("Error", message, "error");
     }
   };
 
@@ -153,20 +331,14 @@ export default function ComplaintAddForm() {
           <div>
             <Label>Customer *</Label>
             <Select
-              value={customer ? resolveId(customer) : undefined}
-              onValueChange={onCustomerChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select customer" />
-              </SelectTrigger>
-              <SelectContent>
-                {customers.map((c) => (
-                  <SelectItem key={resolveId(c)} value={resolveId(c)}>
-                    {c.customer_name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              value={customer ? String(customer.id ?? customer.unique_id) : ""}
+              required
+              onChange={onCustomerChange}
+              options={customers.map((c) => ({
+                value: String(c.id ?? c.unique_id),
+                label: c.customer_name,
+              }))}
+            />
           </div>
 
           <div>
@@ -182,59 +354,57 @@ export default function ComplaintAddForm() {
           <div>
             <Label>Zone *</Label>
             <Select
-              value={zone || undefined}
-              onValueChange={(v) => {
+              required
+              value={zone}
+              onChange={(v) => {
                 setZone(v);
+                setWard("");
                 loadWards(v);
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select zone" />
-              </SelectTrigger>
-              <SelectContent>
-                {zones.map((z) => (
-                  <SelectItem key={resolveId(z)} value={resolveId(z)}>
-                    {z.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              options={zones.map((z) => ({
+                value: resolveOptionValue(z),
+                label: z.name,
+              }))}
+            />
           </div>
 
           <div>
             <Label>Ward *</Label>
-            <Select value={ward || undefined} onValueChange={(v) => setWard(v)}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select ward" />
-              </SelectTrigger>
-              <SelectContent>
-                {wards.map((w) => (
-                  <SelectItem key={resolveId(w)} value={resolveId(w)}>
-                    {w.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Select
+              required
+              value={ward}
+              onChange={(v) => setWard(v)}
+              options={wards.map((w) => ({
+                value: resolveOptionValue(w),
+                label: w.name,
+              }))}
+            />
           </div>
 
           <div>
-            <Label>Category *</Label>
+            <Label>Main Category *</Label>
             <Select
-              value={category || undefined}
-              onValueChange={(v) => setCategory(v)}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="COLLECTION">Collection</SelectItem>
-                <SelectItem value="TRANSPORT">Transport</SelectItem>
-                <SelectItem value="SEGREGATION">Segregation</SelectItem>
-                <SelectItem value="VEHICLE">Vehicle</SelectItem>
-                <SelectItem value="WORKER">Worker</SelectItem>
-                <SelectItem value="OTHER">Other</SelectItem>
-              </SelectContent>
-            </Select>
+              required
+              value={mainCategoryId}
+              onChange={handleMainCategoryChange}
+              options={mainCategories.map((cat) => ({
+                value: resolveOptionValue(cat),
+                label: cat.main_categoryName || cat.name,
+              }))}
+            />
+          </div>
+
+          <div>
+            <Label>Sub Category *</Label>
+            <Select
+              required
+              value={subCategoryId}
+              onChange={(v) => setSubCategoryId(v)}
+              options={subCategories.map((sub) => ({
+                value: resolveOptionValue(sub),
+                label: sub.name,
+              }))}
+            />
           </div>
 
           <div className="md:col-span-2">
@@ -289,9 +459,8 @@ export default function ComplaintAddForm() {
               <div className="flex items-center gap-3 mt-3">
 
                 {/* Preview */}
-                <Button
+                <button
                   type="button"
-                  variant="secondary"
                   onClick={() => {
                     if (isPreviewImage) {
                       window.open(previewUrl, "_blank");
@@ -299,14 +468,19 @@ export default function ComplaintAddForm() {
                       window.open(URL.createObjectURL(file!), "_blank");
                     }
                   }}
+                  className="bg-gray-300 hover:bg-gray-200 text-white px-3 py-1 rounded text-sm"
                 >
                   Preview
-                </Button>
+                </button>
 
                 {/* Remove */}
-                <Button type="button" variant="destructive" onClick={clearFile}>
+                <button
+                  type="button"
+                  onClick={clearFile}
+                  className="bg-red-400 hover:bg-red-300 text-white px-3 py-1 rounded text-sm"
+                >
                   Remove
-                </Button>
+                </button>
 
               </div>
             )}
@@ -314,10 +488,16 @@ export default function ComplaintAddForm() {
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
-          <Button type="submit">Save</Button>
-          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
+          <button className="bg-green-custom text-white px-4 py-2 rounded">
+            Save
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(ENC_LIST_PATH)}
+            className="bg-red-400 text-white px-4 py-2 rounded"
+          >
             Cancel
-          </Button>
+          </button>
         </div>
       </form>
     </ComponentCard>
