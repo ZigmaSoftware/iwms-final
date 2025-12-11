@@ -13,6 +13,8 @@ export const districtApi = adminApi.districts;
 export const cityApi = adminApi.cities;
 export const zoneApi = adminApi.zones;
 export const wardApi = adminApi.wards;
+export const subPropertiesApi = adminApi.subProperties;
+export const propertiesApi = adminApi.properties;
 
 // Staff & User Management
 export const staffCreationApi = adminApi.staffCreation;
