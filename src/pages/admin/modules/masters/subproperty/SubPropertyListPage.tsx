@@ -14,8 +14,9 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { Switch } from "@/components/ui/switch"; // 🔥 Toggle
-import { adminApi } from "@/helpers/admin/registry";
+import { Switch } from "@/components/ui/switch";
+
+import { subPropertiesApi } from "@/helpers/admin";
 
 type SubProperty = {
   unique_id: string;
@@ -43,7 +44,6 @@ export default function SubPropertyList() {
   const ENC_EDIT_PATH = (unique_id: string) =>
     `/${encMasters}/${encSubProperties}/${unique_id}/edit`;
 
-  const subPropertiesApi = adminApi.subProperties;
 
   const fetchSubProperties = async () => {
     try {

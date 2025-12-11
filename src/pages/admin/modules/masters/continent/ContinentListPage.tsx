@@ -12,8 +12,10 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin/registry";
 import { encryptSegment } from "@/utils/routeCrypto";
+
+import { continentApi } from "@/helpers/admin";
+
 
 type Continent = {
   unique_id: string;
@@ -33,7 +35,6 @@ const ENC_NEW_PATH = `/${encMasters}/${encContinents}/new`;
 const ENC_EDIT_PATH = (id: string) =>
   `/${encMasters}/${encContinents}/${id}/edit`;
 
-const continentApi = adminApi.continents;
 
 export default function ContinentList() {
   const [continents, setContinents] = useState<Continent[]>([]);
