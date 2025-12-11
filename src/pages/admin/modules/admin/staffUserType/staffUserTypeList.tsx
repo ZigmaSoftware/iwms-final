@@ -17,14 +17,8 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 
-type StaffUserType = {
-  unique_id: string;
-  name: string;
-  is_active: boolean;
-  usertype?: { unique_id?: string; name?: string } | string | null;
-  usertype_name?: string; // computed for display
-  usertype_id?: string | null;
-};
+import type { StaffUserType } from "../types/admin.types"; 
+
 
 export default function StaffUserTypeList() {
   const [records, setRecords] = useState<StaffUserType[]>([]);
