@@ -8,7 +8,7 @@
 
 .dr-card {
   width: 100%;
-  max-width: 900px;
+  /* max-width: 900px; */
   background: #fff;
   border-radius: 20px;
   padding: 28px;
@@ -16,6 +16,34 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+
+.dr-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.dr-summary-card {
+  background: #f8f9ff;
+  border: 1px solid #e0e7ff;
+  border-radius: 14px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dr-summary-card span {
+  font-size: 13px;
+  color: #5c6d8c;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.dr-summary-card strong {
+  font-size: 22px;
+  color: #1d2b48;
 }
 
 .dr-header {

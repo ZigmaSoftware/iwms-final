@@ -180,8 +180,8 @@ export default function WasteCollectedDataList() {
   if (loading) return <div className="p-6">Loading Waste Collected Data...</div>;
 
   return (
-    <div className="p-6">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+    <div className="">
+      <div className="bg-white rounded-lg shadow-lg ">
         {/* Page Header */}
         <div className="flex justify-between items-center mb-6">
           <div>

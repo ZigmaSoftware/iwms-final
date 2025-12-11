@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getEncryptedRoute } from "@/utils/routeCache";
-import { fetchWasteReport, type WasteApiRow } from "@/utils/wasteApi";
 import "./dayreport.css";
 
-type ApiRow = WasteApiRow & {
+type ApiRow = {
+  Ticket_No: string;
+  Vehicle_No: string;
+  date: string;
   Start_Time: string | null;
   End_Time: string | null;
   total_trip: number;
@@ -42,7 +43,6 @@ const getLastDayOfMonth = (year: number, month: number) => {
 
 export default function DayReport() {
   const navigate = useNavigate();
-  const { encWorkforceManagement } = getEncryptedRoute();
 
   const initialFromDate = `${today.getFullYear()}-${String(
     today.getMonth() + 1
@@ -75,29 +75,45 @@ export default function DayReport() {
     setLoading(true);
     setError(null);
     try {
-      const { rows: apiRows, message } = await fetchWasteReport<ApiRow>(
-        "day_wise_data",
-        targetFromDate,
-        targetToDate
+      const response = await fetch(
+        `https://zigma.in/d2d/folders/waste_collected_summary_report/test_waste_collected_data_api.php?action=day_wise_data&from_date=${targetFromDate}&to_date=${targetToDate}&key=ZIGMA-DELHI-WEIGHMENT-2025-SECURE`
       );
+      const json = await response.json();
 
-      if (!apiRows.length) {
+      if (!json.data || !json.data.length) {
         setRows([]);
-        setError(message || "No data available for the selected range.");
-      } else {
-        const sorted = [...apiRows].sort((a, b) => compareDates(a.date, b.date));
-        setRows(sorted);
-        setCurrentPage(1);
-        setError(null);
+        setError("No data available for the selected range.");
+        return;
       }
+
+      const apiRows: ApiRow[] = json.data.map((row: any) => {
+        const dry = Number(row.Dry_Wt.replace(/,/g, ""));
+        const wet = Number(row.Wet_Wt.replace(/,/g, ""));
+        const mix = Number(row.Mix_Wt.replace(/,/g, ""));
+        const net = Number(row.Net_Wt.replace(/,/g, ""));
+        return {
+          Ticket_No: row.Ticket_No,
+          Vehicle_No: row.Vehicle_No,
+          date: row.Date.split(" ")[0],
+          Start_Time: row.Date.split(" ")[1] || null,
+          End_Time: null,
+          total_trip: 1,
+          dry_weight: dry,
+          wet_weight: wet,
+          mix_weight: mix,
+          total_net_weight: net,
+          average_weight_per_trip: net,
+        };
+      });
+
+      const sorted = apiRows.sort((a, b) => compareDates(a.date, b.date));
+      setRows(sorted);
+      setCurrentPage(1);
+      setError(null);
     } catch (err) {
       console.error("Day report API error:", err);
       setRows([]);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load data. Please try again."
-      );
+      setError(err instanceof Error ? err.message : "Unable to load data.");
     } finally {
       setLoading(false);
     }
@@ -116,7 +132,7 @@ export default function DayReport() {
   };
 
   const goBack = () => {
-    navigate(`/${encWorkforceManagement}/${encWorkforceManagement}`);
+    navigate(-1); // simple back navigation
   };
 
   const rangeLabel = `${formatFullDate(fromDate)} – ${formatFullDate(toDate)}`;
@@ -173,29 +189,29 @@ export default function DayReport() {
                   <th>S.No</th>
                   <th>Date</th>
                   <th>Start Time</th>
-                  <th>End Time</th>
-                  <th>No. of Trip</th>
+                  <th>Ticket No</th>
+                  <th>Vehicle No</th>
                   <th>Dry Wt/kg</th>
                   <th>Wet Wt/kg</th>
                   <th>Mixed Wt/kg</th>
                   <th>Net Wt/kg</th>
-                  <th>Avg/<br />Trip</th>
+                  <th>Avg/Trip</th>
                 </tr>
               </thead>
 
               <tbody>
                 {paginatedRows.map((row, index) => (
-                  <tr key={row.date + index}>
+                  <tr key={row.Ticket_No + index}>
                     <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
                     <td>{row.date}</td>
                     <td>{formatTime(row.Start_Time)}</td>
-                    <td>{formatTime(row.End_Time)}</td>
-                    <td>{formatNumber(row.total_trip)}</td>
+                    <td>{row.Ticket_No}</td>
+                    <td>{row.Vehicle_No}</td>
                     <td>{formatNumber(row.dry_weight)}</td>
                     <td>{formatNumber(row.wet_weight)}</td>
                     <td>{formatNumber(row.mix_weight)}</td>
                     <td>{formatNumber(row.total_net_weight)}</td>
-                    <td>{Number(row.average_weight_per_trip).toFixed(2)}</td>
+                    <td>{row.average_weight_per_trip.toFixed(2)}</td>
                   </tr>
                 ))}
               </tbody>
@@ -203,7 +219,6 @@ export default function DayReport() {
           )}
         </div>
 
-        {/* -------- PAGINATION UI -------- */}
         {rows.length > 0 && (
           <div className="dr-pagination">
             <div className="dr-pagination-bar">
