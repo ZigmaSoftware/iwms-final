@@ -16,11 +16,9 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 
-type UserType = {
-  unique_id: string;
-  name: string;
-  is_active: boolean;
-};
+
+import type { UserType } from "../types/admin.types"; 
+
 import { userTypeApi } from "@/helpers/admin";
 
 export default function UserTypePage() {
