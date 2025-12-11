@@ -12,7 +12,7 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin";
+import { adminApi } from "@/helpers/admin/registry";
 import { encryptSegment } from "@/utils/routeCrypto";
 
 type Continent = {

@@ -6,7 +6,7 @@ import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { adminApi } from "@/helpers/admin";
+import { adminApi } from "@/helpers/admin/registry";
 
 type Fuel = {
   id: number;

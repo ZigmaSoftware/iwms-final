@@ -15,40 +15,40 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin";
-type UserType = {
 
+type UserType = {
   unique_id: string;
   name: string;
   is_active: boolean;
 };
+import { userTypeApi } from "@/helpers/admin";
 
 export default function UserTypePage() {
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
-    name: { value: null, matchMode: FilterMatchMode.STARTS_WITH }
+    name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
 
   const navigate = useNavigate();
   const { encAdmins, encUserType } = getEncryptedRoute();
-  const userTypeapi = adminApi.userTypes;
 
   const ENC_NEW_PATH = `/${encAdmins}/${encUserType}/new`;
-  const ENC_EDIT_PATH = (unique_id: string) => `/${encAdmins}/${encUserType}/${unique_id}/edit`;
+  const ENC_EDIT_PATH = (unique_id: string) =>
+    `/${encAdmins}/${encUserType}/${unique_id}/edit`;
 
   const fetchUserTypes = async () => {
     try {
-      const res = await userTypeapi.list();
+      const res = await userTypeApi.list();
       const payload: any = res;
       const data = Array.isArray(payload)
         ? payload
         : Array.isArray(payload.data)
           ? payload.data
-          : payload.data?.results ?? [];
+          : (payload.data?.results ?? []);
       setUserTypes(data);
     } finally {
       setLoading(false);
@@ -72,7 +72,7 @@ export default function UserTypePage() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await userTypeapi.remove(unique_id);
+    await userTypeApi.remove(unique_id);
 
     Swal.fire({
       icon: "success",
@@ -117,21 +117,15 @@ export default function UserTypePage() {
 
   const statusTemplate = (row: UserType) => {
     const updateStatus = async (value: boolean) => {
-      await userTypeapi.update(row.unique_id, {
-        name: row.name,         // correct field name
+      await userTypeApi.update(row.unique_id, {
+        name: row.name, // correct field name
         is_active: value,
       });
-
 
       fetchUserTypes();
     };
 
-    return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   const header = (
@@ -154,8 +148,12 @@ export default function UserTypePage() {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">User Types</h1>
-            <p className="text-gray-500 text-sm">Manage your user type records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              User Types
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Manage your user type records
+            </p>
           </div>
 
           <Button
@@ -180,10 +178,27 @@ export default function UserTypePage() {
           showGridlines
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
-          <Column field="name" header="User Type" sortable style={{ minWidth: "200px" }} />
-          <Column header="Status" body={statusTemplate} style={{ width: "150px" }} />
-          <Column header="Actions" body={actionTemplate} style={{ width: "150px" }} />
+          <Column
+            header="S.No"
+            body={indexTemplate}
+            style={{ width: "80px" }}
+          />
+          <Column
+            field="name"
+            header="User Type"
+            sortable
+            style={{ minWidth: "200px" }}
+          />
+          <Column
+            header="Status"
+            body={statusTemplate}
+            style={{ width: "150px" }}
+          />
+          <Column
+            header="Actions"
+            body={actionTemplate}
+            style={{ width: "150px" }}
+          />
         </DataTable>
       </div>
     </div>

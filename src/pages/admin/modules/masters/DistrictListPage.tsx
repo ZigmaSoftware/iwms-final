@@ -12,7 +12,7 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin";
+import { adminApi } from "@/helpers/admin/registry";
 
 
 type DistrictRecord = {

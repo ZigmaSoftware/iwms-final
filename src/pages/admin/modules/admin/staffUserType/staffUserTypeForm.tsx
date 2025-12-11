@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import { desktopApi } from "@/api";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { userTypeApi, staffUserTypeApi } from "@/helpers/admin";
 
 const { encAdmins, encStaffUserType } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encAdmins}/${encStaffUserType}`;
@@ -27,7 +27,9 @@ export default function StaffUserTypeForm() {
 
   /* ---------------------- FETCH ALL USERTYPES ---------------------- */
   const fetchUserTypes = async () => {
-    const res = await desktopApi.get("user-type/");
+   
+    const res = await userTypeApi.list();
+    
     const list = Array.isArray(res.data) ? res.data : res.data.results ?? [];
 
     setUserTypes(list);
@@ -45,8 +47,8 @@ export default function StaffUserTypeForm() {
   /* ---------------------- EDIT MODE LOAD ---------------------- */
   useEffect(() => {
     if (isEdit) {
-      desktopApi
-        .get(`staffusertypes/${id}/`)
+      staffUserTypeApi
+        .get(id as string)
         .then((res) => {
           setName(res.data.name);
           setIsActive(res.data.is_active);
@@ -74,10 +76,10 @@ export default function StaffUserTypeForm() {
 
     try {
       if (isEdit) {
-        await desktopApi.put(`staffusertypes/${id}/`, payload);
+        await staffUserTypeApi.update(id as string, payload);
         Swal.fire({ icon: "success", title: "Updated", timer: 1500, showConfirmButton: false });
       } else {
-        await desktopApi.post("staffusertypes/", payload);
+        await staffUserTypeApi.create(payload);
         Swal.fire({ icon: "success", title: "Created", timer: 1500, showConfirmButton: false });
       }
 
