@@ -24,8 +24,8 @@ export default function UserCreationList() {
   const navigate = useNavigate();
   const { encAdmins, encUserCreation } = getEncryptedRoute();
   const ENC_NEW = `/${encAdmins}/${encUserCreation}/new`;
-  const ENC_EDIT = (id: number) =>
-    `/${encAdmins}/${encUserCreation}/${id}/edit`;
+  const ENC_EDIT = (unique_id: number) =>
+    `/${encAdmins}/${encUserCreation}/${unique_id}/edit`;
 
   const [users, setUsers] = useState<any[]>([]);
   const [globalFilter, setGlobalFilter] = useState("");
@@ -36,7 +36,7 @@ export default function UserCreationList() {
 
   const fetchUsers = async () => {
     try {
-      const res = await desktopApi.get("user/");
+      const res = await desktopApi.get("users-creation/");
       setUsers(res.data);
     } catch (err) {
       console.error("Error loading users:", err);
@@ -72,7 +72,7 @@ export default function UserCreationList() {
   };
 
   /** ---------- Delete User ---------- */
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (unique_id: number) => {
     const r = await Swal.fire({
       title: "Are you sure?",
       text: "This user will be soft-deleted!",
@@ -85,14 +85,14 @@ export default function UserCreationList() {
 
     if (!r.isConfirmed) return;
 
-    await desktopApi.delete(`user/${id}/`);
+    await desktopApi.delete(`user/${unique_id}/`);
     Swal.fire("Deleted!", "User removed.", "success");
     fetchUsers();
   };
 
   /** ---------- Toggle Status ---------- */
-  const handleStatusToggle = async (id: number, value: boolean) => {
-    await desktopApi.put(`user/${id}/`, { is_active: value });
+  const handleStatusToggle = async (unique_id: string, value: boolean) => {
+    await desktopApi.put(`user/${unique_id}/`, { is_active: value });
     fetchUsers();
   };
 
@@ -200,11 +200,11 @@ export default function UserCreationList() {
                 <div className="flex gap-3">
                   <PencilIcon
                     className="cursor-pointer"
-                    onClick={() => navigate(ENC_EDIT(row.id))}
+                    onClick={() => navigate(ENC_EDIT(row.unique_id))}
                   />
                   <TrashBinIcon
                     className="cursor-pointer text-red-600"
-                    onClick={() => handleDelete(row.id)}
+                    onClick={() => handleDelete(row.unique_id)}
                   />
                 </div>
               )}
@@ -272,7 +272,7 @@ export default function UserCreationList() {
               body={(row) => (
                 <Switch
                   checked={row.is_active}
-                  onCheckedChange={(val) => handleStatusToggle(row.id, val)}
+                  onCheckedChange={(val) => handleStatusToggle(row.unique_id, val)}
                 />
               )}
             />
@@ -284,11 +284,11 @@ export default function UserCreationList() {
                 <div className="flex gap-3">
                   <PencilIcon
                     className="cursor-pointer"
-                    onClick={() => navigate(ENC_EDIT(row.id))}
+                    onClick={() => navigate(ENC_EDIT(row.unique_id))}
                   />
                   <TrashBinIcon
                     className="cursor-pointer text-red-600"
-                    onClick={() => handleDelete(row.id)}
+                    onClick={() => handleDelete(row.unique_id)}
                   />
                 </div>
               )}
