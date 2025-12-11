@@ -1,17 +1,18 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
 import { Input } from "@/components/ui/input";
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { adminApi } from "@/helpers/admin/registry";
 
 const { encMasters, encProperties } = getEncryptedRoute();
 
 const ENC_LIST_PATH = `/${encMasters}/${encProperties}`;
+
+
+import { propertiesApi } from "@/helpers/admin";
 
 
 function PropertyForm() {
@@ -21,7 +22,6 @@ function PropertyForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
-  const propertiesApi = adminApi.properties;
 
   // Fetch existing data if editing
   useEffect(() => {

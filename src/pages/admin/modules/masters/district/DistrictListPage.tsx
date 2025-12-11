@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -8,21 +9,19 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 
-import "primereact/resources/themes/lara-light-blue/theme.css";
-import "primereact/resources/primereact.min.css";
-import "primeicons/primeicons.css";
-
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch"; // 
-import { adminApi } from "@/helpers/admin/registry";
+import { Switch } from "@/components/ui/switch";
 
-type CountryRecord = {
+import { districtApi } from "@/helpers/admin";
+
+
+
+type DistrictRecord = {
   unique_id: string;
+  countryName: string;
+  stateName: string;
   name: string;
-  continent_name: string;
-  mob_code: string;
-  currency: string;
   is_active: boolean;
 };
 
@@ -70,37 +69,48 @@ const extractErrorMessage = (error: unknown) => {
   return "Something went wrong while processing the request.";
 };
 
-const countryApi = adminApi.countries;
 
-export default function CountryList() {
-  const [countries, setCountries] = useState<CountryRecord[]>([]);
+export default function DistrictListPage() {
+  const [districts, setDistricts] = useState<DistrictRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+    name: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
   const navigate = useNavigate();
 
   const encMasters = encryptSegment("masters");
-  const encCountries = encryptSegment("countries");
+  const encDistricts = encryptSegment("districts");
 
-  const ENC_NEW_PATH = `/${encMasters}/${encCountries}/new`;
-  const ENC_EDIT_PATH = (unique_id: string) =>
-    `/${encMasters}/${encCountries}/${unique_id}/edit`;
+  const ENC_NEW_PATH = `/${encMasters}/${encDistricts}/new`;
+  const ENC_EDIT_PATH = (id: string) =>
+    `/${encMasters}/${encDistricts}/${id}/edit`;
 
-
-  const fetchCountries = useCallback(async () => {
+  const fetchDistricts = useCallback(async () => {
     setLoading(true);
     try {
-      const data = (await countryApi.list()) as CountryRecord[];
-      setCountries(data);
+      const res = await districtApi.list(); // Keep original ref
+      const data = res as any[];            // Convert to array
+
+      const mapped: DistrictRecord[] = data.map((d: any) => ({
+        unique_id: d.unique_id,
+        countryName: d.country_name,
+        stateName: d.state_name,
+        name: d.name,
+        is_active: d.is_active,
+      }));
+
+      mapped.sort((a, b) => a.name.localeCompare(b.name));
+
+      setDistricts(mapped);
     } catch (error) {
-      console.error("Failed loading countries:", error);
+      console.error("Failed loading districts:", error);
       Swal.fire({
         icon: "error",
-        title: "Unable to load countries",
+        title: "Unable to load districts",
         text: extractErrorMessage(error),
       });
     } finally {
@@ -108,15 +118,16 @@ export default function CountryList() {
     }
   }, []);
 
-  useEffect(() => {
-    void fetchCountries();
-  }, [fetchCountries]);
 
-  // Delete Record
-  const handleDelete = async (unique_id: string) => {
+
+  useEffect(() => {
+    fetchDistricts();
+  }, []);
+
+  const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
-      text: "This country will be permanently deleted!",
+      text: "This district will be permanently deleted!",
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -124,36 +135,26 @@ export default function CountryList() {
       confirmButtonText: "Yes, delete it!",
     });
 
-    if (!confirm.isConfirmed) {
-      return;
-    }
+    if (!confirm.isConfirmed) return;
 
-    try {
-      await countryApi.remove(unique_id);
-      Swal.fire({
-        icon: "success",
-        title: "Deleted successfully!",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      void fetchCountries();
-    } catch (error) {
-      console.error("Failed deleting country:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Delete failed",
-        text: extractErrorMessage(error),
-      });
-    }
+    await districtApi.remove(id);
+
+    Swal.fire({
+      icon: "success",
+      title: "Deleted successfully!",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+
+    fetchDistricts();
   };
 
-  // Search Bar
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setFilters({
-      ...filters,
-      global: { ...filters.global, value },
-    });
+    setFilters((prev: any) => ({
+      ...prev,
+      global: { ...prev.global, value },
+    }));
     setGlobalFilterValue(value);
   };
 
@@ -164,43 +165,37 @@ export default function CountryList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Countries..."
+          placeholder="Search Districts..."
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
     </div>
   );
 
-  const header = renderHeader();
-
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // Toggle logic (PATCH only)
-  const statusTemplate = (row: CountryRecord) => {
+  // Toggle Component Body
+  const statusTemplate = (row: DistrictRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await countryApi.update(row.unique_id, { is_active: value });
-        void fetchCountries();
-      } catch (error) {
-        console.error("Status update failed:", error);
-        Swal.fire({
-          icon: "error",
-          title: "Failed to update status",
-          text: extractErrorMessage(error),
-        });
+        await districtApi.update(row.unique_id, { is_active: value });
+        fetchDistricts();
+      } catch (e) {
+        console.error("Toggle update failed:", e);
       }
     };
 
-    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
+    return (
+      <Switch checked={row.is_active} onCheckedChange={updateStatus} />
+    );
   };
 
-  // Actions
-  const actionTemplate = (c: CountryRecord) => (
+  const actionTemplate = (row: DistrictRecord) => (
     <div className="flex gap-3 justify-center">
       <button
         title="Edit"
-        onClick={() => navigate(ENC_EDIT_PATH(c.unique_id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -208,7 +203,7 @@ export default function CountryList() {
 
       <button
         title="Delete"
-        onClick={() => handleDelete(c.unique_id)}
+        onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
@@ -216,81 +211,64 @@ export default function CountryList() {
     </div>
   );
 
-  // S.No
-  const indexTemplate = (_: CountryRecord, { rowIndex }: any) => rowIndex + 1;
+  const indexTemplate = (_: DistrictRecord, { rowIndex }: any) => rowIndex + 1;
 
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Countries</h1>
-            <p className="text-gray-500 text-sm">Manage country records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">Districts</h1>
+            <p className="text-gray-500 text-sm">Manage district records</p>
           </div>
 
           <Button
-            label="Add Country"
+            label="Add District"
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
           />
         </div>
 
-        {/* Data Table */}
         <DataTable
-          value={countries}
+          value={districts}
+          dataKey="unique_id"
+          loading={loading}
           paginator
           rows={10}
-          loading={loading}
           filters={filters}
-          header={header}
+          header={renderHeader()}
           stripedRows
           showGridlines
-          emptyMessage="No countries found."
-          globalFilterFields={["name", "continent_name", "currency", "mob_code"]}
+          emptyMessage="No districts found."
+          globalFilterFields={["name", "countryName", "stateName"]}
           className="p-datatable-sm"
         >
+          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
           <Column
-            header="S.No"
-            body={indexTemplate}
-            style={{ width: "80px" }}
-          />
-
-          <Column
-            field="continent_name"
-            header="Continent"
+            field="countryName"
+            header="Country"
+            body={(row) => cap(row.countryName)}
             sortable
-            body={(row: CountryRecord) => cap(row.continent_name)}
-            style={{ minWidth: "150px" }}
           />
-
+          <Column
+            field="stateName"
+            header="State"
+            body={(row) => cap(row.stateName)}
+            sortable
+          />
           <Column
             field="name"
-            header="Country"
+            header="District"
+            body={(row) => cap(row.name)}
             sortable
-            body={(row: CountryRecord) => cap(row.name)}
-            style={{ minWidth: "150px" }}
           />
 
-          <Column
-            field="currency"
-            header="Currency"
-            sortable
-            style={{ minWidth: "130px" }}
-          />
-
-          <Column
-            field="mob_code"
-            header="Mobile Code"
-            sortable
-            style={{ minWidth: "130px" }}
-          />
-
+          {/* 🔥 Toggle Column */}
           <Column
             header="Status"
             body={statusTemplate}
-            style={{ width: "140px" }}
+            style={{ width: "150px" }}
           />
 
           <Column
@@ -298,7 +276,6 @@ export default function CountryList() {
             body={actionTemplate}
             style={{ width: "150px", textAlign: "center" }}
           />
-
         </DataTable>
       </div>
     </div>

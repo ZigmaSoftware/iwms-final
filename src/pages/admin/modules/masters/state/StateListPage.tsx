@@ -15,7 +15,8 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin/registry";
+import { stateApi } from "@/helpers/admin";
+
 
 type StateRecord = {
   unique_id: string;
@@ -68,8 +69,6 @@ const extractErrorMessage = (error: unknown) => {
 
   return "Something went wrong while processing the request.";
 };
-
-const stateApi = adminApi.states;
 
 export default function StateList() {
   const [states, setStates] = useState<StateRecord[]>([]);
