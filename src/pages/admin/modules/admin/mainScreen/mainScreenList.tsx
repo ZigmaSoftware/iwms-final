@@ -15,7 +15,9 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin";
+import {
+  mainScreenApi
+} from "@/helpers/admin";
 
 /* ------------------------------
     TYPES
@@ -44,7 +46,6 @@ export default function MainScreenList() {
   const navigate = useNavigate();
   const { encAdmins, encMainScreen } = getEncryptedRoute();
 
-  const mainScreenApi = adminApi.mainscreens;
 
   const ENC_NEW_PATH = `/${encAdmins}/${encMainScreen}/new`;
   const ENC_EDIT_PATH = (id: string) => `/${encAdmins}/${encMainScreen}/${id}/edit`;

@@ -10,7 +10,7 @@ import {
   filterActiveCustomers,
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
-import { adminApi } from "@/helpers/admin";
+import { adminApi } from "@/helpers/admin/registry";
 
 const customerApi = adminApi.customerCreations;
 const feedbackApi = adminApi.feedbacks;

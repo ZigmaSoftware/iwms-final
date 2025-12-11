@@ -7,7 +7,7 @@ import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { filterActiveRecords } from "@/utils/customerUtils";
-import { adminApi } from "@/helpers/admin";
+import { adminApi } from "@/helpers/admin/registry";
 
 const vehicleTypeApi = adminApi.vehicleTypes;
 const fuelTypeApi = adminApi.fuels;

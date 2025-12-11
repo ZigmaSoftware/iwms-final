@@ -15,7 +15,7 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";   // Toggle component
-import { adminApi } from "@/helpers/admin";
+import { adminApi } from "@/helpers/admin/registry";
 
 type WardRecord = {
   unique_id: string;

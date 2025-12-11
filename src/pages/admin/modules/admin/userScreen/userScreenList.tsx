@@ -15,7 +15,9 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
-import { adminApi } from "@/helpers/admin";
+import {
+  userScreenApi
+} from "@/helpers/admin";
 
 type UserScreen = {
   unique_id: string;
@@ -40,7 +42,6 @@ export default function UserScreenList() {
 
   const navigate = useNavigate();
   const { encAdmins, encUserScreen } = getEncryptedRoute();
-  const userScreenApi = adminApi.userscreens;
 
   const ENC_NEW_PATH = `/${encAdmins}/${encUserScreen}/new`;
   const ENC_EDIT_PATH = (id: string) =>
