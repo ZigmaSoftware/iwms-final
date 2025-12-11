@@ -31,9 +31,9 @@ function AdminLayoutShell({ children }: AdminLayoutProps) {
       <AppSidebar />
       <Backdrop />
       <main className={`pt-6 transition-all ${desktopPadding}`}>
-        <div className="min-h-[calc(100vh-4rem)] px-4 py-6 lg:py-8 lg:px-8">
-          <div className="mx-auto flex max-w-7xl flex-col gap-6">
-            <div className="w-full rounded-[32px] border border-[var(--admin-border)] bg-[var(--admin-surfaceAlt)]/95 p-6 shadow-[var(--admin-cardShadow)] backdrop-blur">
+        <div className="min-h-[calc(100vh-4rem)] px-3 py-6 lg:py-8 lg:px-6">
+          <div className="mx-auto flex max-w-9xl flex-col gap-5">
+            <div className="w-full rounded-[28px] border border-[var(--admin-border)] bg-[var(--admin-surfaceAlt)]/95 px-4 py-5 shadow-[var(--admin-cardShadow)] backdrop-blur">
               {children}
             </div>
           </div>
