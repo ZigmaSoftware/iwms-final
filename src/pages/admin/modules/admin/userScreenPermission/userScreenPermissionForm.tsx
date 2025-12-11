@@ -17,45 +17,40 @@ import {
 import { encryptSegment } from "@/utils/routeCrypto";
 import { adminApi } from "@/helpers/admin";
 
-/* ---------------------------------------------------------
-   ROUTES
---------------------------------------------------------- */
 const ENC_LIST_PATH = `/${encryptSegment("admins")}/${encryptSegment(
   "userscreenpermissions"
 )}`;
 
-/* ---------------------------------------------------------
-   APIS
---------------------------------------------------------- */
-const userTypeApi = adminApi.userTypes;
 const staffUserTypeApi = adminApi.staffUserTypes;
 const mainScreenApi = adminApi.mainscreens;
 const userScreenApi = adminApi.userscreens;
 const userScreenActionApi = adminApi.userscreenaction;
 const userScreenPermissionApi = adminApi.userscreenpermissions;
 
-/* ---------------------------------------------------------
-   TYPES
---------------------------------------------------------- */
-type Option = { value: string; label: string };
+type Option = {
+  value: string;
+  label: string;
+  userTypeId?: string;
+  alreadyAssigned?: boolean;
+};
 
 export default function UserScreenPermissionForm() {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const isEdit = Boolean(id);
 
-  /* STATE */
-  const [userTypeId, setUserTypeId] = useState("");
+  // Only staffTypeId in route now
+  const params = useParams();
+  const staffTypeId = params.id;
+
+  const isEdit = Boolean(staffTypeId);
+
   const [staffUserTypeId, setStaffUserTypeId] = useState("");
   const [mainScreenId, setMainScreenId] = useState("");
-
   const [description, setDescription] = useState("");
+  const [userTypeId, setUserTypeId] = useState("");
 
-  const [userTypes, setUserTypes] = useState<Option[]>([]);
   const [staffUserTypes, setStaffUserTypes] = useState<Option[]>([]);
   const [mainScreens, setMainScreens] = useState<Option[]>([]);
   const [allUserScreens, setAllUserScreens] = useState<any[]>([]);
-
   const [actions, setActions] = useState<Option[]>([]);
 
   const [screenMatrix, setScreenMatrix] = useState<
@@ -63,22 +58,43 @@ export default function UserScreenPermissionForm() {
   >([]);
 
   const [loading, setLoading] = useState(false);
+  const [loadingData, setLoadingData] = useState(false);
 
-  /* =========================================================
-     LOAD MASTER DATA
-  ========================================================== */
+  /* -----------------------------------------------------------
+     LOAD DROPDOWNS
+  ----------------------------------------------------------- */
   useEffect(() => {
     const load = async () => {
       try {
-        const ut = await userTypeApi.list();
-        const sut = await staffUserTypeApi.list();
-        const ms = await mainScreenApi.list();
-        const us = await userScreenApi.list();
-        const ac = await userScreenActionApi.list();
+        setLoadingData(true);
 
-        setUserTypes(ut.map((x: any) => ({ value: x.unique_id, label: x.name })));
-        setStaffUserTypes(sut.map((x: any) => ({ value: x.unique_id, label: x.name })));
-        setMainScreens(ms.map((x: any) => ({ value: x.unique_id, label: x.mainscreen_name })));
+        const [sut, ms, us, ac, perms] = await Promise.all([
+          staffUserTypeApi.list(),
+          mainScreenApi.list(),
+          userScreenApi.list(),
+          userScreenActionApi.list(),
+          userScreenPermissionApi.list(),
+        ]);
+
+        const usedStaffTypes = new Set(
+          perms.map((p: any) => p.staffusertype_id)
+        );
+
+        setStaffUserTypes(
+          sut.map((x: any) => ({
+            value: x.unique_id,
+            label: x.name,
+            userTypeId: x.usertype_id,
+            alreadyAssigned: usedStaffTypes.has(x.unique_id), // <-- store flag
+          }))
+        );
+
+        setMainScreens(
+          ms.map((x: any) => ({
+            value: x.unique_id,
+            label: x.mainscreen_name,
+          }))
+        );
 
         setAllUserScreens(us);
 
@@ -87,95 +103,107 @@ export default function UserScreenPermissionForm() {
         );
       } catch {
         Swal.fire("Error", "Failed to load dropdown values", "error");
+      } finally {
+        setLoadingData(false);
       }
     };
 
     load();
   }, []);
 
-  /* =========================================================
-     EDIT MODE → LOAD EXISTING PERMISSION RECORD
-  ========================================================== */
+  /* -----------------------------------------------------------
+     EDIT MODE — Prefill only StaffUserType
+  ----------------------------------------------------------- */
   useEffect(() => {
-    if (!isEdit) return;
+    if (!isEdit || !staffTypeId) return;
 
-    const loadRecord = async () => {
+    setStaffUserTypeId(staffTypeId);
+    setMainScreenId(""); // User must select manually
+    setScreenMatrix([]); // Reset table
+  }, [isEdit, staffTypeId]);
+
+  /* -----------------------------------------------------------
+     LOAD PERMISSIONS AFTER USER SELECTS MAIN SCREEN
+  ----------------------------------------------------------- */
+  useEffect(() => {
+    if (!staffUserTypeId || !mainScreenId) return;
+
+    const loadPermissions = async () => {
       try {
-        const res = await userScreenPermissionApi.get(id!);
-        const data = res.data ?? res;
+        let formatted: any = null;
 
-        setUserTypeId(data.usertype_id);
-        setStaffUserTypeId(data.staffusertype_id);
-        setMainScreenId(data.mainscreen_id);
-        setDescription(data.description || "");
-
-        if (data.screens) {
-          // We'll refill matrix after mainScreen auto-load
-          setTimeout(() => {
-            setScreenMatrix(
-              data.screens.map((s: any) => ({
-                userscreen_id: s.userscreen_id,
-                userscreen_name: allUserScreens.find((u: any) => u.unique_id === s.userscreen_id)
-                  ?.userscreen_name,
-                actions: s.actions,
-              }))
-            );
-          }, 300);
+        // TRY TO LOAD PERMISSIONS
+        try {
+          formatted = await userScreenPermissionApi.get(
+            `by-staff-format/?staffusertype_id=${staffUserTypeId}&mainscreen_id=${mainScreenId}`
+          );
+        } catch (err) {
+          // backend returns 404 → treat as no permissions
+          formatted = { screens: [], description: "" };
         }
-      } catch {
-        Swal.fire("Error", "Unable to load permission record", "error");
+
+        // ---- ALWAYS LOAD ALL USER SCREENS FOR THIS MAIN SCREEN ----
+        const fullScreens = allUserScreens.filter(
+          (u: any) => u.mainscreen_id === mainScreenId
+        );
+
+        // map DB permissions
+        const dbMap = new Map(
+          (formatted.screens || []).map((s: any) => [s.userscreen_id, s])
+        );
+
+        // Merge full list + permissions
+        const matrix = fullScreens.map((scr: any) => ({
+          userscreen_id: scr.unique_id,
+          userscreen_name: scr.userscreen_name,
+          actions: dbMap.get(scr.unique_id)?.actions || [], // prefill or empty
+        }));
+
+        setDescription(formatted.description || "");
+        setScreenMatrix(matrix);
+      } catch (err) {
+        console.error("Permission Load Failed:", err);
+        Swal.fire("Error", "Failed to load permission matrix", "error");
       }
     };
 
-    loadRecord();
-  }, [id, isEdit, allUserScreens]);
+    loadPermissions();
+  }, [staffUserTypeId, mainScreenId, allUserScreens]);
 
-  /* =========================================================
-     WHEN MAIN SCREEN SELECTED → AUTO LOAD USER SCREENS
-  ========================================================== */
+  /* -----------------------------------------------------------
+     AUTO SET USER TYPE
+  ----------------------------------------------------------- */
   useEffect(() => {
-    if (!mainScreenId) {
-      setScreenMatrix([]);
-      return;
-    }
+    if (!staffUserTypeId || staffUserTypes.length === 0) return;
 
-    const filtered = allUserScreens.filter(
-      (u: any) => u.mainscreen_id === mainScreenId
-    );
+    const sut = staffUserTypes.find((s) => s.value === staffUserTypeId);
+    setUserTypeId(sut?.userTypeId || "");
+  }, [staffUserTypeId, staffUserTypes]);
 
-    const matrix = filtered.map((u: any) => ({
-      userscreen_id: u.unique_id,
-      userscreen_name: u.userscreen_name,
-      actions: [],
-    }));
-
-    setScreenMatrix(matrix);
-  }, [mainScreenId, allUserScreens]);
-
-  /* =========================================================
-     TOGGLE ACTION FOR A ROW
-  ========================================================== */
-  const handleActionToggle = (screenId: string, actionId: string, checked: boolean) => {
+  /* -----------------------------------------------------------
+     LIST TOGGLE FUNCTIONS
+  ----------------------------------------------------------- */
+  const handleActionToggle = (
+    screenId: string,
+    actionId: string,
+    checked: boolean
+  ) => {
     setScreenMatrix((prev) =>
       prev.map((row) =>
         row.userscreen_id === screenId
           ? {
-            ...row,
-            actions: checked
-              ? [...row.actions, actionId]
-              : row.actions.filter((a) => a !== actionId),
-          }
+              ...row,
+              actions: checked
+                ? [...row.actions, actionId]
+                : row.actions.filter((a) => a !== actionId),
+            }
           : row
       )
     );
   };
 
-  /* =========================================================
-     SELECT ALL ACTIONS FOR A SCREEN ROW
-  ========================================================== */
   const handleSelectAll = (screenId: string, checked: boolean) => {
     const allActions = actions.map((a) => a.value);
-
     setScreenMatrix((prev) =>
       prev.map((row) =>
         row.userscreen_id === screenId
@@ -185,26 +213,27 @@ export default function UserScreenPermissionForm() {
     );
   };
 
-  /* =========================================================
-     SUBMIT FORM
-  ========================================================== */
+  /* -----------------------------------------------------------
+     SUBMIT
+  ----------------------------------------------------------- */
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!userTypeId || !staffUserTypeId || !mainScreenId) {
-      Swal.fire("Missing Fields", "Required fields must be selected", "warning");
+    if (!staffUserTypeId || !mainScreenId) {
+      Swal.fire(
+        "Missing Fields",
+        "Select staff user type & main screen",
+        "warning"
+      );
       return;
     }
 
     const payload = {
-      usertype_id: userTypeId,
       staffusertype_id: staffUserTypeId,
       mainscreen_id: mainScreenId,
-      screens: screenMatrix.map((s) => ({
-        userscreen_id: s.userscreen_id,
-        actions: s.actions,
-      })),
+      screens: screenMatrix,
       description: description.trim(),
+      usertype_id: userTypeId,
     };
 
     try {
@@ -218,45 +247,57 @@ export default function UserScreenPermissionForm() {
       Swal.fire("Success", "Permissions saved successfully", "success");
       navigate(ENC_LIST_PATH);
     } catch {
-      Swal.fire("Error", "Failed to save data", "error");
+      Swal.fire("Error", "Failed to save", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  /* =========================================================
-     JSX UI
-  ========================================================== */
+  /* -----------------------------------------------------------
+     RENDER
+  ----------------------------------------------------------- */
+  if (loadingData) {
+    return (
+      <ComponentCard title="Loading...">
+        <div className="flex justify-center items-center py-12 text-gray-500">
+          Loading permission data...
+        </div>
+      </ComponentCard>
+    );
+  }
+
   return (
     <ComponentCard title={isEdit ? "Edit Permission" : "Add Permission"}>
-      <form onSubmit={handleSubmit} noValidate>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          {/* USER TYPE */}
-          <div>
-            <Label>User Type *</Label>
-            <Select value={userTypeId} onValueChange={setUserTypeId}>
-              <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select User Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {userTypes.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* STAFF USER TYPE */}
+      <form onSubmit={handleSubmit}>
+        <div className="grid md:grid-cols-2 gap-6">
           <div>
             <Label>Staff User Type *</Label>
-            <Select value={staffUserTypeId} onValueChange={setStaffUserTypeId}>
-              <SelectTrigger className="input-validate w-full">
+
+            <Select
+              value={staffUserTypeId}
+              onValueChange={(v) => {
+                const selected = staffUserTypes.find((o) => o.value === v);
+
+                if (selected?.alreadyAssigned && !isEdit) {
+                  Swal.fire(
+                    "Permission Exists",
+                    "This staff user type already has permissions. Redirecting to Edit.",
+                    "info"
+                  );
+                  navigate(
+                    `/${encryptSegment("admins")}/${encryptSegment("userscreenpermissions")}/${v}/edit`
+                  );
+                  return;
+                }
+
+                setStaffUserTypeId(v);
+              }}
+              disabled={isEdit}
+            >
+              <SelectTrigger>
                 <SelectValue placeholder="Select Staff User Type" />
               </SelectTrigger>
+
               <SelectContent>
                 {staffUserTypes.map((opt) => (
                   <SelectItem key={opt.value} value={opt.value}>
@@ -267,11 +308,10 @@ export default function UserScreenPermissionForm() {
             </Select>
           </div>
 
-          {/* MAIN SCREEN */}
           <div>
             <Label>Main Screen *</Label>
             <Select value={mainScreenId} onValueChange={setMainScreenId}>
-              <SelectTrigger className="input-validate w-full">
+              <SelectTrigger>
                 <SelectValue placeholder="Select Main Screen" />
               </SelectTrigger>
               <SelectContent>
@@ -283,86 +323,113 @@ export default function UserScreenPermissionForm() {
               </SelectContent>
             </Select>
           </div>
-
         </div>
 
         {/* PERMISSION TABLE */}
-        <div className="mt-6 border rounded-lg p-4 bg-white shadow-sm">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b font-semibold">
-                <th className="p-2 w-10">#</th>
-                <th className="p-2 text-left">Screen</th>
-
-                <th className="p-2 text-center">All</th>
-                {actions.map((act) => (
-                  <th key={act.value} className="p-2 text-center">
-                    {act.label}
+        {screenMatrix.length > 0 && (
+          <div className="mt-6 border rounded-lg overflow-x-auto bg-white">
+            <table className="w-full">
+              <thead className="bg-gray-50 border-b">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">
+                    #
                   </th>
-                ))}
-              </tr>
-            </thead>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">
+                    Screen
+                  </th>
+                  <th className="px-4 py-3 text-center text-sm font-semibold">
+                    All
+                  </th>
 
-            <tbody>
-              {screenMatrix.map((row, index) => {
-                const allChecked = row.actions.length === actions.length;
+                  {actions.map((act) => (
+                    <th
+                      key={act.value}
+                      className="px-4 py-3 text-center text-sm font-semibold"
+                    >
+                      {act.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
 
-                return (
-                  <tr key={row.userscreen_id} className="border-b">
-                    <td className="p-2 text-center">{index + 1}</td>
-                    <td className="p-2">{row.userscreen_name}</td>
+              <tbody>
+                {screenMatrix.map((row, i) => {
+                  const allChecked = row.actions.length === actions.length;
 
-                    {/* ALL */}
-                    <td className="p-2 text-center">
-                      <input
-                        type="checkbox"
-                        checked={allChecked}
-                        onChange={(e) =>
-                          handleSelectAll(row.userscreen_id, e.target.checked)
-                        }
-                      />
-                    </td>
+                  return (
+                    <tr
+                      key={row.userscreen_id}
+                      className="border-b hover:bg-gray-50"
+                    >
+                      <td className="px-4 py-3 text-sm">{i + 1}</td>
+                      <td className="px-4 py-3 text-sm font-medium">
+                        {row.userscreen_name}
+                      </td>
 
-                    {/* INDIVIDUAL ACTIONS */}
-                    {actions.map((act) => (
-                      <td key={act.value} className="p-2 text-center">
+                      <td className="px-4 py-3 text-center">
                         <input
                           type="checkbox"
-                          checked={row.actions.includes(act.value)}
+                          checked={allChecked}
                           onChange={(e) =>
-                            handleActionToggle(
-                              row.userscreen_id,
-                              act.value,
-                              e.target.checked
-                            )
+                            handleSelectAll(row.userscreen_id, e.target.checked)
                           }
+                          className="w-4 h-4 cursor-pointer"
                         />
                       </td>
-                    ))}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
 
-        {/* DESCRIPTION */}
-        <div className="mt-6">
-          <Label>Description</Label>
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Enter description"
-          />
-        </div>
+                      {actions.map((act) => (
+                        <td key={act.value} className="px-4 py-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={row.actions.includes(act.value)}
+                            onChange={(e) =>
+                              handleActionToggle(
+                                row.userscreen_id,
+                                act.value,
+                                e.target.checked
+                              )
+                            }
+                            className="w-4 h-4 cursor-pointer"
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        {/* BUTTONS */}
+        {screenMatrix.length === 0 && mainScreenId && (
+          <div className="mt-6 p-8 border rounded-lg bg-gray-50 text-center text-gray-500">
+            No screens found for this main screen.
+          </div>
+        )}
+
+        {mainScreenId && (
+          <div className="mt-6">
+            <Label>Description</Label>
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Enter description (optional)"
+            />
+          </div>
+        )}
+
         <div className="flex justify-end gap-3 mt-6">
-          <Button disabled={loading} type="submit">
-            {loading ? "Saving..." : "Save"}
+          <Button
+            type="submit"
+            disabled={loading || !staffUserTypeId || !mainScreenId}
+          >
+            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
           </Button>
-
-          <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => navigate(ENC_LIST_PATH)}
+          >
             Cancel
           </Button>
         </div>
