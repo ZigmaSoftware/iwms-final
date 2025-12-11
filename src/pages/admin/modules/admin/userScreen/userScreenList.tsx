@@ -19,16 +19,7 @@ import {
   userScreenApi
 } from "@/helpers/admin";
 
-type UserScreen = {
-  unique_id: string;
-  mainscreen_name: string;
-  userscreen_name: string;
-  folder_name: string;
-  icon_name: string;
-  order_no: number;
-  is_active: boolean;
-  mainscreen_id: string;
-};
+import type { UserScreen } from "../types/admin.types"; 
 
 export default function UserScreenList() {
   const [screens, setScreens] = useState<UserScreen[]>([]);
