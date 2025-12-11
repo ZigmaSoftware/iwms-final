@@ -15,17 +15,20 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
-import { adminApi } from "@/helpers/admin";
 
 const ENC_LIST_PATH = `/${encryptSegment("admins")}/${encryptSegment(
   "userscreenpermissions"
 )}`;
 
-const staffUserTypeApi = adminApi.staffUserTypes;
-const mainScreenApi = adminApi.mainscreens;
-const userScreenApi = adminApi.userscreens;
-const userScreenActionApi = adminApi.userscreenaction;
-const userScreenPermissionApi = adminApi.userscreenpermissions;
+import {
+  staffUserTypeApi,
+  mainScreenApi,
+  userScreenApi,
+  userScreenActionApi,
+  userScreenPermissionApi
+} from "@/helpers/admin";
+
+
 
 type Option = {
   value: string;

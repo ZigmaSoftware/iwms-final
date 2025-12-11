@@ -17,7 +17,7 @@ import {
   filterActiveCustomers,
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
-import { adminApi } from "@/helpers/admin";
+import { adminApi } from "@/helpers/admin/registry";
 
 const FILE_ICON =
   "https://cdn-icons-png.flaticon.com/512/337/337946.png"; // fallback for pdf/doc

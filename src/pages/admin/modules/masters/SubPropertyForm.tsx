@@ -7,7 +7,7 @@ import Label from "@/components/form/Label";
 import { Input } from "@/components/ui/input";
 
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { adminApi } from "@/helpers/admin";
+import { adminApi } from "@/helpers/admin/registry";
 
 import {
   Select,

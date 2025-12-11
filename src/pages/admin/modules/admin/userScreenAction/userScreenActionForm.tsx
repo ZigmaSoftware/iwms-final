@@ -15,7 +15,10 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
-import { adminApi } from "@/helpers/admin";
+
+import {
+  userScreenActionApi
+} from "@/helpers/admin";
 
 /* ------------------------------
     ROUTES
@@ -44,7 +47,6 @@ export default function UserScreenActionForm() {
 
   const [loading, setLoading] = useState(false);
 
-  const api = adminApi.userscreenaction;
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
@@ -57,7 +59,7 @@ export default function UserScreenActionForm() {
 
     (async () => {
       try {
-        const data = await api.get(id);
+        const data = await userScreenActionApi.get(id);
 
         setActionName(data.action_name || "");
         setVariableName(data.variable_name || "");
@@ -89,10 +91,10 @@ export default function UserScreenActionForm() {
 
     try {
       if (isEdit && id) {
-        await api.update(id, payload);
+        await userScreenActionApi.update(id, payload);
         Swal.fire("Success", "Updated successfully!", "success");
       } else {
-        await api.create(payload);
+        await userScreenActionApi.create(payload);
         Swal.fire("Success", "Added successfully!", "success");
       }
 

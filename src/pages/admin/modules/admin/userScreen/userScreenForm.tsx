@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
-import { adminApi } from "@/helpers/admin";
 
 /* -----------------------------------------
    ROUTES
@@ -27,8 +26,12 @@ const ENC_LIST_PATH = `/${encAdmins}/${encUserScreen}`;
 /* -----------------------------------------
    APIS
 ----------------------------------------- */
-const userScreenApi = adminApi.userscreens;
-const mainScreenApi = adminApi.mainscreens;
+
+import {
+  userScreenApi,
+  mainScreenApi
+} from "@/helpers/admin";
+
 
 /* =========================================
     FORM COMPONENT

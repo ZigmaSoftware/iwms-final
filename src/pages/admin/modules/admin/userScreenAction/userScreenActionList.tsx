@@ -15,7 +15,7 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { Switch } from "@/components/ui/switch";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { adminApi } from "@/helpers/admin";
+
 
 type UserScreenAction = {
   unique_id: string;
@@ -23,6 +23,10 @@ type UserScreenAction = {
   variable_name: string;
   is_active: boolean;
 };
+
+import {
+  userScreenActionApi
+} from "@/helpers/admin";
 
 export default function UserScreenActionList() {
   const [records, setRecords] = useState<UserScreenAction[]>([]);
@@ -36,7 +40,7 @@ export default function UserScreenActionList() {
 
   const navigate = useNavigate();
   const { encAdmins, encUserScreenAction } = getEncryptedRoute();
-  const api = adminApi.userscreenaction;
+
 
   const ENC_NEW_PATH = `/${encAdmins}/${encUserScreenAction}/new`;
   const ENC_EDIT_PATH = (unique_id: string) =>
@@ -50,7 +54,7 @@ export default function UserScreenActionList() {
 
   const fetchRecords = async () => {
     try {
-      const res = await api.list();
+      const res = await userScreenActionApi.list();
       console.log(res);
       setRecords(extractData(res));
     } finally {
@@ -75,7 +79,7 @@ export default function UserScreenActionList() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await api.remove(unique_id);
+    await userScreenActionApi.remove(unique_id);
 
     Swal.fire({
       icon: "success",
@@ -122,7 +126,7 @@ export default function UserScreenActionList() {
 
   const statusTemplate = (row: UserScreenAction) => {
     const updateStatus = async (value: boolean) => {
-      await api.update(row.unique_id, {
+      await userScreenActionApi.update(row.unique_id, {
         action_name: row.action_name,
         variable_name: row.variable_name,
         is_active: value,
