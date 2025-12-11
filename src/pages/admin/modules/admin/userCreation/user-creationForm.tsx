@@ -5,12 +5,14 @@ import { desktopApi } from "@/api";
 
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
-import Select from "@/components/form/Select";
+import Select, { type SelectOption } from "@/components/form/Select";
 import { Input } from "@/components/ui/input";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 const { encAdmins, encUserCreation } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encAdmins}/${encUserCreation}`;
+
+
 
 /* ========================================================
    ROLE CONFIG — dynamic field control, scalable for future
@@ -26,6 +28,54 @@ const ROLE_CONFIG: any = {
   },
 };
 
+const normalizeListData = (payload: any): any[] => {
+  if (Array.isArray(payload)) return payload;
+
+  if (payload?.results && Array.isArray(payload.results)) {
+    return payload.results;
+  }
+
+  if (payload?.data && Array.isArray(payload.data)) {
+    return payload.data;
+  }
+
+  if (payload?.data?.results && Array.isArray(payload.data.results)) {
+    return payload.data.results;
+  }
+
+  return [];
+};
+
+const buildOptions = (
+  data: any,
+  getLabel: (item: any) => string
+): SelectOption[] => {
+  return normalizeListData(data)
+    .map((item: any) => {
+      const rawValue = item?.id ?? item?.unique_id;
+      const label = getLabel(item);
+
+      if (rawValue === undefined || rawValue === null || !label) {
+        return null;
+      }
+
+      return {
+        value: String(rawValue),
+        label,
+      };
+    })
+    .filter(Boolean) as SelectOption[];
+};
+
+const normalizeIdValue = (value: string | number | null | undefined) => {
+  if (value === undefined || value === null || value === "") return undefined;
+
+  if (typeof value === "number") return value;
+
+  const trimmed = value.trim();
+  return /^\d+$/.test(trimmed) ? Number(trimmed) : trimmed;
+};
+
 export default function UserCreationForm() {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -37,123 +87,227 @@ export default function UserCreationForm() {
   //  STATE
   // ----------------------------------------------------
   const [userType, setUserType] = useState("");
-  const [userTypes, setUserTypes] = useState<Array<{ value: string; label: string }>>([]);
+  const [userTypes, setUserTypes] = useState<SelectOption[]>([]);
 
   const [password, setPassword] = useState("");
   const [isActive, setIsActive] = useState(true);
 
-  const [customerList, setCustomerList] = useState<any[]>([]);
+  const [customerList, setCustomerList] = useState<SelectOption[]>([]);
   const [customerId, setCustomerId] = useState("");
 
-  const [staffUserTypes, setStaffUserTypes] = useState<any[]>([]);
+  const [staffUserTypes, setStaffUserTypes] = useState<SelectOption[]>([]);
   const [staffUserType, setStaffUserType] = useState("");
 
-  const [staffList, setStaffList] = useState<any[]>([]);
+  const [staffList, setStaffList] = useState<SelectOption[]>([]);
   const [staffId, setStaffId] = useState("");
 
-  const [districtList, setDistrictList] = useState<any[]>([]);
+  const [districtList, setDistrictList] = useState<SelectOption[]>([]);
   const [district, setDistrict] = useState("");
 
-  const [cityList, setCityList] = useState<any[]>([]);
+  const [cityList, setCityList] = useState<SelectOption[]>([]);
   const [city, setCity] = useState("");
 
-  const [zoneList, setZoneList] = useState<any[]>([]);
+  const [zoneList, setZoneList] = useState<SelectOption[]>([]);
   const [zone, setZone] = useState("");
 
-  const [wardList, setWardList] = useState<any[]>([]);
+  const [wardList, setWardList] = useState<SelectOption[]>([]);
   const [ward, setWard] = useState("");
 
   // ----------------------------------------------------
   // LOAD USER TYPES
   // ----------------------------------------------------
   useEffect(() => {
-    desktopApi.get("user-type/").then((res) => {
-      setUserTypes(
-        res.data.map((u: any) => ({
-          value: u.id.toString(),
-          label: u.name.toLowerCase(),
-        }))
-      );
-    });
+    const fetchUserTypes = async () => {
+      try {
+        const res = await desktopApi.get("user-type/");
+        setUserTypes(
+          buildOptions(res.data, (u) => (u?.name ?? "").toLowerCase())
+        );
+      } catch (err) {
+        console.error("Failed to load user types", err);
+        setUserTypes([]);
+      }
+    };
+
+    fetchUserTypes();
   }, []);
 
   // ----------------------------------------------------
   // GET SELECTED ROLE NAME (staff / customer / future)
   // ----------------------------------------------------
-  const selectedRole = userTypes.find((ut: any) => ut.value === userType)?.label;
+  const selectedRoleLabel = userTypes.find((ut: any) => ut.value === userType)?.label;
+  const selectedRole =
+    typeof selectedRoleLabel === "string" ? selectedRoleLabel : undefined;
   const roleConfig = selectedRole ? ROLE_CONFIG[selectedRole] : undefined;
 
   // ----------------------------------------------------
   // AUTO-LOAD API DATA BASED ON ROLE CONFIG
   // ----------------------------------------------------
   useEffect(() => {
-    if (!roleConfig) return;
+    if (!roleConfig) {
+      setCustomerList([]);
+      setStaffUserTypes([]);
+      setStaffList([]);
+      setDistrictList([]);
+      setCityList([]);
+      setZoneList([]);
+      setWardList([]);
 
-    roleConfig.apis.forEach((api: string) => {
-      desktopApi.get(api).then((res) => {
-        switch (api) {
-          case "customercreations/":
-            setCustomerList(
-              res.data.map((c: any) => ({
-                value: c.id.toString(),
-                label: `${c.customer_name} - ${c.contact_no}`,
-              }))
-            );
-            break;
+      setCustomerId("");
+      setStaffUserType("");
+      setStaffId("");
+      setDistrict("");
+      setCity("");
+      setZone("");
+      setWard("");
+      return;
+    }
 
-          case "staffusertypes/":
-            setStaffUserTypes(
-              res.data.map((s: any) => ({
-                value: s.id.toString(),
-                label: s.name,
-              }))
-            );
-            break;
+    const { fields = [], apis = [] } = roleConfig;
 
-          case "staffcreation/":
-            setStaffList(
-              res.data.map((s: any) => ({
-                value: s.id.toString(),
-                label: s.employee_name,
-              }))
-            );
-            break;
+    if (!fields.includes("customer_id")) {
+      setCustomerId("");
+      setCustomerList([]);
+    }
+    if (!fields.includes("staffusertype_id")) {
+      setStaffUserType("");
+      setStaffUserTypes([]);
+    }
+    if (!fields.includes("staff_id")) {
+      setStaffId("");
+      setStaffList([]);
+    }
+    if (!fields.includes("district_id")) {
+      setDistrict("");
+      setDistrictList([]);
+    }
+    if (!fields.includes("city_id")) {
+      setCity("");
+      setCityList([]);
+    }
+    if (!fields.includes("zone_id")) {
+      setZone("");
+      setZoneList([]);
+    }
+    if (!fields.includes("ward_id")) {
+      setWard("");
+      setWardList([]);
+    }
 
-          case "districts/":
-            setDistrictList(
-              res.data.map((d: any) => ({ value: d.id.toString(), label: d.name }))
-            );
-            break;
+    const fetchRoleData = async () => {
+      await Promise.all(
+        apis.map(async (api: string) => {
+          try {
+            const res = await desktopApi.get(api);
+            switch (api) {
+              case "customercreations/":
+                setCustomerList(
+                  buildOptions(res.data, (c) => {
+                    const name = c?.customer_name ?? c?.name ?? "";
+                    const phone = c?.contact_no ?? c?.phone ?? "";
+                    return [name, phone].filter(Boolean).join(" - ");
+                  })
+                );
+                break;
 
-          default:
-            break;
-        }
-      });
-    });
-  }, [userType, roleConfig]);
+              case "staffusertypes/":
+                setStaffUserTypes(buildOptions(res.data, (s) => s?.name ?? ""));
+                break;
+
+              case "staffcreation/":
+                setStaffList(
+                  buildOptions(
+                    res.data,
+                    (s) => s?.employee_name ?? s?.staff_name ?? s?.name ?? ""
+                  )
+                );
+                break;
+
+              case "districts/":
+                setDistrictList(buildOptions(res.data, (d) => d?.name ?? ""));
+                break;
+
+              default:
+                console.warn(`Unhandled API mapping for ${api}`);
+                break;
+            }
+          } catch (err) {
+            console.error(`Failed to load data for ${api}`, err);
+          }
+        })
+      );
+    };
+
+    fetchRoleData();
+  }, [roleConfig]);
 
   // ----------------------------------------------------
   // LOAD CHAINED LOCATION DATA
   // ----------------------------------------------------
   useEffect(() => {
-    if (!district) return;
-    desktopApi.get(`cities/?district=${district}`).then((res) =>
-      setCityList(res.data.map((c: any) => ({ value: c.id.toString(), label: c.name })))
-    );
+    if (!district) {
+      setCity("");
+      setCityList([]);
+      setZone("");
+      setZoneList([]);
+      setWard("");
+      setWardList([]);
+      return;
+    }
+
+    const loadCities = async () => {
+      try {
+        const res = await desktopApi.get(`cities/?district=${district}`);
+        setCityList(buildOptions(res.data, (c) => c?.name ?? ""));
+      } catch (err) {
+        console.error("Failed to load cities", err);
+        setCityList([]);
+      }
+    };
+
+    loadCities();
   }, [district]);
 
   useEffect(() => {
-    if (!city) return;
-    desktopApi.get(`zones/?city=${city}`).then((res) =>
-      setZoneList(res.data.map((z: any) => ({ value: z.id.toString(), label: z.name })))
-    );
+    if (!city) {
+      setZone("");
+      setZoneList([]);
+      setWard("");
+      setWardList([]);
+      return;
+    }
+
+    const loadZones = async () => {
+      try {
+        const res = await desktopApi.get(`zones/?city=${city}`);
+        setZoneList(buildOptions(res.data, (z) => z?.name ?? ""));
+      } catch (err) {
+        console.error("Failed to load zones", err);
+        setZoneList([]);
+      }
+    };
+
+    loadZones();
   }, [city]);
 
   useEffect(() => {
-    if (!zone) return;
-    desktopApi.get(`wards/?zone=${zone}`).then((res) =>
-      setWardList(res.data.map((w: any) => ({ value: w.id.toString(), label: w.name })))
-    );
+    if (!zone) {
+      setWard("");
+      setWardList([]);
+      return;
+    }
+
+    const loadWards = async () => {
+      try {
+        const res = await desktopApi.get(`wards/?zone=${zone}`);
+        setWardList(buildOptions(res.data, (w) => w?.name ?? ""));
+      } catch (err) {
+        console.error("Failed to load wards", err);
+        setWardList([]);
+      }
+    };
+
+    loadWards();
   }, [zone]);
 
   // ----------------------------------------------------
@@ -187,31 +341,41 @@ export default function UserCreationForm() {
     e.preventDefault();
 
     const payload: any = {
-      user_type: Number(userType),
+      user_type: normalizeIdValue(userType),
       password,
       is_active: isActive ? 1 : 0,
     };
 
     if (selectedRole === "customer") {
-      payload.customer_id = Number(customerId);
+      const customerVal = normalizeIdValue(customerId);
+      if (customerVal !== undefined) {
+        payload.customer_id = customerVal;
+      }
     }
 
     if (selectedRole === "staff") {
-      payload.staffusertype_id = Number(staffUserType);
-      payload.staff_id = Number(staffId);
-      payload.district_id = Number(district);
-      payload.city_id = Number(city);
-      payload.zone_id = Number(zone);
-      payload.ward_id = Number(ward);
+      const staffUserTypeVal = normalizeIdValue(staffUserType);
+      const staffVal = normalizeIdValue(staffId);
+      const districtVal = normalizeIdValue(district);
+      const cityVal = normalizeIdValue(city);
+      const zoneVal = normalizeIdValue(zone);
+      const wardVal = normalizeIdValue(ward);
+
+      if (staffUserTypeVal !== undefined) payload.staffusertype_id = staffUserTypeVal;
+      if (staffVal !== undefined) payload.staff_id = staffVal;
+      if (districtVal !== undefined) payload.district_id = districtVal;
+      if (cityVal !== undefined) payload.city_id = cityVal;
+      if (zoneVal !== undefined) payload.zone_id = zoneVal;
+      if (wardVal !== undefined) payload.ward_id = wardVal;
     }
 
     try {
       setLoading(true);
 
       if (isEdit) {
-        await desktopApi.put(`user/${id}/`, payload);
+        await desktopApi.put(`users-creation/${id}/`, payload);
       } else {
-        await desktopApi.post("user/", payload);
+        await desktopApi.post("users-creation/", payload);
       }
 
       Swal.fire({ icon: "success", title: "Saved Successfully!" });
