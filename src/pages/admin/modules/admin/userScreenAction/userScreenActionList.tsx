@@ -16,17 +16,11 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { Switch } from "@/components/ui/switch";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
-
-type UserScreenAction = {
-  unique_id: string;
-  action_name: string;
-  variable_name: string;
-  is_active: boolean;
-};
-
 import {
   userScreenActionApi
 } from "@/helpers/admin";
+
+import type { UserScreenAction } from "../types/admin.types"; 
 
 export default function UserScreenActionList() {
   const [records, setRecords] = useState<UserScreenAction[]>([]);

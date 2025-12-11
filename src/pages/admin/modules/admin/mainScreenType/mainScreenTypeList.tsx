@@ -20,12 +20,8 @@ import {
   mainScreenTypeApi
 } from "@/helpers/admin";
 
+import type { MainScreenType } from "../types/admin.types"; 
 
-type MainScreenType = {
-  unique_id: string;
-  type_name: string;
-  is_active: boolean;
-};
 
 export default function MainScreenTypeList() {
   const [mainScreenTypes, setMainScreenTypes] = useState<MainScreenType[]>([]);
