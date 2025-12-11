@@ -18,29 +18,7 @@ import {
   userScreenPermissionApi
 } from "@/helpers/admin";
 
-
-/* -----------------------------------------------------------
-   TYPES
------------------------------------------------------------ */
-type PermissionScreen = {
-  screen: string;
-  action: string;
-  order: number;
-};
-
-type StaffUserType = {
-  unique_id: string;               // staffusertype_id
-  name: string;                    // userscreen_name (first one)
-  is_active: boolean;
-
-  staffusertype_name?: string;
-  usertype_id?: string | null;
-  mainscreen_id?: string;
-
-  screens?: PermissionScreen[];
-};
-
-type GroupedMap = Record<string, StaffUserType>;
+import type { StaffUserType, GroupedMap } from "../types/admin.types"; 
 
 
 /* -----------------------------------------------------------

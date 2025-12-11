@@ -15,40 +15,25 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
-import {
-  mainScreenApi
-} from "@/helpers/admin";
+import { mainScreenApi } from "@/helpers/admin";
 
-/* ------------------------------
-    TYPES
------------------------------- */
-type MainScreen = {
-  unique_id: string;
-  mainscreentype_name: string;
-  mainscreen_name: string;
-  icon_name: string;
-  order_no: number;
-  description: string;
-  is_active: boolean;
-  is_deleted: boolean;
-  mainscreentype_id: string;
-};
+import type { MainScreen } from "../types/admin.types"; // Correct import
 
 export default function MainScreenList() {
   const [records, setRecords] = useState<MainScreen[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [globalFilterValue, setGlobalFilterValue] = useState('');
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
   const navigate = useNavigate();
   const { encAdmins, encMainScreen } = getEncryptedRoute();
 
-
   const ENC_NEW_PATH = `/${encAdmins}/${encMainScreen}/new`;
-  const ENC_EDIT_PATH = (id: string) => `/${encAdmins}/${encMainScreen}/${id}/edit`;
+  const ENC_EDIT_PATH = (id: string) =>
+    `/${encAdmins}/${encMainScreen}/${id}/edit`;
 
   /* ------------------------------
       Extract data uniformly
@@ -86,7 +71,7 @@ export default function MainScreenList() {
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete!"
+      confirmButtonText: "Yes, delete!",
     });
 
     if (!confirm.isConfirmed) return;
@@ -120,12 +105,7 @@ export default function MainScreenList() {
       fetchData();
     };
 
-    return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   /* ------------------------------
@@ -183,12 +163,15 @@ export default function MainScreenList() {
   return (
     <div className="px-3 py-3 w-full ">
       <div className="bg-white rounded-lg shadow-lg p-6">
-
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Main Screens</h1>
-            <p className="text-gray-500 text-sm">Manage main screen configurations</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              Main Screens
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Manage main screen configurations
+            </p>
           </div>
 
           <Button
@@ -210,7 +193,7 @@ export default function MainScreenList() {
             "mainscreen_name",
             "mainscreentype_name",
             "icon_name",
-            "description"
+            "description",
           ]}
           header={header}
           stripedRows
@@ -218,7 +201,11 @@ export default function MainScreenList() {
           emptyMessage="No records found"
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={(_, { rowIndex }) => rowIndex + 1} style={{ width: 80 }} />
+          <Column
+            header="S.No"
+            body={(_, { rowIndex }) => rowIndex + 1}
+            style={{ width: 80 }}
+          />
 
           <Column field="mainscreen_name" header="MainScreen Name" sortable />
           <Column field="mainscreentype_name" header="Type" sortable />
@@ -226,11 +213,18 @@ export default function MainScreenList() {
           <Column field="order_no" header="Order No" sortable />
           <Column field="description" header="Description" sortable />
 
-          <Column header="Status" body={statusTemplate} style={{ width: 120 }} />
+          <Column
+            header="Status"
+            body={statusTemplate}
+            style={{ width: 120 }}
+          />
 
-          <Column header="Actions" body={actionTemplate} style={{ width: 150 }} />
+          <Column
+            header="Actions"
+            body={actionTemplate}
+            style={{ width: 150 }}
+          />
         </DataTable>
-
       </div>
     </div>
   );
