@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminApi } from "@/helpers/admin";
 import Swal from "sweetalert2";
+import ReactDOM from "react-dom/client";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -51,9 +52,6 @@ export default function CustomerCreationList() {
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     customer_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
   });
-
-  const [qrModalOpen, setQrModalOpen] = useState(false);
-  const [qrData, setQrData] = useState("");
 
   const navigate = useNavigate();
   const { encCustomerMaster, encCustomerCreation } = getEncryptedRoute();
@@ -121,38 +119,44 @@ export default function CustomerCreationList() {
     </div>
   );
 
-  // QR column
-  const qrTemplate = (c: Customer) => (
-    <div
-      className="cursor-pointer flex justify-center"
-      onClick={() => {
-        const qrText = `Customer ID: ${c.unique_id}
-Customer Name: ${c.customer_name}
-Contact: ${c.contact_no}
-Address: ${c.building_no}, ${c.street}, ${c.area}, ${c.pincode}
-${c.city_name}, ${c.district_name}, ${c.state_name}
-Ward: ${c.ward_name} | Zone: ${c.zone_name}
-Property: ${c.property_name} - ${c.sub_property_name}`;
+  const buildCustomerQrPayload = (c: Customer) => ({
+    id: c.unique_id,
+    name: c.customer_name,
+    mobile: c.contact_no,
+    address: `${c.building_no}, ${c.street}, ${c.area}, ${c.pincode}`,
+    ward: c.ward_name,
+    zone: c.zone_name,
+    city: c.city_name,
+    state: c.state_name,
+  });
 
-        setQrData(qrText);
-        setQrModalOpen(true);
-      }}
-    >
-      <div className="p-1 border rounded bg-white shadow-sm">
-        <QRCode
-          value={JSON.stringify({
-            id: c.id,
-            unique_id: c.unique_id,
-            name: c.customer_name,
-            mobile: c.contact_no,
-            ward: c.ward_name,
-            zone: c.zone_name,
-          })}
-          size={45}
-        />
-      </div>
-    </div>
-  );
+  const openQrPopup = (payload: any) => {
+    Swal.fire({
+      title: "Customer QR",
+      html: `<div id="customer-qr-holder" class="flex justify-center"></div>`,
+      width: 350,
+      didOpen: () => {
+        const div = document.getElementById("customer-qr-holder");
+        if (div) {
+          const root = ReactDOM.createRoot(div);
+          root.render(<QRCode value={JSON.stringify(payload)} size={200} />);
+        }
+      },
+    });
+  };
+
+  // QR column
+  const qrTemplate = (c: Customer) => {
+    const payload = buildCustomerQrPayload(c);
+    return (
+      <button
+        className="p-1 border rounded bg-white shadow-sm hover:bg-gray-50"
+        onClick={() => openQrPopup(payload)}
+      >
+        <QRCode value={JSON.stringify(payload)} size={45} />
+      </button>
+    );
+  };
 
   /* --------------------- TOGGLE STATUS --------------------- */
   const statusTemplate = (row: Customer) => {
@@ -197,33 +201,6 @@ Property: ${c.property_name} - ${c.sub_property_name}`;
 
   return (
     <>
-      {/* QR Modal */}
-      {qrModalOpen && (
-        <div
-          className="fixed inset-0 backdrop-blur-sm flex items-center justify-center z-50"
-          onClick={() => setQrModalOpen(false)}
-        >
-          <div
-            className="bg-white p-6 rounded-lg shadow-xl w-[280px]"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-center text-lg font-semibold mb-4">
-              Customer QR
-            </h2>
-
-            <div className="flex justify-center mb-4">
-              <QRCode value={qrData} size={200} />
-            </div>
-
-            <Button
-              label="Close"
-              className="p-button-success w-full"
-              onClick={() => setQrModalOpen(false)}
-            />
-          </div>
-        </div>
-      )}
-
       <div className="p-3">
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex justify-between items-center mb-6">

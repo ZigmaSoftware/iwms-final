@@ -54,11 +54,15 @@ export default function SubComplaintCategoryForm() {
     e.preventDefault();
     setLoading(true);
 
-    const payload = {
+    const payload: Record<string, any> = {
       name,
-      mainCategory: mainCategory ? Number(mainCategory) : null,
       is_active: isActive,
     };
+
+    if (mainCategory) {
+      const numeric = Number(mainCategory);
+      payload.mainCategory = Number.isNaN(numeric) ? mainCategory : numeric;
+    }
 
     try {
       if (isEdit) {

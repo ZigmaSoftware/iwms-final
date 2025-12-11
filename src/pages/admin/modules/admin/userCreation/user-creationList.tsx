@@ -24,10 +24,11 @@ export default function UserCreationList() {
   const navigate = useNavigate();
   const { encAdmins, encUserCreation } = getEncryptedRoute();
   const ENC_NEW = `/${encAdmins}/${encUserCreation}/new`;
-  const ENC_EDIT = (id: number) =>
-    `/${encAdmins}/${encUserCreation}/${id}/edit`;
+  const ENC_EDIT = (unique_id: string) =>
+    `/${encAdmins}/${encUserCreation}/${unique_id}/edit`;
 
   const [users, setUsers] = useState<any[]>([]);
+  const [customerMap, setCustomerMap] = useState<Record<string, any>>({});
   const [globalFilter, setGlobalFilter] = useState("");
 
   const [filters, setFilters] = useState({
@@ -36,8 +37,21 @@ export default function UserCreationList() {
 
   const fetchUsers = async () => {
     try {
-      const res = await desktopApi.get("user/");
-      setUsers(res.data);
+      const [usersRes, customersRes] = await Promise.all([
+        desktopApi.get("users-creation/"),
+        desktopApi.get("customercreations/"),
+      ]);
+
+      setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+
+      const map: Record<string, any> = {};
+      const customers = Array.isArray(customersRes.data) ? customersRes.data : [];
+      customers.forEach((customer: any) => {
+        const key = customer?.unique_id ?? customer?.id;
+        if (!key) return;
+        map[String(key)] = customer;
+      });
+      setCustomerMap(map);
     } catch (err) {
       console.error("Error loading users:", err);
     }
@@ -51,11 +65,25 @@ export default function UserCreationList() {
   const staffList = users.filter(
     (u) => u.user_type_name?.toString().toLowerCase() === "staff"
   );
-  const customerList = users.filter(
-    (u) => u.user_type_name?.toString().toLowerCase() === "customer"
-  );
+  const customerList = users
+    .filter((u) => u.user_type_name?.toString().toLowerCase() === "customer")
+    .map((u) => ({
+      ...u,
+      customer:
+        customerMap[String(u.customer_id ?? u.customer_unique_id ?? "")] ?? null,
+    }));
 
-  /** ------------ QR POPUP ------------------ */
+  /** ------------ QR HELPERS ------------------ */
+  const buildCustomerQrPayload = (customer: any) => {
+    if (!customer) return null;
+    return {
+      id: customer.id,
+      name: customer.customer_name,
+      mobile: customer.contact_no,
+      address: `${customer.building_no}, ${customer.street}, ${customer.area}`,
+    };
+  };
+
   const openQRPopup = (data: any) => {
     Swal.fire({
       title: "Customer QR",
@@ -72,7 +100,7 @@ export default function UserCreationList() {
   };
 
   /** ---------- Delete User ---------- */
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (unique_id: string) => {
     const r = await Swal.fire({
       title: "Are you sure?",
       text: "This user will be soft-deleted!",
@@ -85,15 +113,20 @@ export default function UserCreationList() {
 
     if (!r.isConfirmed) return;
 
-    await desktopApi.delete(`user/${id}/`);
+    await desktopApi.delete(`users-creation/${unique_id}/`);
     Swal.fire("Deleted!", "User removed.", "success");
     fetchUsers();
   };
 
   /** ---------- Toggle Status ---------- */
-  const handleStatusToggle = async (id: number, value: boolean) => {
-    await desktopApi.put(`user/${id}/`, { is_active: value });
-    fetchUsers();
+  const handleStatusToggle = async (unique_id: string, value: boolean) => {
+    try {
+      await desktopApi.patch(`users-creation/${unique_id}/`, { is_active: value });
+      fetchUsers();
+    } catch (err) {
+      console.error("Failed to update status", err);
+      Swal.fire("Update failed", "Unable to change status right now", "error");
+    }
   };
 
   /** ---------- UTILS ---------- */
@@ -189,7 +222,7 @@ export default function UserCreationList() {
               body={(row) => (
                 <Switch
                   checked={row.is_active}
-                  onCheckedChange={(val) => handleStatusToggle(row.id, val)}
+                  onCheckedChange={(val) => handleStatusToggle(row.unique_id, val)}
                 />
               )}
             />
@@ -200,14 +233,14 @@ export default function UserCreationList() {
                 <div className="flex gap-3">
                   <PencilIcon
                     className="cursor-pointer"
-                    onClick={() => navigate(ENC_EDIT(row.id))}
+                    onClick={() => navigate(ENC_EDIT(row.unique_id))}
                   />
-                  <TrashBinIcon
-                    className="cursor-pointer text-red-600"
-                    onClick={() => handleDelete(row.id)}
-                  />
-                </div>
-              )}
+              <TrashBinIcon
+                className="cursor-pointer text-red-600"
+                onClick={() => handleDelete(row.unique_id)}
+              />
+            </div>
+          )}
             />
           </DataTable>
         </TabsContent>
@@ -246,25 +279,18 @@ export default function UserCreationList() {
 
             <Column
               header="QR"
-              body={(row) =>
-                row.customer ? (
+              body={(row) => {
+                const qrPayload = buildCustomerQrPayload(row.customer);
+                if (!qrPayload) return "—";
+                return (
                   <button
-                    className="text-blue-600 underline"
-                    onClick={() =>
-                      openQRPopup({
-                        id: row.customer.id,
-                        name: row.customer.customer_name,
-                        mobile: row.customer.contact_no,
-                        address: `${row.customer.building_no}, ${row.customer.street}, ${row.customer.area}`,
-                      })
-                    }
+                    className="p-1 border rounded hover:bg-gray-50"
+                    onClick={() => openQRPopup(qrPayload)}
                   >
-                    View
+                    <QRCode value={JSON.stringify(qrPayload)} size={48} />
                   </button>
-                ) : (
-                  "—"
-                )
-              }
+                );
+              }}
             />
 
             <Column
@@ -272,7 +298,7 @@ export default function UserCreationList() {
               body={(row) => (
                 <Switch
                   checked={row.is_active}
-                  onCheckedChange={(val) => handleStatusToggle(row.id, val)}
+                  onCheckedChange={(val) => handleStatusToggle(row.unique_id, val)}
                 />
               )}
             />
@@ -284,11 +310,11 @@ export default function UserCreationList() {
                 <div className="flex gap-3">
                   <PencilIcon
                     className="cursor-pointer"
-                    onClick={() => navigate(ENC_EDIT(row.id))}
+                    onClick={() => navigate(ENC_EDIT(row.unique_id))}
                   />
                   <TrashBinIcon
                     className="cursor-pointer text-red-600"
-                    onClick={() => handleDelete(row.id)}
+                    onClick={() => handleDelete(row.unique_id)}
                   />
                 </div>
               )}

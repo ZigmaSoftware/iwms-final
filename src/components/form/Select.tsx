@@ -35,19 +35,35 @@ export default function Select({
   required,
 }: SelectProps) {
   const normalizedValue = value === null || value === undefined ? "" : String(value);
-  const shadValue = normalizedValue === "" ? undefined : normalizedValue;
   const finalPlaceholder = placeholder ?? options[0]?.label ?? "Select an option";
+  const optionValues = options.map((option) => String(option.value));
+  let placeholderValue = "__placeholder__";
+
+  while (optionValues.includes(placeholderValue)) {
+    placeholderValue = `_${placeholderValue}`;
+  }
+
+  const isEmpty = normalizedValue === "";
+  const shadValue = isEmpty ? placeholderValue : normalizedValue;
 
   return (
     <ShadSelect
       value={shadValue}
-      onValueChange={(val) => onChange?.(val)}
+      onValueChange={(val) => {
+        if (val === placeholderValue) return;
+        onChange?.(val);
+      }}
       disabled={disabled}
     >
       <SelectTrigger id={id} className={className} aria-required={required}>
         <SelectValue placeholder={finalPlaceholder} />
       </SelectTrigger>
       <SelectContent>
+        {isEmpty && (
+          <SelectItem value={placeholderValue} disabled>
+            {finalPlaceholder}
+          </SelectItem>
+        )}
         {options.map((option) => (
           <SelectItem key={option.value} value={String(option.value)}>
             {option.label}

@@ -12,6 +12,50 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 const { encAdmins, encUserCreation } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encAdmins}/${encUserCreation}`;
 
+const pickIdentifier = (entity: any): string => {
+  if (entity === null || entity === undefined) return "";
+  if (typeof entity !== "object") return String(entity);
+  const keys = [
+    "unique_id",
+    "id",
+    "value",
+    "staff_unique_id",
+    "customer_id",
+    "zone_id",
+    "city_id",
+    "district_id",
+    "ward_id",
+  ];
+
+  for (const key of keys) {
+    const value = entity[key];
+    if (value !== undefined && value !== null) {
+      const str = String(value);
+      if (str.length > 0) return str;
+    }
+  }
+
+  return "";
+};
+
+const parseIdentifierForPayload = (value: string) => {
+  if (!value) return undefined;
+  return /^\d+$/.test(value) ? Number(value) : value;
+};
+
+const mapToOptions = (
+  items: any[] = [],
+  labelBuilder: (item: any) => string | undefined | null
+): Array<{ value: string; label: string }> =>
+  items
+    .map((item) => {
+      const value = pickIdentifier(item);
+      if (!value) return null;
+      const label = (labelBuilder(item) ?? "").toString();
+      return { value, label: label.trim() || value };
+    })
+    .filter(Boolean) as Array<{ value: string; label: string }>;
+
 /* ========================================================
    ROLE CONFIG — dynamic field control, scalable for future
    ======================================================== */
@@ -68,20 +112,21 @@ export default function UserCreationForm() {
   // ----------------------------------------------------
   useEffect(() => {
     desktopApi.get("user-type/").then((res) => {
-      setUserTypes(
-        res.data.map((u: any) => ({
-          value: u.id.toString(),
-          label: u.name.toLowerCase(),
-        }))
-      );
+      const list = Array.isArray(res.data) ? res.data : [];
+      setUserTypes(mapToOptions(list, (u: any) => u.name ?? ""));
     });
   }, []);
 
   // ----------------------------------------------------
   // GET SELECTED ROLE NAME (staff / customer / future)
   // ----------------------------------------------------
-  const selectedRole = userTypes.find((ut: any) => ut.value === userType)?.label;
-  const roleConfig = selectedRole ? ROLE_CONFIG[selectedRole] : undefined;
+  const selectedRoleKey = (() => {
+    const raw = userTypes.find((ut: any) => ut.value === userType)?.label;
+    if (!raw) return undefined;
+    const normalized = String(raw).toLowerCase().trim();
+    return normalized.length ? normalized : undefined;
+  })();
+  const roleConfig = selectedRoleKey ? ROLE_CONFIG[selectedRoleKey] : undefined;
 
   // ----------------------------------------------------
   // AUTO-LOAD API DATA BASED ON ROLE CONFIG
@@ -91,38 +136,28 @@ export default function UserCreationForm() {
 
     roleConfig.apis.forEach((api: string) => {
       desktopApi.get(api).then((res) => {
+        const list = Array.isArray(res.data) ? res.data : [];
         switch (api) {
           case "customercreations/":
             setCustomerList(
-              res.data.map((c: any) => ({
-                value: c.id.toString(),
-                label: `${c.customer_name} - ${c.contact_no}`,
-              }))
+              mapToOptions(list, (c: any) => {
+                const name = c.customer_name ?? "";
+                const phone = c.contact_no ?? "";
+                return [name, phone].filter(Boolean).join(" - ");
+              })
             );
             break;
 
           case "staffusertypes/":
-            setStaffUserTypes(
-              res.data.map((s: any) => ({
-                value: s.id.toString(),
-                label: s.name,
-              }))
-            );
+            setStaffUserTypes(mapToOptions(list, (s: any) => s.name));
             break;
 
           case "staffcreation/":
-            setStaffList(
-              res.data.map((s: any) => ({
-                value: s.id.toString(),
-                label: s.employee_name,
-              }))
-            );
+            setStaffList(mapToOptions(list, (s: any) => s.employee_name));
             break;
 
           case "districts/":
-            setDistrictList(
-              res.data.map((d: any) => ({ value: d.id.toString(), label: d.name }))
-            );
+            setDistrictList(mapToOptions(list, (d: any) => d.name));
             break;
 
           default:
@@ -130,30 +165,42 @@ export default function UserCreationForm() {
         }
       });
     });
-  }, [userType, roleConfig]);
+  }, [selectedRoleKey, roleConfig]);
 
   // ----------------------------------------------------
   // LOAD CHAINED LOCATION DATA
   // ----------------------------------------------------
   useEffect(() => {
     if (!district) return;
-    desktopApi.get(`cities/?district=${district}`).then((res) =>
-      setCityList(res.data.map((c: any) => ({ value: c.id.toString(), label: c.name })))
-    );
+    const districtParam = parseIdentifierForPayload(district);
+    if (districtParam === undefined) return;
+
+    desktopApi.get(`cities/?district=${districtParam}`).then((res) => {
+      const list = Array.isArray(res.data) ? res.data : [];
+      setCityList(mapToOptions(list, (c: any) => c.name));
+    });
   }, [district]);
 
   useEffect(() => {
     if (!city) return;
-    desktopApi.get(`zones/?city=${city}`).then((res) =>
-      setZoneList(res.data.map((z: any) => ({ value: z.id.toString(), label: z.name })))
-    );
+    const cityParam = parseIdentifierForPayload(city);
+    if (cityParam === undefined) return;
+
+    desktopApi.get(`zones/?city=${cityParam}`).then((res) => {
+      const list = Array.isArray(res.data) ? res.data : [];
+      setZoneList(mapToOptions(list, (z: any) => z.name));
+    });
   }, [city]);
 
   useEffect(() => {
     if (!zone) return;
-    desktopApi.get(`wards/?zone=${zone}`).then((res) =>
-      setWardList(res.data.map((w: any) => ({ value: w.id.toString(), label: w.name })))
-    );
+    const zoneParam = parseIdentifierForPayload(zone);
+    if (zoneParam === undefined) return;
+
+    desktopApi.get(`wards/?zone=${zoneParam}`).then((res) => {
+      const list = Array.isArray(res.data) ? res.data : [];
+      setWardList(mapToOptions(list, (w: any) => w.name));
+    });
   }, [zone]);
 
   // ----------------------------------------------------
@@ -162,21 +209,21 @@ export default function UserCreationForm() {
   useEffect(() => {
     if (!isEdit) return;
 
-    desktopApi.get(`user/${id}/`).then((res) => {
+    desktopApi.get(`users-creation/${id}/`).then((res) => {
       const u = res.data;
 
-      setUserType(u.user_type?.toString());
-      setPassword(u.password);
-      setIsActive(u.is_active);
+      setUserType(pickIdentifier(u.user_type_id ?? u.user_type));
+      setPassword(u.password ?? "");
+      setIsActive(Boolean(u.is_active));
 
-      if (u.customer_id) setCustomerId(u.customer_id.toString());
-      if (u.staff_id) setStaffId(u.staff_id.toString());
-      if (u.staffusertype_id) setStaffUserType(u.staffusertype_id.toString());
+      setCustomerId(pickIdentifier(u.customer_id));
+      setStaffId(pickIdentifier(u.staff_id));
+      setStaffUserType(pickIdentifier(u.staffusertype_id));
 
-      setDistrict(u.district_id?.toString() || "");
-      setCity(u.city_id?.toString() || "");
-      setZone(u.zone_id?.toString() || "");
-      setWard(u.ward_id?.toString() || "");
+      setDistrict(pickIdentifier(u.district_id));
+      setCity(pickIdentifier(u.city_id));
+      setZone(pickIdentifier(u.zone_id));
+      setWard(pickIdentifier(u.ward_id));
     });
   }, [id, isEdit]);
 
@@ -187,31 +234,39 @@ export default function UserCreationForm() {
     e.preventDefault();
 
     const payload: any = {
-      user_type: Number(userType),
+      user_type: parseIdentifierForPayload(userType),
       password,
       is_active: isActive ? 1 : 0,
     };
 
-    if (selectedRole === "customer") {
-      payload.customer_id = Number(customerId);
+    if (selectedRoleKey === "customer") {
+      const parsedCustomer = parseIdentifierForPayload(customerId);
+      if (parsedCustomer !== undefined) payload.customer_id = parsedCustomer;
     }
 
-    if (selectedRole === "staff") {
-      payload.staffusertype_id = Number(staffUserType);
-      payload.staff_id = Number(staffId);
-      payload.district_id = Number(district);
-      payload.city_id = Number(city);
-      payload.zone_id = Number(zone);
-      payload.ward_id = Number(ward);
+    if (selectedRoleKey === "staff") {
+      const staffFields: Record<string, string> = {
+        staffusertype_id: staffUserType,
+        staff_id: staffId,
+        district_id: district,
+        city_id: city,
+        zone_id: zone,
+        ward_id: ward,
+      };
+
+      Object.entries(staffFields).forEach(([key, rawValue]) => {
+        const parsedValue = parseIdentifierForPayload(rawValue);
+        if (parsedValue !== undefined) payload[key] = parsedValue;
+      });
     }
 
     try {
       setLoading(true);
 
       if (isEdit) {
-        await desktopApi.put(`user/${id}/`, payload);
+        await desktopApi.put(`users-creation/${id}/`, payload);
       } else {
-        await desktopApi.post("user/", payload);
+        await desktopApi.post("users-creation/", payload);
       }
 
       Swal.fire({ icon: "success", title: "Saved Successfully!" });
