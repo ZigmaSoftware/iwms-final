@@ -9,7 +9,15 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
 import ZigmaLogo from "@/images/logo.png";
-import type { DashboardLayoutProps } from "@/types/roles";
+import {
+  ADMIN_ROLE,
+  ADMIN_VIEW_MODE_ADMIN,
+  USER_ROLE_STORAGE_KEY,
+  clearAdminViewPreference,
+  normalizeRole,
+  setAdminViewPreference,
+  type DashboardLayoutProps,
+} from "@/types/roles";
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
@@ -18,12 +26,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const { theme, toggleTheme } = useTheme();
   const { setUser } = useUser();
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     setIsNavigating(true);
     const timer = window.setTimeout(() => setIsNavigating(false), 450);
     return () => window.clearTimeout(timer);
   }, [location.pathname]);
+
+  useEffect(() => {
+    const role = normalizeRole(localStorage.getItem(USER_ROLE_STORAGE_KEY));
+    setIsAdmin(role === ADMIN_ROLE);
+  }, []);
 
   const handleSignOut = () => {
     try {
@@ -32,6 +46,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       localStorage.removeItem("unique_id");
       localStorage.removeItem("user_name");
       localStorage.removeItem("user_email");
+      clearAdminViewPreference();
       setUser(null);
 
       navigate("/auth", { replace: true });
@@ -42,6 +57,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
         variant: "destructive",
       });
     }
+  };
+
+  const handleSwitchToAdmin = () => {
+    setAdminViewPreference(ADMIN_VIEW_MODE_ADMIN);
+    navigate("/admin", { replace: true });
   };
 
   return (
@@ -75,6 +95,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
 
             {/* NAVIGATION */}
             <HorizontalNav />
+
+            {isAdmin && (
+              <Button variant="outline" size="sm" onClick={handleSwitchToAdmin}>
+                Admin View
+              </Button>
+            )}
 
             {/* THEME TOGGLE */}
             <button
