@@ -313,9 +313,7 @@ export default function UserCreationForm() {
 
       if (isEdit) {
         await desktopApi.put(`users-creation/${id}/`, payload);
-        await desktopApi.put(`users-creation/${id}/`, payload);
       } else {
-        await desktopApi.post("users-creation/", payload);
         await desktopApi.post("users-creation/", payload);
       }
 
