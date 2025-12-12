@@ -13,6 +13,9 @@ import {
   DEFAULT_ROLE,
   USER_ROLE_STORAGE_KEY,
   normalizeRole,
+  setAdminViewPreference,
+  clearAdminViewPreference,
+  ADMIN_VIEW_MODE_ADMIN,
   type UserRole,
 } from "@/types/roles";
 import ZigmaLogo from "../images/logo.png";
@@ -55,6 +58,12 @@ export default function Auth() {
       email: profile.email,
     });
 
+    if (normalizedRole === ADMIN_ROLE) {
+      setAdminViewPreference(ADMIN_VIEW_MODE_ADMIN);
+    } else {
+      clearAdminViewPreference();
+    }
+
     navigate(normalizedRole === ADMIN_ROLE ? "/admin" : "/", { replace: true });
   };
 
@@ -83,8 +92,10 @@ export default function Auth() {
 
       if (normalizedRole === ADMIN_ROLE) {
         navigate("/admin", { replace: true });
+        setAdminViewPreference(ADMIN_VIEW_MODE_ADMIN);
       } else {
         navigate("/", { replace: true });
+        clearAdminViewPreference();
       }
     } catch (error: any) {
       toast({
