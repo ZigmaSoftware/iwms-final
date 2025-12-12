@@ -78,12 +78,14 @@ export default function WorkforceManagement() {
               <svg viewBox="0 0 400 360" role="presentation">
                 <path
                   d="M50 320l20-60 40-30 10-40 45-25 10-30 45-25 40-10 15-40 50-20 30 10 10 45-20 50 10 20 20-5 5 30-25 45-40 15-20 40-35 15-20-5-40 25-30-10-40 20-30-40z"
-                  fill="#e8f7df"
-                  stroke="#45a047"
-                  strokeWidth="4"
-                  strokeLinejoin="round"
+                  style={{
+                    fill: "var(--wf-map-fill)",
+                    stroke: "var(--wf-map-stroke)",
+                    strokeWidth: 4,
+                    strokeLinejoin: "round",
+                  }}
                 />
-                <circle cx="150" cy="160" r="10" fill="#e32" />
+                <circle cx="150" cy="160" r="10" style={{ fill: "var(--wf-map-dot)" }} />
               </svg>
             </div>
             <div className="wf-region">

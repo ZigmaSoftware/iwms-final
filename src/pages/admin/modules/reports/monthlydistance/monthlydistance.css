@@ -4,13 +4,15 @@
   width: 100%;
   margin-left: auto;
   margin-right: auto;
-  background: #fff;
+  background: var(--admin-surfaceAlt);
   border-radius: 10px;
   padding: 14px;
-  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+  border: 1px solid var(--admin-border);
+  box-shadow: var(--admin-cardShadow);
   display: flex;
   flex-direction: column;
   gap: 14px;
+  color: var(--admin-text);
 }
 
 /* =================== PAGE HEADER =================== */
@@ -36,7 +38,7 @@
 .md-page-header h2 {
   margin: 0;
   font-size: clamp(18px, 2vw, 22px);
-  color: #22314a;
+  color: var(--admin-text);
 }
 
 .md-header-actions {
@@ -58,12 +60,12 @@
 }
 
 .md-search-field input {
-  border: 1px solid #dce1ef;
+  border: 1px solid var(--admin-border);
   border-radius: 10px;
   padding: 8px 10px;
   font-size: 13px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--admin-surfaceAlt);
+  color: var(--admin-text);
   width: 80%;
 }
 
@@ -72,7 +74,7 @@
   border: none;
   border-radius: 12px;
   padding: 8px 16px;
-  background: #22c55e;      /* Main green */
+  background: var(--green-custom);      /* Main green */
   color: #fff;
   font-weight: 600;
   display: inline-flex;
@@ -90,7 +92,7 @@
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  border-bottom: 1px solid #e7ecff;
+  border-bottom: 1px solid var(--admin-border);
   padding-bottom: 10px;
 }
 
@@ -111,19 +113,19 @@
 
 /* =================== MONTH INPUT =================== */
 .md-field-inline input[type="month"] {
-  border: 1px solid #dce1ef;
+  border: 1px solid var(--admin-border);
   border-radius: 10px;
   padding: 6px 8px;
   font-size: 12px;
-  background: #fff;
-  color: #0f172a;
+  background: var(--admin-surfaceAlt);
+  color: var(--admin-text);
   width: 30%;
 }
 
 /* =================== MATCH GO BUTTON WITH EXPORT =================== */
 .md-go-button {
   border: none !important;
-  background: #22c55e !important;  /* Same green as Export */
+  background: var(--green-custom) !important;  /* Same green as Export */
   color: #fff !important;
   font-weight: 600;
   border-radius: 12px !important;  /* Same roundness */
@@ -137,9 +139,9 @@
 
 /* =================== TABLE CARD =================== */
 .md-table-card {
-  border: 1px solid #e6e9f5;
+  border: 1px solid var(--admin-border);
   border-radius: 18px;
-  background: #fff;
+  background: var(--admin-surfaceAlt);
   width: 100%;
   padding: 16px;
   overflow-x: auto;
@@ -157,8 +159,8 @@
   align-items: center;
   gap: 10px;
   padding: 10px 16px;
-  border-top: 1px solid #e6e9f5;
-  background: #fff;
+  border-top: 1px solid var(--admin-border);
+  background: var(--admin-surfaceAlt);
   flex-wrap: wrap;
 }
 

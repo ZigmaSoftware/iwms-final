@@ -161,7 +161,7 @@ export default function WasteCollectedDataList() {
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
         title="Edit"
       >
-        <PencilIcon className="fill-gray-500 size-5" />
+        <PencilIcon className="size-5" />
       </button>
 
       <button
@@ -169,7 +169,7 @@ export default function WasteCollectedDataList() {
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
         title="Delete"
       >
-        <TrashBinIcon className="fill-gray-500 size-5" />
+        <TrashBinIcon className="size-5" />
       </button>
     </div>
   );
