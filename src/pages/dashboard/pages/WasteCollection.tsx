@@ -1060,34 +1060,12 @@ export default function WasteCollection() {
     }
   };
 
-  const propertyFactor = useMemo(() => {
-    return PROPERTY_IMPACT[property]?.[subProperty] ?? 1;
-  }, [property, subProperty]);
-
   const wardBaseData = useMemo(() => {
     if (!selectedZone || !selectedWard) return null;
     return WARD_WASTE_SUMMARY[selectedZone]?.[selectedWard] ?? null;
   }, [selectedZone, selectedWard]);
 
-  const wardWasteData = useMemo(() => {
-    if (!wardBaseData) return null;
-
-    const scaleCategory = (category: WardWasteCategory) => ({
-      total: Number((category.total * propertyFactor).toFixed(2)),
-      breakdown: Object.fromEntries(
-        Object.entries(category.breakdown).map(([k, v]) => [
-          k,
-          Number((v * propertyFactor).toFixed(2)),
-        ])
-      ),
-    });
-
-    return {
-      household: scaleCategory(wardBaseData.household),
-      ewaste: scaleCategory(wardBaseData.ewaste),
-      medical: scaleCategory(wardBaseData.medical),
-    };
-  }, [wardBaseData, propertyFactor]);
+  const wardWasteData = wardBaseData;
 
   const getZonePieChartData = (
     zoneName?: string
@@ -1549,55 +1527,9 @@ export default function WasteCollection() {
 
                     {selectedWard ? (
                       <div className="space-y-6">
-                        <div className="grid gap-4 md:grid-cols-2">
-                          <div>
-                            <Label>Property</Label>
-                            <Select
-                              value={property}
-                              onValueChange={(v) =>
-                                setProperty(v as keyof typeof PROPERTY_OPTIONS)
-                              }
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Property" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {(
-                                  Object.keys(
-                                    PROPERTY_OPTIONS
-                                  ) as Array<keyof typeof PROPERTY_OPTIONS>
-                                ).map((p) => (
-                                  <SelectItem key={p} value={p}>
-                                    {p}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <div>
-                            <Label>Subproperty</Label>
-                            <Select
-                              value={subProperty}
-                              onValueChange={(v) => setSubProperty(v)}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Subproperty" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {PROPERTY_OPTIONS[property].map((sp) => (
-                                  <SelectItem key={sp} value={sp}>
-                                    {sp}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
                         <div className="bg-white rounded-xl p-4 shadow border">
                           <h3 className="text-lg font-semibold mb-4 text-center">
-                            Waste Summary · {propertyDescriptor}
+                            Ward Waste Mix · {selectedWard}
                           </h3>
                           <div className="flex flex-col items-center gap-4">
                             <div className="h-64 w-64">
@@ -1622,7 +1554,7 @@ export default function WasteCollection() {
                           </div>
                         </div>
 
-                        <div className="grid gap-4 md:grid-cols-3">
+                        {/* <div className="grid gap-4 md:grid-cols-3">
                           {WASTE_CATEGORY_KEYS.map((key) => {
                             const meta = WASTE_CATEGORY_META[key];
                             const total = wardWasteData
@@ -1656,8 +1588,8 @@ export default function WasteCollection() {
                               </button>
                             );
                           })}
-                        </div>
-
+                        </div> */}
+{/* 
                         <Card className="border shadow-sm">
                           <CardHeader>
                             <CardTitle>
@@ -1697,19 +1629,72 @@ export default function WasteCollection() {
                               </p>
                             )}
                           </CardContent>
-                        </Card>
+                        </Card> */}
 
                         <Card className="border shadow-sm">
                           <CardHeader>
-                            <CardTitle>
-                              Collection Runs · {subProperty}
-                            </CardTitle>
-                            <CardDescription>
-                              Latest 10 pickups tagged to{" "}
-                              {property === "All"
-                                ? "all property types"
-                                : `${subProperty} (${property})`}
-                            </CardDescription>
+                            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+                              <div>
+                                <CardTitle>
+                                  Collection Runs · {propertyDescriptor}
+                                </CardTitle>
+                                <CardDescription>
+                                  Latest 10 pickups tagged to{" "}
+                                  {property === "All"
+                                    ? "all property types"
+                                    : `${subProperty} (${property})`}
+                                </CardDescription>
+                              </div>
+                              <div className="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                  <Label>Property</Label>
+                                  <Select
+                                    value={property}
+                                    onValueChange={(v) =>
+                                      setProperty(
+                                        v as keyof typeof PROPERTY_OPTIONS
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Property" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {(
+                                        Object.keys(
+                                          PROPERTY_OPTIONS
+                                        ) as Array<
+                                          keyof typeof PROPERTY_OPTIONS
+                                        >
+                                      ).map((p) => (
+                                        <SelectItem key={p} value={p}>
+                                          {p}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+
+                                <div>
+                                  <Label>Subproperty</Label>
+                                  <Select
+                                    value={subProperty}
+                                    onValueChange={(v) => setSubProperty(v)}
+                                  >
+                                    <SelectTrigger>
+                                      <SelectValue placeholder="Subproperty" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {PROPERTY_OPTIONS[property].map((sp) => (
+                                        <SelectItem key={sp} value={sp}>
+                                          {sp}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
                           </CardHeader>
                           <CardContent className="space-y-4">
                             <div className="rounded-xl border overflow-hidden">
