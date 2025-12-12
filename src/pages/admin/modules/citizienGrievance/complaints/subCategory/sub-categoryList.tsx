@@ -91,14 +91,14 @@ export default function SubComplaintCategoryList() {
         onClick={() => navigate(EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
-        <PencilIcon className="size-5 fill-gray-600" />
+        <PencilIcon className="size-5" />
       </button>
 
       <button
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
-        <TrashBinIcon className="size-5 fill-gray-600" />
+        <TrashBinIcon className="size-5" />
       </button>
     </div>
   );

@@ -27,16 +27,23 @@ export default function StaffUserTypeForm() {
 
   /* ---------------------- FETCH ALL USERTYPES ---------------------- */
   const fetchUserTypes = async () => {
-   
-    const res = await userTypeApi.list();
-    
-    const list = Array.isArray(res.data) ? res.data : res.data.results ?? [];
+    try {
+      const res = await userTypeApi.list();
+      const list = Array.isArray(res) ? res : (res as any)?.results ?? [];
 
-    setUserTypes(list);
+      setUserTypes(list);
 
-    // auto select first usertype if none selected
-    if (!selectedUserType && list.length > 0) {
-      setSelectedUserType(list[0].unique_id);
+      // auto select first usertype if none selected
+      if (!selectedUserType && list.length > 0) {
+        setSelectedUserType(list[0].unique_id);
+      }
+    } catch (error) {
+      console.error("Failed to load user types", error);
+      Swal.fire({
+        icon: "error",
+        title: "Failed to load User Types",
+        text: "Please try again later.",
+      });
     }
   };
 

@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "./dayreport.css";
+import { buildPaginationRange } from "@/utils/pagination";
 
 type ApiRow = {
   Ticket_No: string;
@@ -63,13 +64,18 @@ export default function DayReport() {
   // -------- Pagination --------
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
-
-  const totalPages = Math.ceil(rows.length / rowsPerPage);
+  const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
 
   const paginatedRows = rows.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  const paginationRange = useMemo(() => buildPaginationRange(currentPage, totalPages), [currentPage, totalPages]);
 
   const fetchData = async (targetFromDate: string, targetToDate: string) => {
     setLoading(true);
@@ -247,15 +253,21 @@ export default function DayReport() {
                 ‹
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`dr-page-number ${currentPage === i + 1 ? "active" : ""}`}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {paginationRange.map((page, index) =>
+                typeof page === "number" ? (
+                  <button
+                    key={`page-${page}`}
+                    className={`dr-page-number ${currentPage === page ? "active" : ""}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ) : (
+                  <span key={`${page}-${index}`} className="dr-page-ellipsis">
+                    …
+                  </span>
+                ),
+              )}
 
               <button
                 className="dr-page-btn"

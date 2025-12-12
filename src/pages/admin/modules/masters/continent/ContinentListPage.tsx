@@ -15,6 +15,7 @@ import { Switch } from "@/components/ui/switch";
 import { encryptSegment } from "@/utils/routeCrypto";
 
 import { continentApi } from "@/helpers/admin";
+import { PencilIcon, TrashBinIcon } from "@/icons";
 
 
 type Continent = {
@@ -122,21 +123,22 @@ export default function ContinentList() {
   };
 
   const actionBodyTemplate = (row: Continent) => (
-    <div className="flex gap-2 justify-center">
-      <Button
-        icon="pi pi-pencil"
-        rounded
-        outlined
-        severity="info"
+    <div className="flex gap-3 justify-center">
+      <button
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
-      />
-      <Button
-        icon="pi pi-trash"
-        rounded
-        outlined
-        severity="danger"
+        className="text-blue-600 hover:text-blue-800"
+        title="Edit"
+      >
+        <PencilIcon className="size-5" />
+      </button>
+
+      <button
         onClick={() => handleDelete(row.unique_id)}
-      />
+        className="text-red-600 hover:text-red-800"
+        title="Delete"
+      >
+        <TrashBinIcon className="size-5" />
+      </button>
     </div>
   );
 

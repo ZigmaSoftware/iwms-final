@@ -1,7 +1,8 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { fetchWasteReport, type WasteApiRow } from "@/utils/wasteApi";
+import { buildPaginationRange } from "@/utils/pagination";
 import "./datereport.css";
 
 type ApiRow = WasteApiRow & {
@@ -63,13 +64,18 @@ export default function DateReport() {
   // ---- Pagination ----
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 10;
-
-  const totalPages = Math.ceil(rows.length / rowsPerPage);
+  const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
 
   const paginatedRows = rows.slice(
     (currentPage - 1) * rowsPerPage,
     currentPage * rowsPerPage
   );
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
+  const paginationRange = useMemo(() => buildPaginationRange(currentPage, totalPages), [currentPage, totalPages]);
 
   const fetchData = async (targetFromDate: string, targetToDate: string) => {
     setLoading(true);
@@ -215,7 +221,7 @@ export default function DateReport() {
               <div
                 className="dr-pagination-progress"
                 style={{
-                  width: `${(currentPage / totalPages) * 100}%`,
+                  width: `${Math.min(100, (currentPage / totalPages) * 100)}%`,
                 }}
               ></div>
             </div>
@@ -237,17 +243,21 @@ export default function DateReport() {
                 ‹
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => (
-                <button
-                  key={i}
-                  className={`dr-page-number ${
-                    currentPage === i + 1 ? "active" : ""
-                  }`}
-                  onClick={() => setCurrentPage(i + 1)}
-                >
-                  {i + 1}
-                </button>
-              ))}
+              {paginationRange.map((page, index) =>
+                typeof page === "number" ? (
+                  <button
+                    key={`page-${page}`}
+                    className={`dr-page-number ${currentPage === page ? "active" : ""}`}
+                    onClick={() => setCurrentPage(page)}
+                  >
+                    {page}
+                  </button>
+                ) : (
+                  <span key={`${page}-${index}`} className="dr-page-ellipsis">
+                    …
+                  </span>
+                ),
+              )}
 
               <button
                 className="dr-page-btn"
