@@ -65,19 +65,58 @@ export default function UserCreationList() {
   const staffList = users.filter(
     (u) => u.user_type_name?.toString().toLowerCase() === "staff"
   );
+  const composeCustomerInfo = (row: any) => {
+    if (row?.customer_name || row?.customer_unique_id) {
+      return {
+        unique_id: row.customer_unique_id ?? row.customer_id,
+        customer_name: row.customer_name,
+        contact_no: row.customer_contact_no,
+        building_no: row.customer_building_no,
+        street: row.customer_street,
+        area: row.customer_area,
+        ward_name: row.customer_ward_name ?? row.ward_name,
+        zone_name: row.customer_zone_name ?? row.zone_name,
+        city_name: row.customer_city_name ?? row.city_name,
+        state_name: row.customer_state_name ?? row.state_name,
+      };
+    }
+
+    const fallbackKey = row?.customer_unique_id ?? row?.customer_id ?? row?.customer;
+    if (!fallbackKey) {
+      return null;
+    }
+
+    const fallback = customerMap[String(fallbackKey)];
+    if (!fallback) {
+      return null;
+    }
+
+    return {
+      unique_id: fallback.unique_id,
+      customer_name: fallback.customer_name,
+      contact_no: fallback.contact_no,
+      building_no: fallback.building_no,
+      street: fallback.street,
+      area: fallback.area,
+      ward_name: fallback.ward_name,
+      zone_name: fallback.zone_name,
+      city_name: fallback.city_name,
+      state_name: fallback.state_name,
+    };
+  };
+
   const customerList = users
     .filter((u) => u.user_type_name?.toString().toLowerCase() === "customer")
     .map((u) => ({
       ...u,
-      customer:
-        customerMap[String(u.customer_id ?? u.customer_unique_id ?? "")] ?? null,
+      customer: composeCustomerInfo(u),
     }));
 
   /** ------------ QR HELPERS ------------------ */
   const buildCustomerQrPayload = (customer: any) => {
     if (!customer) return null;
     return {
-      id: customer.id,
+      id: customer.unique_id,
       name: customer.customer_name,
       mobile: customer.contact_no,
       address: `${customer.building_no}, ${customer.street}, ${customer.area}`,

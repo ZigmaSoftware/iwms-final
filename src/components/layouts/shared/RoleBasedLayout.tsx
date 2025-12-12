@@ -3,8 +3,10 @@ import { DashboardLayout } from "@/components/layouts/dashboard/DashboardLayout"
 import type { RoleBasedLayoutProps, UserRole } from "@/types/roles";
 import {
   ADMIN_ROLE,
+  ADMIN_VIEW_MODE_DASHBOARD,
   DEFAULT_ROLE,
   USER_ROLE_STORAGE_KEY,
+  getAdminViewPreference,
   normalizeRole,
 } from "@/types/roles";
 
@@ -23,6 +25,11 @@ export function RoleBasedLayout({
   const resolvedRole = roleOverride ?? getStoredRole() ?? DEFAULT_ROLE;
 
   if (resolvedRole === ADMIN_ROLE) {
+    const adminPreference = getAdminViewPreference();
+    if (adminPreference === ADMIN_VIEW_MODE_DASHBOARD) {
+      return <DashboardLayout>{children}</DashboardLayout>;
+    }
+
     return <AdminLayout>{children}</AdminLayout>;
   }
 

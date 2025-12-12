@@ -20,8 +20,14 @@ import EncryptedRouter from "@/components/layout/AdminPanelLayout/EncryptedRoute
 import { AdminLayout } from "@/components/layouts/admin/AdminLayout";
 import { RoleBasedLayout } from "@/components/layouts/shared/RoleBasedLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
-import type { UserRole } from "@/types/roles";
-import { ADMIN_ROLE, USER_ROLE_STORAGE_KEY, normalizeRole } from "@/types/roles";
+import type { AdminViewMode, UserRole } from "@/types/roles";
+import {
+  ADMIN_ROLE,
+  ADMIN_VIEW_MODE_ADMIN,
+  USER_ROLE_STORAGE_KEY,
+  getAdminViewPreference,
+  normalizeRole,
+} from "@/types/roles";
 
 function withDashboard(children: ReactNode) {
   return (
@@ -43,11 +49,16 @@ function withAdmin(children: ReactNode) {
 
 function DashboardRouteGuard({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<UserRole | null>(null);
+  const [adminViewPreference, setAdminViewPreferenceState] = useState<AdminViewMode | null>(null);
   const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     try {
-      setRole(normalizeRole(localStorage.getItem(USER_ROLE_STORAGE_KEY)));
+      const storedRole = normalizeRole(localStorage.getItem(USER_ROLE_STORAGE_KEY));
+      setRole(storedRole);
+      if (storedRole === ADMIN_ROLE) {
+        setAdminViewPreferenceState(getAdminViewPreference());
+      }
     } finally {
       setChecked(true);
     }
@@ -57,7 +68,7 @@ function DashboardRouteGuard({ children }: { children: ReactNode }) {
     return null;
   }
 
-  if (role === ADMIN_ROLE) {
+  if (role === ADMIN_ROLE && (adminViewPreference ?? ADMIN_VIEW_MODE_ADMIN) === ADMIN_VIEW_MODE_ADMIN) {
     return <Navigate to="/admin" replace />;
   }
 
