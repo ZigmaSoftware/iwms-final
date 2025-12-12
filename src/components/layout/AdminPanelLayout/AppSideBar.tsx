@@ -172,7 +172,7 @@ const reportItems: NavItem[] = [
 ];
 
 const menuButtonBase =
-  "flex w-full items-center gap-3 rounded-2xl border px-3.5 py-2.5 text-left text-sm font-semibold tracking-wide transition-all duration-300 backdrop-blur";
+  " flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left text-sm font-semibold";
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen } = useSidebar();
@@ -258,7 +258,7 @@ const AppSidebar: React.FC = () => {
               onClick={() => handleSubmenuToggle(index, type)}
               className={`${menuButtonBase} ${openSubmenu?.type === type && openSubmenu?.index === index
                 ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
-                : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
+                : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] "
                 }`}
             >
               <span className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}>{nav.icon}</span>
