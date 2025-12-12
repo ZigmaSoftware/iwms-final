@@ -4,6 +4,7 @@ import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
+import { clearAdminViewPreference } from "@/types/roles";
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
@@ -36,6 +37,7 @@ export default function UserDropdown() {
     localStorage.removeItem("unique_id");
     localStorage.removeItem("user_name");
     localStorage.removeItem("user_email");
+    clearAdminViewPreference();
     setUser(null);
     navigate("/auth", { replace: true });
   }
@@ -83,7 +85,7 @@ export default function UserDropdown() {
           <span className="mt-0.5 block text-sm text-[var(--admin-mutedText)]">{displayEmail}</span>
         </div>
 
-        <ul className="mt-4 flex flex-col gap-1">
+        {/* <ul className="mt-4 flex flex-col gap-1">
           <li>
             <DropdownItem
               onItemClick={closeDropdown}
@@ -123,7 +125,7 @@ export default function UserDropdown() {
               Support
             </DropdownItem>
           </li>
-        </ul>
+        </ul> */}
 
         <button
           onClick={handleSignOut}
