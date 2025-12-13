@@ -14,11 +14,8 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch"; // 
-
+import { Switch } from "@/components/ui/switch";
 import { zoneApi } from "@/helpers/admin";
-
-
 
 // ===========================
 //   Types
@@ -32,7 +29,6 @@ type ZoneRecord = {
   is_active: boolean;
 };
 
-
 type ErrorWithResponse = {
   response?: {
     data?: unknown;
@@ -40,39 +36,23 @@ type ErrorWithResponse = {
 };
 
 const extractErrorMessage = (error: unknown) => {
-  if (!error) {
-    return "Something went wrong while processing the request.";
-  }
+  if (!error) return "Something went wrong while processing the request.";
+  if (typeof error === "string") return error;
 
-  if (typeof error === "string") {
-    return error;
-  }
+  const data = (error as ErrorWithResponse)?.response?.data;
 
-  const withResponse = error as ErrorWithResponse;
-  const data = withResponse.response?.data;
-
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.join(", ");
-  }
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return data.join(", ");
 
   if (data && typeof data === "object") {
     return Object.entries(data as Record<string, unknown>)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: ${value.join(", ")}`;
-        }
-        return `${key}: ${String(value)}`;
-      })
+      .map(([k, v]) =>
+        Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
+      )
       .join("\n");
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error && error.message) return error.message;
 
   return "Something went wrong while processing the request.";
 };
@@ -86,7 +66,7 @@ export default function ZoneList() {
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
   const navigate = useNavigate();
@@ -101,15 +81,12 @@ export default function ZoneList() {
   // ===========================
   //   Load Data
   // ===========================
-
-
   const fetchZones = useCallback(async () => {
     setLoading(true);
     try {
       const data = (await zoneApi.list()) as ZoneRecord[];
       setZones(data);
     } catch (error) {
-      console.error("Failed loading zones:", error);
       Swal.fire({
         icon: "error",
         title: "Unable to load zones",
@@ -122,7 +99,7 @@ export default function ZoneList() {
 
   useEffect(() => {
     fetchZones();
-  }, []);
+  }, [fetchZones]);
 
   // ===========================
   //   Delete
@@ -134,8 +111,7 @@ export default function ZoneList() {
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!"
+      confirmButtonText: "Yes, delete it!",
     });
 
     if (!confirm.isConfirmed) return;
@@ -146,7 +122,7 @@ export default function ZoneList() {
       icon: "success",
       title: "Deleted successfully!",
       timer: 1500,
-      showConfirmButton: false
+      showConfirmButton: false,
     });
 
     fetchZones();
@@ -160,17 +136,31 @@ export default function ZoneList() {
 
     setFilters({
       ...filters,
-      global: { ...filters.global, value }
+      global: { ...filters.global, value },
     });
 
     setGlobalFilterValue(value);
   };
 
+  const renderHeader = () => (
+    <div className="flex justify-end items-center">
+      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
+        <i className="pi pi-search text-gray-500" />
+        <InputText
+          value={globalFilterValue}
+          onChange={onGlobalFilterChange}
+          placeholder="Search Zones..."
+          className="p-inputtext-sm !border-0 !shadow-none"
+        />
+      </div>
+    </div>
+  );
+
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
   // ===========================
-  //   Toggle Status (PATCH)
+  //   Toggle Status
   // ===========================
   const statusTemplate = (row: ZoneRecord) => {
     const updateStatus = async (value: boolean) => {
@@ -191,7 +181,6 @@ export default function ZoneList() {
   const actionTemplate = (row: ZoneRecord) => (
     <div className="flex gap-3 justify-center">
       <button
-        title="Edit"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
@@ -199,7 +188,6 @@ export default function ZoneList() {
       </button>
 
       <button
-        title="Delete"
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
@@ -212,31 +200,11 @@ export default function ZoneList() {
     rowIndex + 1;
 
   // ===========================
-  //   Table Header
-  // ===========================
-  const renderHeader = () => (
-    <div className="flex justify-end items-center">
-      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
-        <i className="pi pi-search text-gray-500" />
-        <InputText
-          value={globalFilterValue}
-          onChange={onGlobalFilterChange}
-          placeholder="Search Zones..."
-          className="p-inputtext-sm !border-0 !shadow-none"
-        />
-      </div>
-    </div>
-  );
-
-  const header = renderHeader();
-
-  // ===========================
   //   UI
   // ===========================
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        {/* Page Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">Zones</h1>
@@ -251,18 +219,24 @@ export default function ZoneList() {
           />
         </div>
 
-        {/* Data Table */}
         <DataTable
           value={zones}
+          dataKey="unique_id"
           paginator
           rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           loading={loading}
           filters={filters}
-          header={header}
+          header={renderHeader()}
           stripedRows
           showGridlines
           emptyMessage="No zones found."
-          globalFilterFields={["name", "city_name", "district_name", "state_name"]}
+          globalFilterFields={[
+            "name",
+            "city_name",
+            "district_name",
+            "state_name",
+          ]}
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
@@ -271,22 +245,17 @@ export default function ZoneList() {
             field="city_name"
             header="City"
             sortable
-            body={(row: ZoneRecord) => cap(row.city_name)}
+            body={(row) => cap(row.city_name)}
           />
 
           <Column
             field="name"
             header="Zone"
             sortable
-            body={(row: ZoneRecord) => cap(row.name)}
+            body={(row) => cap(row.name)}
           />
 
-          {/* 🔥 Toggle Status */}
-          <Column
-            header="Status"
-            body={statusTemplate}
-            style={{ width: "140px" }}
-          />
+          <Column header="Status" body={statusTemplate} style={{ width: "140px" }} />
 
           <Column
             header="Actions"

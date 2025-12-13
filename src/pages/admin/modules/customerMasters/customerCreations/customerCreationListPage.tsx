@@ -17,7 +17,6 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-
 import { Switch } from "@/components/ui/switch";
 
 type Customer = {
@@ -46,8 +45,8 @@ const customerApi = adminApi.customerCreations;
 export default function CustomerCreationList() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-
   const [globalFilterValue, setGlobalFilterValue] = useState("");
+
   const [filters, setFilters] = useState<any>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
     customer_name: { value: null, matchMode: FilterMatchMode.STARTS_WITH },
@@ -85,6 +84,7 @@ export default function CustomerCreationList() {
     if (!confirm.isConfirmed) return;
 
     await customerApi.remove(unique_id);
+
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
@@ -100,7 +100,7 @@ export default function CustomerCreationList() {
 
   const onGlobalFilterChange = (e: any) => {
     const updated = { ...filters };
-    updated["global"].value = e.target.value;
+    updated.global.value = e.target.value;
     setFilters(updated);
     setGlobalFilterValue(e.target.value);
   };
@@ -145,7 +145,6 @@ export default function CustomerCreationList() {
     });
   };
 
-  // QR column
   const qrTemplate = (c: Customer) => {
     const payload = buildCustomerQrPayload(c);
     return (
@@ -158,22 +157,17 @@ export default function CustomerCreationList() {
     );
   };
 
-  /* --------------------- TOGGLE STATUS --------------------- */
   const statusTemplate = (row: Customer) => {
     const updateStatus = async (value: boolean) => {
       try {
-        await customerApi.update(row.unique_id, {
-          is_active: value,
-        });
+        await customerApi.update(row.unique_id, { is_active: value });
         fetchCustomers();
       } catch (err) {
         console.error("Status update failed:", err);
       }
     };
 
-    return (
-      <Switch checked={row.is_active} onCheckedChange={updateStatus} />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   const actionTemplate = (c: Customer) => (
@@ -196,100 +190,98 @@ export default function CustomerCreationList() {
     </div>
   );
 
-  const indexTemplate = (_: Customer, { rowIndex }: { rowIndex: number }) =>
-    rowIndex + 1;
+  const indexTemplate = (_: Customer, options: any) => options.rowIndex + 1;
 
   return (
-    <>
-      <div className="p-3">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800 mb-1">
-                Customer Creation
-              </h1>
-              <p className="text-gray-500 text-sm">Manage customer records</p>
-            </div>
-
-            <Button
-              label="Add Customer"
-              icon="pi pi-plus"
-              className="p-button-success"
-              onClick={() => navigate(ENC_NEW_PATH)}
-            />
+    <div className="p-3">
+      <div className="bg-white rounded-lg shadow-lg p-6">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              Customer Creation
+            </h1>
+            <p className="text-gray-500 text-sm">Manage customer records</p>
           </div>
 
-          <DataTable
-            value={customers}
-            paginator
-            rows={10}
-            filters={filters}
-            loading={loading}
-            globalFilterFields={[
-              "customer_name",
-              "contact_no",
-              "ward_name",
-              "zone_name",
-              "city_name",
-            ]}
-            header={header}
-            emptyMessage="No customers found."
-            stripedRows
-            showGridlines
-            className="p-datatable-sm"
-          >
-            <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
-
-            <Column
-              field="customer_name"
-              header="Customer"
-              body={(row: Customer) => cap(row.customer_name)}
-              sortable
-            />
-            <Column field="contact_no" header="Mobile" sortable />
-            <Column
-              field="ward_name"
-              header="Ward"
-              body={(row: Customer) => cap(row.ward_name)}
-              sortable
-            />
-            <Column
-              field="zone_name"
-              header="Zone"
-              body={(row: Customer) => cap(row.zone_name)}
-              sortable
-            />
-            <Column
-              field="city_name"
-              header="City"
-              body={(row: Customer) => cap(row.city_name)}
-              sortable
-            />
-            <Column
-              field="state_name"
-              header="State"
-              body={(row: Customer) => cap(row.state_name)}
-              sortable
-            />
-
-            <Column header="QR" body={qrTemplate} style={{ width: "100px" }} />
-
-            {/* 🔥 New Toggle Status */}
-            <Column
-              field="is_active"
-              header="Status"
-              body={statusTemplate}
-              style={{ width: "120px" }}
-            />
-
-            <Column
-              header="Actions"
-              body={actionTemplate}
-              style={{ width: "140px", textAlign: "center" }}
-            />
-          </DataTable>
+          <Button
+            label="Add Customer"
+            icon="pi pi-plus"
+            className="p-button-success"
+            onClick={() => navigate(ENC_NEW_PATH)}
+          />
         </div>
+
+        <DataTable
+          value={customers}
+          dataKey="unique_id"
+          paginator
+          rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          loading={loading}
+          filters={filters}
+          globalFilterFields={[
+            "customer_name",
+            "contact_no",
+            "ward_name",
+            "zone_name",
+            "city_name",
+          ]}
+          header={header}
+          emptyMessage="No customers found."
+          stripedRows
+          showGridlines
+          className="p-datatable-sm"
+        >
+          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+
+          <Column
+            field="customer_name"
+            header="Customer"
+            body={(row: Customer) => cap(row.customer_name)}
+            sortable
+          />
+          <Column field="contact_no" header="Mobile" sortable />
+          <Column
+            field="ward_name"
+            header="Ward"
+            body={(row: Customer) => cap(row.ward_name)}
+            sortable
+          />
+          <Column
+            field="zone_name"
+            header="Zone"
+            body={(row: Customer) => cap(row.zone_name)}
+            sortable
+          />
+          <Column
+            field="city_name"
+            header="City"
+            body={(row: Customer) => cap(row.city_name)}
+            sortable
+          />
+          <Column
+            field="state_name"
+            header="State"
+            body={(row: Customer) => cap(row.state_name)}
+            sortable
+          />
+
+          <Column header="QR" body={qrTemplate} style={{ width: "100px" }} />
+
+          <Column
+            field="is_active"
+            header="Status"
+            body={statusTemplate}
+            style={{ width: "120px" }}
+          />
+
+          <Column
+            header="Actions"
+            body={actionTemplate}
+            style={{ width: "140px", textAlign: "center" }}
+          />
+        </DataTable>
       </div>
-    </>
+    </div>
   );
 }

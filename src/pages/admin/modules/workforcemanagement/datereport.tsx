@@ -1,8 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+
+import "primereact/resources/themes/lara-light-blue/theme.css";
+import "primereact/resources/primereact.min.css";
+import "primeicons/primeicons.css";
+
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { fetchWasteReport, type WasteApiRow } from "@/utils/wasteApi";
-import { buildPaginationRange } from "@/utils/pagination";
 import "./datereport.css";
 
 type ApiRow = WasteApiRow & {
@@ -18,28 +26,13 @@ type ApiRow = WasteApiRow & {
 
 const today = new Date();
 
-const formatFullDate = (value: string) => {
-  if (!value) return "";
-  const parsed = new Date(value);
-  return parsed.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-};
+const getLastDayOfMonth = (y: number, m: number) =>
+  new Date(y, m, 0).getDate();
 
-const compareDates = (a: string, b: string) => {
-  return new Date(a).getTime() - new Date(b).getTime();
-};
+const formatNumber = (v?: number | null) =>
+  v !== null && v !== undefined ? v.toLocaleString() : "-";
 
-const formatNumber = (value?: number | null) =>
-  value !== undefined && value !== null ? value.toLocaleString() : "-";
-
-const formatTime = (value: string | null) => (value ? value : "-");
-
-const getLastDayOfMonth = (year: number, month: number) => {
-  return new Date(year, month, 0).getDate();
-};
+const formatTime = (v: string | null) => (v ? v : "-");
 
 export default function DateReport() {
   const navigate = useNavigate();
@@ -57,226 +50,166 @@ export default function DateReport() {
 
   const [fromDate, setFromDate] = useState(initialFromDate);
   const [toDate, setToDate] = useState(initialToDate);
+
   const [rows, setRows] = useState<ApiRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ---- Pagination ----
-  const [currentPage, setCurrentPage] = useState(1);
-  const rowsPerPage = 10;
-  const totalPages = Math.max(1, Math.ceil(rows.length / rowsPerPage));
+  /* ================= Fetch ================= */
+  const loadData = async () => {
+    if (new Date(fromDate) > new Date(toDate)) {
+      setError("From Date cannot be later than To Date");
+      return;
+    }
 
-  const paginatedRows = rows.slice(
-    (currentPage - 1) * rowsPerPage,
-    currentPage * rowsPerPage
-  );
-
-  useEffect(() => {
-    setCurrentPage((prev) => Math.min(prev, totalPages));
-  }, [totalPages]);
-
-  const paginationRange = useMemo(() => buildPaginationRange(currentPage, totalPages), [currentPage, totalPages]);
-
-  const fetchData = async (targetFromDate: string, targetToDate: string) => {
     setLoading(true);
     setError(null);
+
     try {
-      const { rows: apiRows, message } = await fetchWasteReport<ApiRow>(
-        "date_wise_data",
-        targetFromDate,
-        targetToDate
-      );
+      const { rows: apiRows, message } =
+        await fetchWasteReport<ApiRow>(
+          "date_wise_data",
+          fromDate,
+          toDate
+        );
 
       if (!apiRows.length) {
         setRows([]);
-        setError(message || "No data available for the selected range.");
-      } else {
-        const sorted = [...apiRows].sort((a, b) => compareDates(a.date, b.date));
-        setRows(sorted);
-        setCurrentPage(1); // reset page
-        setError(null);
+        setError(message || "No data available");
+        return;
       }
-    } catch (err) {
-      console.error("Date report API error:", err);
+
+      setRows(apiRows);
+    } catch (e) {
       setRows([]);
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Unable to load data. Please try again."
-      );
+      setError("Unable to load data");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchData(initialFromDate, initialToDate);
-  }, [initialFromDate, initialToDate]);
+    loadData();
+  }, []);
 
-  const handleGo = () => {
-    if (new Date(fromDate) > new Date(toDate)) {
-      setError("From Date cannot be later than To Date.");
-      return;
-    }
-    fetchData(fromDate, toDate);
-  };
+  const indexTemplate = (_: ApiRow, { rowIndex }: any) => rowIndex + 1;
 
-  const goBack = () => {
-    navigate(`/${encWorkforceManagement}/${encWorkforceManagement}`);
-  };
-
-  const rangeLabel = `${formatFullDate(fromDate)} – ${formatFullDate(toDate)}`;
-
+  /* ================= UI ================= */
   return (
-    <div className="dr-page">
-      <div className="dr-card">
-        <div className="dr-header">
-          <button type="button" className="dr-back" onClick={goBack}>
-            Back
-          </button>
-
-          <div className="dr-title-area">
-            <h1>Date-wise Waste Report</h1>
-            <p>{rangeLabel}</p>
+    <div className="p-4">
+      <div className="bg-white p-6 rounded-lg shadow-lg">
+        <div className="flex justify-between items-center mb-4">
+          <div>
+            <h1 className="text-2xl font-bold">
+              Date-wise Waste Report
+            </h1>
+            <p className="text-sm text-gray-500">
+              Consolidated waste metrics by date
+            </p>
           </div>
 
-          <div className="dr-controls">
-            <label>
-              From Date
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(event) => setFromDate(event.target.value)}
-              />
-            </label>
-
-            <label>
-              To Date
-              <input
-                type="date"
-                value={toDate}
-                onChange={(event) => setToDate(event.target.value)}
-              />
-            </label>
-
-            <button
-              type="button"
-              className="dr-go"
-              onClick={handleGo}
-              disabled={loading}
-            >
-              {loading ? "Loading..." : "Go"}
-            </button>
-          </div>
+          <Button
+            icon="pi pi-arrow-left"
+            label="Back"
+            severity="secondary"
+            onClick={() =>
+              navigate(
+                `/${encWorkforceManagement}/${encWorkforceManagement}`
+              )
+            }
+          />
         </div>
 
-        {error && <p className="dr-error">{error}</p>}
+        {/* Controls */}
+        <div className="flex gap-4 items-end mb-4">
+          <label>
+            From Date
+            <input
+              type="date"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+              className="ml-2"
+            />
+          </label>
 
-        <div className="dr-table-wrapper">
-          {loading && rows.length === 0 ? (
-            <p className="dr-loading">Loading data...</p>
-          ) : rows.length === 0 ? (
-            <p className="dr-empty">No data available for the selected range.</p>
-          ) : (
-            <table className="dr-table">
-              <thead>
-                <tr>
-                  <th>S.No</th>
-                  <th>Date</th>
-                  <th>Start Time</th>
-                  <th>End Time</th>
-                  <th>No. of Trip</th>
-                  <th>Dry Wt/kg</th>
-                  <th>Wet Wt/kg</th>
-                  <th>Mixed Wt/kg</th>
-                  <th>Net Wt/kg</th>
-                  <th>Avg/<br />Trip</th>
-                </tr>
-              </thead>
+          <label>
+            To Date
+            <input
+              type="date"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+              className="ml-2"
+            />
+          </label>
 
-              <tbody>
-                {paginatedRows.map((row, index) => (
-                  <tr key={row.date + index}>
-                    <td>{(currentPage - 1) * rowsPerPage + index + 1}</td>
-                    <td>{row.date}</td>
-                    <td>{formatTime(row.Start_Time)}</td>
-                    <td>{formatTime(row.End_Time)}</td>
-                    <td>{formatNumber(row.total_trip)}</td>
-                    <td>{formatNumber(row.dry_weight)}</td>
-                    <td>{formatNumber(row.wet_weight)}</td>
-                    <td>{formatNumber(row.mix_weight)}</td>
-                    <td>{formatNumber(row.total_net_weight)}</td>
-                    <td>{Number(row.average_weight_per_trip).toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          <Button
+            label="Go"
+            icon="pi pi-search"
+            onClick={loadData}
+            loading={loading}
+          />
         </div>
 
-        {/* ================= PAGINATION ================= */}
-        {rows.length > 0 && (
-          <div className="dr-pagination">
-            <div className="dr-pagination-bar">
-              <div
-                className="dr-pagination-progress"
-                style={{
-                  width: `${Math.min(100, (currentPage / totalPages) * 100)}%`,
-                }}
-              ></div>
-            </div>
-
-            <div className="dr-pagination-numbers">
-              <button
-                className="dr-page-btn"
-                onClick={() => setCurrentPage(1)}
-                disabled={currentPage === 1}
-              >
-                «
-              </button>
-
-              <button
-                className="dr-page-btn"
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={currentPage === 1}
-              >
-                ‹
-              </button>
-
-              {paginationRange.map((page, index) =>
-                typeof page === "number" ? (
-                  <button
-                    key={`page-${page}`}
-                    className={`dr-page-number ${currentPage === page ? "active" : ""}`}
-                    onClick={() => setCurrentPage(page)}
-                  >
-                    {page}
-                  </button>
-                ) : (
-                  <span key={`${page}-${index}`} className="dr-page-ellipsis">
-                    …
-                  </span>
-                ),
-              )}
-
-              <button
-                className="dr-page-btn"
-                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                disabled={currentPage === totalPages}
-              >
-                ›
-              </button>
-
-              <button
-                className="dr-page-btn"
-                onClick={() => setCurrentPage(totalPages)}
-                disabled={currentPage === totalPages}
-              >
-                »
-              </button>
-            </div>
-          </div>
+        {error && (
+          <p className="text-red-600 mb-3">{error}</p>
         )}
+
+        {/* ================= TABLE ================= */}
+        <DataTable
+          value={rows}
+          paginator
+          rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          loading={loading}
+          stripedRows
+          showGridlines
+          emptyMessage="No records found"
+          className="p-datatable-sm"
+        >
+          <Column
+            header="S.No"
+            body={indexTemplate}
+            style={{ width: "80px" }}
+          />
+
+          <Column field="date" header="Date" sortable />
+          <Column
+            header="Start Time"
+            body={(r) => formatTime(r.Start_Time)}
+          />
+          <Column
+            header="End Time"
+            body={(r) => formatTime(r.End_Time)}
+          />
+          <Column
+            field="total_trip"
+            header="Trips"
+            sortable
+          />
+          <Column
+            header="Dry (kg)"
+            body={(r) => formatNumber(r.dry_weight)}
+          />
+          <Column
+            header="Wet (kg)"
+            body={(r) => formatNumber(r.wet_weight)}
+          />
+          <Column
+            header="Mixed (kg)"
+            body={(r) => formatNumber(r.mix_weight)}
+          />
+          <Column
+            header="Net (kg)"
+            body={(r) => formatNumber(r.total_net_weight)}
+            sortable
+          />
+          <Column
+            header="Avg / Trip"
+            body={(r) =>
+              Number(r.average_weight_per_trip).toFixed(2)
+            }
+          />
+        </DataTable>
       </div>
     </div>
   );

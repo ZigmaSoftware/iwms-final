@@ -1,114 +1,44 @@
+/* ================= ROOT VARIABLES ================= */
 :root {
-  --dr-shell-bg: #f4f6fb;
+  --dr-bg: #f4f6fb;
   --dr-card-bg: #ffffff;
-  --dr-card-shadow: 0 10px 45px rgba(15, 35, 80, 0.15);
-  --dr-surface-muted: #f8f9ff;
   --dr-border: #e0e7ff;
-  --dr-border-strong: #c5d5f6;
-  --dr-border-input: #c2cfe6;
-  --dr-divider: #e6e6e6;
-  --dr-text: #1d2b48;
-  --dr-text-muted: #5c6d8c;
-  --dr-heading: #1d2b48;
-  --dr-subtle: #5c5c5c;
+  --dr-border-strong: #c7d2fe;
+  --dr-text: #1e293b;
+  --dr-muted: #64748b;
+  --dr-primary: #2563eb;
+  --dr-primary-light: #e0e7ff;
   --dr-success: #22c55e;
-  --dr-success-hover: #16a34a;
-  --dr-back-text: #1f4b8f;
-  --dr-error: #b42318;
-  --dr-loading: #1d3f66;
-  --dr-empty: #5c5c5c;
-  --dr-pagination-track: #d1d1d1;
-  --dr-pagination-progress: #7b7b7b;
-  --dr-pagination-text: #7d7d7d;
-  --dr-page-number-text: #555555;
-  --dr-page-number-hover: #eeeeee;
-  --dr-page-number-active-bg: #edf3ff;
-  --dr-page-number-active-text: #3567ff;
-  --dr-page-number-active-shadow: 0 0 10px rgba(80, 130, 255, 0.2);
-  --dr-table-head-text: #4a5b7c;
+  --dr-error: #dc2626;
+
+  --dr-pagination-track: #e5e7eb;
+  --dr-pagination-progress: #2563eb;
+  --dr-page-text: #475569;
+  --dr-page-hover: #f1f5f9;
+  --dr-page-active-bg: #e0e7ff;
+  --dr-page-active-text: #1d4ed8;
 }
 
-.dark {
-  --dr-shell-bg: var(--admin-surface);
-  --dr-card-bg: var(--admin-surfaceAlt);
-  --dr-card-shadow: var(--admin-cardShadow);
-  --dr-surface-muted: color-mix(in srgb, var(--admin-surfaceAlt) 90%, var(--admin-surface) 10%);
-  --dr-border: color-mix(in srgb, var(--admin-border) 80%, transparent);
-  --dr-border-strong: var(--admin-border);
-  --dr-border-input: var(--admin-border);
-  --dr-divider: color-mix(in srgb, var(--admin-border) 90%, transparent);
-  --dr-text: var(--admin-text);
-  --dr-text-muted: var(--admin-mutedText);
-  --dr-heading: var(--admin-text);
-  --dr-subtle: var(--admin-mutedText);
-  --dr-success: var(--admin-accent);
-  --dr-success-hover: var(--admin-accentHover);
-  --dr-back-text: var(--admin-accent);
-  --dr-error: #fca5a5;
-  --dr-loading: var(--admin-text);
-  --dr-empty: var(--admin-mutedText);
-  --dr-pagination-track: color-mix(in srgb, var(--admin-border) 40%, transparent);
-  --dr-pagination-progress: var(--admin-accent);
-  --dr-pagination-text: var(--admin-mutedText);
-  --dr-page-number-text: var(--admin-text);
-  --dr-page-number-hover: color-mix(in srgb, var(--admin-surfaceAlt) 60%, var(--admin-accent) 40%);
-  --dr-page-number-active-bg: var(--admin-accent);
-  --dr-page-number-active-text: var(--admin-text);
-  --dr-page-number-active-shadow: 0 0 12px rgba(13, 148, 136, 0.35);
-  --dr-table-head-text: var(--admin-text);
-}
-
+/* ================= PAGE LAYOUT ================= */
 .dr-page {
   min-height: 100vh;
-  background: var(--dr-shell-bg);
+  background: var(--dr-bg);
   padding: 32px;
   display: flex;
   justify-content: center;
-  color: var(--dr-text);
-  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .dr-card {
   width: 100%;
+  max-width: 1400px;
   background: var(--dr-card-bg);
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: var(--dr-card-shadow);
+  border-radius: 18px;
+  padding: 26px;
   border: 1px solid var(--dr-border);
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  transition: background-color 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 15px 45px rgba(0, 0, 0, 0.08);
 }
 
-.dr-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-}
-
-.dr-summary-card {
-  background: var(--dr-surface-muted);
-  border: 1px solid var(--dr-border);
-  border-radius: 14px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.dr-summary-card span {
-  font-size: 13px;
-  color: var(--dr-text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.dr-summary-card strong {
-  font-size: 22px;
-  color: var(--dr-heading);
-}
-
+/* ================= HEADER ================= */
 .dr-header {
   display: flex;
   justify-content: space-between;
@@ -119,73 +49,35 @@
 
 .dr-back {
   border: 1px solid var(--dr-border-strong);
-  background: var(--dr-card-bg);
-  color: var(--dr-back-text);
-  padding: 10px 20px;
+  background: transparent;
+  color: green;
+  padding: 8px 18px;
   border-radius: 10px;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
-}
-
-.dr-back:hover {
-  background: var(--dr-surface-muted);
-}
-
-.dr-title-area h1 {
-  margin: 0;
-  font-size: 28px;
-  color: var(--dr-heading);
-}
-
-.dr-title-area p {
-  margin: 4px 0 0;
-  color: var(--dr-text-muted);
 }
 
 .dr-controls {
   display: flex;
+  gap: 10px;
   align-items: flex-end;
-  gap: 12px;
-}
-
-.dr-controls label {
-  display: flex;
-  flex-direction: column;
-  font-size: 14px;
-  color: var(--dr-heading);
-  font-weight: 600;
-  gap: 6px;
 }
 
 .dr-controls input {
-  border-radius: 8px;
-  border: 1px solid var(--dr-border-input);
   padding: 8px 10px;
-  min-width: 150px;
-  background: var(--dr-card-bg);
-  color: var(--dr-text);
-}
-
-.dr-controls input:focus {
-  outline: 2px solid color-mix(in srgb, var(--dr-success) 60%, transparent);
+  border-radius: 8px;
+  border: 1px solid var(--dr-border-strong);
+  font-size: 14px;
 }
 
 .dr-go {
-  border: none;
   background: var(--dr-success);
   color: #fff;
-  padding: 10px 24px;
+  border: none;
   border-radius: 8px;
-  font-size: 14px;
+  padding: 9px 20px;
   font-weight: 700;
   cursor: pointer;
-  min-height: 42px;
-  transition: background-color 0.2s ease;
-}
-
-.dr-go:hover:not(:disabled) {
-  background: var(--dr-success-hover);
 }
 
 .dr-go:disabled {
@@ -193,41 +85,32 @@
   cursor: not-allowed;
 }
 
+/* ================= TABLE ================= */
 .dr-table-wrapper {
+  margin-top: 20px;
   overflow-x: auto;
 }
 
 .dr-table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 780px;
+  min-width: 900px;
   font-size: 14px;
-}
-
-.dr-table-search {
-  display: flex;
-  justify-content: flex-end;
-  margin-bottom: 12px;
-}
-
-.dr-table-search .p-inputtext-sm {
-  width: 240px;
 }
 
 .dr-table th,
 .dr-table td {
-  border-bottom: 1px solid var(--dr-divider);
   padding: 12px 10px;
+  border-bottom: 1px solid var(--dr-border);
   text-align: center;
-  color: var(--dr-text);
 }
 
 .dr-table th {
-  background: var(--dr-surface-muted);
-  color: var(--dr-table-head-text);
+  background: #f8fafc;
+  color: var(--dr-muted);
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 12px;
 }
 
 .dr-table td:first-child {
@@ -235,127 +118,33 @@
   text-align: left;
 }
 
-.dr-error,
-.dr-loading,
-.dr-empty {
-  font-size: 15px;
-  text-align: center;
-}
-
+/* ================= STATES ================= */
 .dr-error {
   color: var(--dr-error);
+  text-align: center;
+  margin-top: 16px;
 }
 
-.dr-loading {
-  color: var(--dr-loading);
-}
-
+.dr-loading,
 .dr-empty {
-  color: var(--dr-empty);
+  text-align: center;
+  color: var(--dr-muted);
+  margin-top: 16px;
 }
 
-@media (max-width: 1500px) {
-  .dr-controls {
-    width: 100%;
-    justify-content: flex-start;
-  }
-
-  .dr-table {
-    min-width: 0;
-  }
-}
-
-@media (max-width: 900px) {
-  .dr-card {
-    padding: 20px;
-  }
-
-  .dr-title-area h1 {
-    font-size: 22px;
-  }
-
-  .dr-controls {
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-
-  .dr-controls input {
-    min-width: 130px;
-  }
-
-  .dr-go {
-    width: 100%;
-  }
-}
-
-@media (max-width: 600px) {
-  .dr-card {
-    padding: 18px;
-    border-radius: 16px;
-  }
-
-  .dr-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-  }
-
-  .dr-title-area h1 {
-    font-size: 20px;
-  }
-
-  .dr-back {
-    padding: 8px 14px;
-    font-size: 13px;
-  }
-
-  .dr-controls {
-    flex-direction: column;
-    width: 100%;
-    align-items: stretch;
-  }
-
-  .dr-controls input {
-    width: 100%;
-  }
-
-  .dr-table {
-    font-size: 13px;
-    min-width: 650px;
-  }
-}
-
-@media (max-width: 480px) {
-  .dr-title-area h1 {
-    font-size: 18px;
-  }
-
-  .dr-controls input {
-    padding: 6px 8px;
-  }
-
-  .dr-go {
-    padding: 10px;
-    font-size: 13px;
-  }
-
-  .dr-table {
-    min-width: 580px;
-  }
-}
-
+/* ================= PAGINATION ================= */
 .dr-pagination {
-  margin-top: 24px;
+  margin-top: 26px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 14px;
-  width: 100%;
 }
 
+/* Progress bar */
 .dr-pagination-bar {
   width: 95%;
-  height: 10px;
+  height: 8px;
   background: var(--dr-pagination-track);
   border-radius: 20px;
   overflow: hidden;
@@ -368,10 +157,11 @@
   transition: width 0.3s ease;
 }
 
+/* Page numbers */
 .dr-pagination-numbers {
   display: flex;
+  gap: 12px;
   align-items: center;
-  gap: 14px;
   flex-wrap: wrap;
 }
 
@@ -379,7 +169,7 @@
   background: transparent;
   border: none;
   font-size: 18px;
-  color: var(--dr-pagination-text);
+  color: var(--dr-page-text);
   cursor: pointer;
   padding: 4px 6px;
 }
@@ -392,31 +182,62 @@
 .dr-page-number {
   width: 34px;
   height: 34px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   border-radius: 50%;
   background: transparent;
   border: 1px solid transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   font-size: 14px;
-  color: var(--dr-page-number-text);
+  color: var(--dr-page-text);
   transition: all 0.2s ease;
 }
 
 .dr-page-number:hover {
-  background: var(--dr-page-number-hover);
+  background: var(--dr-page-hover);
 }
 
 .dr-page-number.active {
-  background: var(--dr-page-number-active-bg);
-  color: var(--dr-page-number-active-text);
-  font-weight: 600;
-  box-shadow: var(--dr-page-number-active-shadow);
+  background: var(--dr-page-active-bg);
+  color: var(--dr-page-active-text);
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(37, 99, 235, 0.25);
 }
 
 .dr-page-ellipsis {
+  color: var(--dr-muted);
   font-size: 16px;
-  color: var(--dr-pagination-text);
   user-select: none;
+}
+
+/* ================= RESPONSIVE ================= */
+@media (max-width: 900px) {
+  .dr-card {
+    padding: 20px;
+  }
+
+  .dr-controls {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .dr-go {
+    width: 100%;
+  }
+
+  .dr-table {
+    min-width: 700px;
+  }
+}
+
+@media (max-width: 600px) {
+  .dr-table {
+    min-width: 600px;
+  }
+
+  .dr-page-number {
+    width: 30px;
+    height: 30px;
+  }
 }
