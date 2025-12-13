@@ -237,10 +237,10 @@ export default function UserCreationList() {
               body={(r) => (
                 <div className="flex gap-3">
                   <PencilIcon onClick={() => navigate(ENC_EDIT(r.unique_id))} />
-                  <TrashBinIcon
+                  {/* <TrashBinIcon
                     className="text-red-600"
                     onClick={() => handleDelete(r.unique_id)}
-                  />
+                  /> */}
                 </div>
               )}
             />
@@ -305,10 +305,10 @@ export default function UserCreationList() {
               body={(r) => (
                 <div className="flex gap-3">
                   <PencilIcon onClick={() => navigate(ENC_EDIT(r.unique_id))} />
-                  <TrashBinIcon
+                  {/* <TrashBinIcon
                     className="text-red-600"
                     onClick={() => handleDelete(r.unique_id)}
-                  />
+                  /> */}
                 </div>
               )}
             />

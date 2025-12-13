@@ -103,13 +103,13 @@ export default function UserTypePage() {
         <PencilIcon className="size-5" />
       </button>
 
-      <button
+      {/* <button
         title="Delete"
         className="text-red-600 hover:text-red-800"
         onClick={() => handleDelete(row.unique_id)}
       >
         <TrashBinIcon className="size-5" />
-      </button>
+      </button> */}
     </div>
   );
 

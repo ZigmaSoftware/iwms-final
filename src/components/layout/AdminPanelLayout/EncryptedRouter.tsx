@@ -60,10 +60,10 @@ import WasteCollectedForm from "@/pages/admin/modules/wasteManagementMasters/was
 import StaffUserTypeForm from "@/pages/admin/modules/admin/staffUserType/staffUserTypeForm";
 import StaffUserTypeList from "@/pages/admin/modules/admin/staffUserType/staffUserTypeList";
 
-import MainComplaintCategoryList from "@/pages/admin/modules/citizienGrievance/complaints/mainCategory/main-categoryList";
-import { MainComplaintCategoryForm } from "@/pages/admin/modules/citizienGrievance/complaints/mainCategory/main-categoryForm";
-import SubCategoryComplaintList from "@/pages/admin/modules/citizienGrievance/complaints/subCategory/sub-categoryList";
-import SubCategoryComplaintForm from "@/pages/admin/modules/citizienGrievance/complaints/subCategory/sub-categoryForm";
+import MainComplaintCategoryList from "@/pages/admin/modules/citizienGrievance/mainCategory/main-categoryList";
+import { MainComplaintCategoryForm } from "@/pages/admin/modules/citizienGrievance/mainCategory/main-categoryForm";
+import SubCategoryComplaintList from "@/pages/admin/modules/citizienGrievance/subCategory/sub-categoryList";
+import SubCategoryComplaintForm from "@/pages/admin/modules/citizienGrievance/subCategory/sub-categoryForm";
 import MainScreenTypeList from "@/pages/admin/modules/admin/mainScreenType/mainScreenTypeList";
 import MainScreenTypeForm from "@/pages/admin/modules/admin/mainScreenType/mainScreenTypeForm";
 import UserScreenActionList from "@/pages/admin/modules/admin/userScreenAction/userScreenActionList";

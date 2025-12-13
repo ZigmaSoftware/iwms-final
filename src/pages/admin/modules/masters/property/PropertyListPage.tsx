@@ -104,7 +104,7 @@ export default function PropertyList() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // 🔥 Toggle (PATCH)
+
   const statusTemplate = (row: Property) => {
     const updateStatus = async (value: boolean) => {
       try {
@@ -129,13 +129,13 @@ export default function PropertyList() {
       >
         <PencilIcon className="size-5" />
       </button>
-
+{/* 
       <button
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
-      </button>
+      </button> */}
     </div>
   );
 

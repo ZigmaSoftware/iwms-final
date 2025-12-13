@@ -180,13 +180,13 @@ export default function CustomerCreationList() {
         <PencilIcon className="size-5" />
       </button>
 
-      <button
+      {/* <button
         title="Delete"
         onClick={() => handleDelete(c.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
-      </button>
+      </button> */}
     </div>
   );
 
