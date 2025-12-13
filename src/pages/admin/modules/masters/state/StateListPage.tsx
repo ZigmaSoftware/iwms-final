@@ -17,7 +17,6 @@ import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";
 import { stateApi } from "@/helpers/admin";
 
-
 type StateRecord = {
   unique_id: string;
   name: string;
@@ -33,39 +32,23 @@ type ErrorWithResponse = {
 };
 
 const extractErrorMessage = (error: unknown) => {
-  if (!error) {
-    return "Something went wrong while processing the request.";
-  }
+  if (!error) return "Something went wrong while processing the request.";
+  if (typeof error === "string") return error;
 
-  if (typeof error === "string") {
-    return error;
-  }
+  const data = (error as ErrorWithResponse)?.response?.data;
 
-  const withResponse = error as ErrorWithResponse;
-  const data = withResponse.response?.data;
-
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.join(", ");
-  }
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return data.join(", ");
 
   if (data && typeof data === "object") {
     return Object.entries(data as Record<string, unknown>)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: ${value.join(", ")}`;
-        }
-        return `${key}: ${String(value)}`;
-      })
+      .map(([k, v]) =>
+        Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
+      )
       .join("\n");
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error && error.message) return error.message;
 
   return "Something went wrong while processing the request.";
 };
@@ -94,7 +77,6 @@ export default function StateList() {
       const data = (await stateApi.list()) as StateRecord[];
       setStates(data);
     } catch (error) {
-      console.error("Failed loading states:", error);
       Swal.fire({
         icon: "error",
         title: "Unable to load states",
@@ -116,13 +98,10 @@ export default function StateList() {
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
       confirmButtonText: "Yes, delete it!",
     });
 
-    if (!confirm.isConfirmed) {
-      return;
-    }
+    if (!confirm.isConfirmed) return;
 
     try {
       await stateApi.remove(unique_id);
@@ -134,7 +113,6 @@ export default function StateList() {
       });
       void fetchStates();
     } catch (error) {
-      console.error("Failed deleting state:", error);
       Swal.fire({
         icon: "error",
         title: "Delete failed",
@@ -166,18 +144,15 @@ export default function StateList() {
     </div>
   );
 
-  // Capitalize helper
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // ⚡ Toggle handler (PATCH only)
   const statusTemplate = (row: StateRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
         await stateApi.update(row.unique_id, { is_active: value });
         void fetchStates();
       } catch (error) {
-        console.error("Status update failed:", error);
         Swal.fire({
           icon: "error",
           title: "Failed to update status",
@@ -186,15 +161,12 @@ export default function StateList() {
       }
     };
 
-    return (
-      <Switch checked={row.is_active} onCheckedChange={updateStatus} />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   const actionTemplate = (row: StateRecord) => (
     <div className="flex gap-3 justify-center">
       <button
-        title="Edit"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
@@ -202,7 +174,6 @@ export default function StateList() {
       </button>
 
       <button
-        title="Delete"
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
@@ -232,8 +203,10 @@ export default function StateList() {
 
         <DataTable
           value={states}
+          dataKey="unique_id"
           paginator
           rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           loading={loading}
           filters={filters}
           header={renderHeader()}
@@ -244,44 +217,26 @@ export default function StateList() {
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "70px" }} />
-
           <Column
             field="country_name"
             header="Country"
-            body={(row: StateRecord) => cap(row.country_name)}
+            body={(r) => cap(r.country_name)}
             sortable
-            style={{ minWidth: "150px" }}
           />
-
           <Column
             field="name"
             header="State"
-            body={(row: StateRecord) => cap(row.name)}
+            body={(r) => cap(r.name)}
             sortable
-            style={{ minWidth: "150px" }}
           />
-
           <Column
             field="label"
             header="Label"
-            body={(row: StateRecord) => row.label.toUpperCase()}
+            body={(r) => r.label.toUpperCase()}
             sortable
-            style={{ minWidth: "150px" }}
           />
-
-          {/* 🔥 Toggle */}
-          <Column
-            header="Status"
-            body={statusTemplate}
-            style={{ width: "150px" }}
-          />
-
-          {/* Actions */}
-          <Column
-            header="Actions"
-            body={actionTemplate}
-            style={{ width: "150px", textAlign: "center" }}
-          />
+          <Column header="Status" body={statusTemplate} />
+          <Column header="Actions" body={actionTemplate} />
         </DataTable>
       </div>
     </div>

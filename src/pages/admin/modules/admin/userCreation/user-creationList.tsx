@@ -31,7 +31,7 @@ export default function UserCreationList() {
   const [customerMap, setCustomerMap] = useState<Record<string, any>>({});
   const [globalFilter, setGlobalFilter] = useState("");
 
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<any>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
@@ -45,12 +45,15 @@ export default function UserCreationList() {
       setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
 
       const map: Record<string, any> = {};
-      const customers = Array.isArray(customersRes.data) ? customersRes.data : [];
-      customers.forEach((customer: any) => {
-        const key = customer?.unique_id ?? customer?.id;
-        if (!key) return;
-        map[String(key)] = customer;
+      const customers = Array.isArray(customersRes.data)
+        ? customersRes.data
+        : [];
+
+      customers.forEach((c: any) => {
+        const key = c?.unique_id ?? c?.id;
+        if (key) map[String(key)] = c;
       });
+
       setCustomerMap(map);
     } catch (err) {
       console.error("Error loading users:", err);
@@ -61,10 +64,11 @@ export default function UserCreationList() {
     fetchUsers();
   }, []);
 
-  /** ------------ FILTERED LISTS ---------------- */
+  /* ---------------- FILTER LISTS ---------------- */
   const staffList = users.filter(
-    (u) => u.user_type_name?.toString().toLowerCase() === "staff"
+    (u) => u.user_type_name?.toLowerCase() === "staff"
   );
+
   const composeCustomerInfo = (row: any) => {
     if (row?.customer_name || row?.customer_unique_id) {
       return {
@@ -81,47 +85,24 @@ export default function UserCreationList() {
       };
     }
 
-    const fallbackKey = row?.customer_unique_id ?? row?.customer_id ?? row?.customer;
-    if (!fallbackKey) {
-      return null;
-    }
-
-    const fallback = customerMap[String(fallbackKey)];
-    if (!fallback) {
-      return null;
-    }
-
-    return {
-      unique_id: fallback.unique_id,
-      customer_name: fallback.customer_name,
-      contact_no: fallback.contact_no,
-      building_no: fallback.building_no,
-      street: fallback.street,
-      area: fallback.area,
-      ward_name: fallback.ward_name,
-      zone_name: fallback.zone_name,
-      city_name: fallback.city_name,
-      state_name: fallback.state_name,
-    };
+    const key = row?.customer_unique_id ?? row?.customer_id ?? row?.customer;
+    return key ? customerMap[String(key)] ?? null : null;
   };
 
   const customerList = users
-    .filter((u) => u.user_type_name?.toString().toLowerCase() === "customer")
-    .map((u) => ({
-      ...u,
-      customer: composeCustomerInfo(u),
-    }));
+    .filter((u) => u.user_type_name?.toLowerCase() === "customer")
+    .map((u) => ({ ...u, customer: composeCustomerInfo(u) }));
 
-  /** ------------ QR HELPERS ------------------ */
-  const buildCustomerQrPayload = (customer: any) => {
-    if (!customer) return null;
-    return {
-      id: customer.unique_id,
-      name: customer.customer_name,
-      mobile: customer.contact_no,
-      address: `${customer.building_no}, ${customer.street}, ${customer.area}`,
-    };
-  };
+  /* ---------------- QR ---------------- */
+  const buildCustomerQrPayload = (c: any) =>
+    c
+      ? {
+          id: c.unique_id,
+          name: c.customer_name,
+          mobile: c.contact_no,
+          address: `${c.building_no}, ${c.street}, ${c.area}`,
+        }
+      : null;
 
   const openQRPopup = (data: any) => {
     Swal.fire({
@@ -138,7 +119,7 @@ export default function UserCreationList() {
     });
   };
 
-  /** ---------- Delete User ---------- */
+  /* ---------------- ACTIONS ---------------- */
   const handleDelete = async (unique_id: string) => {
     const r = await Swal.fire({
       title: "Are you sure?",
@@ -146,8 +127,6 @@ export default function UserCreationList() {
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Delete",
     });
 
     if (!r.isConfirmed) return;
@@ -157,26 +136,24 @@ export default function UserCreationList() {
     fetchUsers();
   };
 
-  /** ---------- Toggle Status ---------- */
   const handleStatusToggle = async (unique_id: string, value: boolean) => {
     try {
-      await desktopApi.patch(`users-creation/${unique_id}/`, { is_active: value });
+      await desktopApi.patch(`users-creation/${unique_id}/`, {
+        is_active: value,
+      });
       fetchUsers();
-    } catch (err) {
-      console.error("Failed to update status", err);
-      Swal.fire("Update failed", "Unable to change status right now", "error");
+    } catch {
+      Swal.fire("Update failed", "Unable to change status", "error");
     }
   };
 
-  /** ---------- UTILS ---------- */
+  /* ---------------- UTILS ---------------- */
   const cap = (t?: string) =>
     t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : "";
 
   const onSearch = (e: any) => {
     const val = e.target.value;
-    const _f: any = { ...filters };
-    _f["global"].value = val;
-    setFilters(_f);
+    setFilters({ global: { value: val, matchMode: FilterMatchMode.CONTAINS } });
     setGlobalFilter(val);
   };
 
@@ -210,7 +187,6 @@ export default function UserCreationList() {
         />
       </div>
 
-      {/* ------- TABS ------- */}
       <Tabs defaultValue="staff">
         <TabsList className="flex gap-3 pb-2">
           <TabsTrigger value="staff" className="px-4 py-2 border rounded">
@@ -221,12 +197,14 @@ export default function UserCreationList() {
           </TabsTrigger>
         </TabsList>
 
-        {/* ================= STAFF TABLE ================= */}
+        {/* ================= STAFF ================= */}
         <TabsContent value="staff">
           <DataTable
             value={staffList}
+            dataKey="unique_id"
             paginator
             rows={10}
+            rowsPerPageOptions={[5, 10, 25, 50]}
             filters={filters}
             globalFilterFields={["staff_name", "staffusertype_name", "zone_name"]}
             header={searchBar}
@@ -234,62 +212,49 @@ export default function UserCreationList() {
             showGridlines
             className="p-datatable-sm mt-4"
           >
-            <Column
-              header="S.No"
-              body={(_, opt) => opt.rowIndex + 1}
-              style={{ width: "80px" }}
-            />
-            <Column
-              header="User Type"
-              field="user_type_name"
-              body={(r) => cap(r.user_type_name)}
-            />
+            <Column header="S.No" body={(_, o) => o.rowIndex + 1} />
+            <Column header="User Type" body={(r) => cap(r.user_type_name)} />
             <Column
               header="Staff User Type"
-              field="staffusertype_name"
               body={(r) => cap(r.staffusertype_name)}
             />
-            <Column
-              header="Staff Name"
-              field="staff_name"
-              body={(r) => cap(r.staff_name)}
-            />
+            <Column header="Staff Name" body={(r) => cap(r.staff_name)} />
             <Column header="Zone" field="zone_name" />
             <Column header="Ward" field="ward_name" />
             <Column
               header="Status"
-              body={(row) => (
+              body={(r) => (
                 <Switch
-                  checked={row.is_active}
-                  onCheckedChange={(val) => handleStatusToggle(row.unique_id, val)}
+                  checked={r.is_active}
+                  onCheckedChange={(v) =>
+                    handleStatusToggle(r.unique_id, v)
+                  }
                 />
               )}
             />
             <Column
               header="Actions"
-              style={{ width: "140px" }}
-              body={(row) => (
+              body={(r) => (
                 <div className="flex gap-3">
-                  <PencilIcon
-                    className="cursor-pointer"
-                    onClick={() => navigate(ENC_EDIT(row.unique_id))}
+                  <PencilIcon onClick={() => navigate(ENC_EDIT(r.unique_id))} />
+                  <TrashBinIcon
+                    className="text-red-600"
+                    onClick={() => handleDelete(r.unique_id)}
                   />
-              <TrashBinIcon
-                className="cursor-pointer text-red-600"
-                onClick={() => handleDelete(row.unique_id)}
-              />
-            </div>
-          )}
+                </div>
+              )}
             />
           </DataTable>
         </TabsContent>
 
-        {/* ================= CUSTOMER TABLE ================= */}
+        {/* ================= CUSTOMER ================= */}
         <TabsContent value="customer">
           <DataTable
             value={customerList}
+            dataKey="unique_id"
             paginator
             rows={10}
+            rowsPerPageOptions={[5, 10, 25, 50]}
             filters={filters}
             globalFilterFields={[
               "customer.customer_name",
@@ -300,60 +265,49 @@ export default function UserCreationList() {
             showGridlines
             className="p-datatable-sm mt-4"
           >
-            <Column
-              header="S.No"
-              body={(_, opt) => opt.rowIndex + 1}
-              style={{ width: "80px" }}
-            />
+            <Column header="S.No" body={(_, o) => o.rowIndex + 1} />
             <Column header="User Type" body={(r) => cap(r.user_type_name)} />
-            <Column
-              header="Customer Name"
-              body={(r) => r.customer?.customer_name}
-            />
+            <Column header="Customer Name" body={(r) => r.customer?.customer_name} />
             <Column header="Mobile" body={(r) => r.customer?.contact_no} />
             <Column header="Ward" body={(r) => r.customer?.ward_name} />
             <Column header="Zone" body={(r) => r.customer?.zone_name} />
             <Column header="City" body={(r) => r.customer?.city_name} />
             <Column header="State" body={(r) => r.customer?.state_name} />
-
             <Column
               header="QR"
-              body={(row) => {
-                const qrPayload = buildCustomerQrPayload(row.customer);
-                if (!qrPayload) return "—";
-                return (
+              body={(r) => {
+                const payload = buildCustomerQrPayload(r.customer);
+                return payload ? (
                   <button
-                    className="p-1 border rounded hover:bg-gray-50"
-                    onClick={() => openQRPopup(qrPayload)}
+                    className="p-1 border rounded"
+                    onClick={() => openQRPopup(payload)}
                   >
-                    <QRCode value={JSON.stringify(qrPayload)} size={48} />
+                    <QRCode value={JSON.stringify(payload)} size={48} />
                   </button>
+                ) : (
+                  "—"
                 );
               }}
             />
-
             <Column
               header="Status"
-              body={(row) => (
+              body={(r) => (
                 <Switch
-                  checked={row.is_active}
-                  onCheckedChange={(val) => handleStatusToggle(row.unique_id, val)}
+                  checked={r.is_active}
+                  onCheckedChange={(v) =>
+                    handleStatusToggle(r.unique_id, v)
+                  }
                 />
               )}
             />
-
             <Column
               header="Actions"
-              style={{ width: "140px" }}
-              body={(row) => (
+              body={(r) => (
                 <div className="flex gap-3">
-                  <PencilIcon
-                    className="cursor-pointer"
-                    onClick={() => navigate(ENC_EDIT(row.unique_id))}
-                  />
+                  <PencilIcon onClick={() => navigate(ENC_EDIT(r.unique_id))} />
                   <TrashBinIcon
-                    className="cursor-pointer text-red-600"
-                    onClick={() => handleDelete(row.unique_id)}
+                    className="text-red-600"
+                    onClick={() => handleDelete(r.unique_id)}
                   />
                 </div>
               )}
