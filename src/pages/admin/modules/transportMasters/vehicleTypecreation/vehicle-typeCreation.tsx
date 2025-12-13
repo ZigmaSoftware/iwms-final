@@ -126,7 +126,7 @@ export default function VehicleTypeCreation() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  /* -------------------- 🔥 Status Toggle (PATCH API) -------------------- */
+  /* --------------------  Status Toggle (PATCH API) -------------------- */
   const statusTemplate = (row: VehicleType) => {
     const updateStatus = async (value: boolean) => {
       try {
@@ -157,13 +157,13 @@ export default function VehicleTypeCreation() {
         <PencilIcon className="size-5" />
       </button>
 
-      <button
+      {/* <button
         onClick={() => handleDelete(resolveId(row))}
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
         title="Delete"
       >
         <TrashBinIcon className="size-5" />
-      </button>
+      </button> */}
     </div>
   );
 

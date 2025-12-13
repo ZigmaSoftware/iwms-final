@@ -124,13 +124,13 @@ export default function FuelList() {
         <PencilIcon className="size-5" />
       </button>
 
-      <button
+      {/* <button
         title="Delete"
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
         onClick={() => handleDelete(resolveId(row))}
       >
         <TrashBinIcon className="size-5" />
-      </button>
+      </button> */}
     </div>
   );
 

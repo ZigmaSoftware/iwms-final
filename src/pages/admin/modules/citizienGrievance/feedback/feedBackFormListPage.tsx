@@ -159,13 +159,13 @@ export default function FeedBackFormList() {
         <PencilIcon className="size-5" />
       </button>
 
-      <button
+      {/* <button
         onClick={() => handleDelete(row.unique_id)}
         className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
         title="Delete"
       >
         <TrashBinIcon className="size-5" />
-      </button>
+      </button> */}
     </div>
   );
 
