@@ -14,11 +14,8 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch"; //  Toggle import
-
-
+import { Switch } from "@/components/ui/switch";
 import { cityApi } from "@/helpers/admin";
-
 
 type CityRecord = {
   unique_id: string;
@@ -36,43 +33,26 @@ type ErrorWithResponse = {
 };
 
 const extractErrorMessage = (error: unknown) => {
-  if (!error) {
-    return "Something went wrong while processing the request.";
-  }
+  if (!error) return "Something went wrong while processing the request.";
+  if (typeof error === "string") return error;
 
-  if (typeof error === "string") {
-    return error;
-  }
+  const data = (error as ErrorWithResponse)?.response?.data;
 
-  const withResponse = error as ErrorWithResponse;
-  const data = withResponse.response?.data;
-
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.join(", ");
-  }
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return data.join(", ");
 
   if (data && typeof data === "object") {
     return Object.entries(data as Record<string, unknown>)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: ${value.join(", ")}`;
-        }
-        return `${key}: ${String(value)}`;
-      })
+      .map(([k, v]) =>
+        Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
+      )
       .join("\n");
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error && error.message) return error.message;
 
   return "Something went wrong while processing the request.";
 };
-
 
 export default function CityList() {
   const [cities, setCities] = useState<CityRecord[]>([]);
@@ -80,7 +60,7 @@ export default function CityList() {
 
   const [globalFilterValue, setGlobalFilterValue] = useState("");
   const [filters, setFilters] = useState<any>({
-    global: { value: null, matchMode: FilterMatchMode.CONTAINS }
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
   const navigate = useNavigate();
@@ -92,15 +72,12 @@ export default function CityList() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encCities}/${id}/edit`;
 
-  //Fetch cities
-
   const fetchCities = useCallback(async () => {
     setLoading(true);
     try {
       const data = (await cityApi.list()) as CityRecord[];
       setCities(data);
     } catch (error) {
-      console.error("Failed loading cities:", error);
       Swal.fire({
         icon: "error",
         title: "Unable to load cities",
@@ -113,9 +90,8 @@ export default function CityList() {
 
   useEffect(() => {
     fetchCities();
-  }, []);
+  }, [fetchCities]);
 
-  // Delete
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
@@ -123,35 +99,29 @@ export default function CityList() {
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!"
+      confirmButtonText: "Yes, delete it!",
     });
 
     if (!confirm.isConfirmed) return;
 
-
     await cityApi.remove(id);
-
 
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
       timer: 1500,
-      showConfirmButton: false
+      showConfirmButton: false,
     });
 
     fetchCities();
   };
 
-  // Search
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-
     setFilters({
       ...filters,
-      global: { ...filters.global, value }
+      global: { ...filters.global, value },
     });
-
     setGlobalFilterValue(value);
   };
 
@@ -169,18 +139,13 @@ export default function CityList() {
     </div>
   );
 
-  const header = renderHeader();
-
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
-
 
   const statusTemplate = (city: CityRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
-
         await cityApi.update(city.unique_id, { is_active: value });
-
         fetchCities();
       } catch (error) {
         console.error("Status update failed:", error);
@@ -190,11 +155,9 @@ export default function CityList() {
     return <Switch checked={city.is_active} onCheckedChange={updateStatus} />;
   };
 
-  // Actions
   const actionTemplate = (city: CityRecord) => (
     <div className="flex gap-3">
       <button
-        title="Edit"
         onClick={() => navigate(ENC_EDIT_PATH(city.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
@@ -202,7 +165,6 @@ export default function CityList() {
       </button>
 
       <button
-        title="Delete"
         onClick={() => handleDelete(city.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
@@ -217,7 +179,6 @@ export default function CityList() {
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-        {/* Header Section */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">Cities</h1>
@@ -232,14 +193,15 @@ export default function CityList() {
           />
         </div>
 
-        {/* Table */}
         <DataTable
           value={cities}
+          dataKey="unique_id"
           paginator
           rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           loading={loading}
           filters={filters}
-          header={header}
+          header={renderHeader()}
           stripedRows
           showGridlines
           emptyMessage="No cities found."
@@ -247,51 +209,37 @@ export default function CityList() {
             "name",
             "country_name",
             "state_name",
-            "district_name"
+            "district_name",
           ]}
           className="p-datatable-sm"
         >
           <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
-
           <Column
             field="country_name"
             header="Country"
-            body={(row: CityRecord) => cap(row.country_name)}
+            body={(r) => cap(r.country_name)}
             sortable
           />
-
           <Column
             field="state_name"
             header="State"
-            body={(row: CityRecord) => cap(row.state_name)}
+            body={(r) => cap(r.state_name)}
             sortable
           />
-
           <Column
             field="district_name"
             header="District"
-            body={(row: CityRecord) => cap(row.district_name)}
+            body={(r) => cap(r.district_name)}
             sortable
           />
-
           <Column
             field="name"
             header="City"
-            body={(row: CityRecord) => cap(row.name)}
+            body={(r) => cap(r.name)}
             sortable
           />
-
-          <Column
-            header="Status"
-            body={statusTemplate}
-            style={{ width: "140px" }}
-          />
-
-          <Column
-            header="Actions"
-            body={actionTemplate}
-            style={{ width: "150px", textAlign: "center" }}
-          />
+          <Column header="Status" body={statusTemplate} />
+          <Column header="Actions" body={actionTemplate} />
         </DataTable>
       </div>
     </div>

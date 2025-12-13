@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-
 import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
@@ -12,10 +11,7 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
 import { Switch } from "@/components/ui/switch";
-
 import { districtApi } from "@/helpers/admin";
-
-
 
 type DistrictRecord = {
   unique_id: string;
@@ -32,43 +28,26 @@ type ErrorWithResponse = {
 };
 
 const extractErrorMessage = (error: unknown) => {
-  if (!error) {
-    return "Something went wrong while processing the request.";
-  }
+  if (!error) return "Something went wrong while processing the request.";
+  if (typeof error === "string") return error;
 
-  if (typeof error === "string") {
-    return error;
-  }
+  const data = (error as ErrorWithResponse)?.response?.data;
 
-  const withResponse = error as ErrorWithResponse;
-  const data = withResponse.response?.data;
-
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.join(", ");
-  }
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return data.join(", ");
 
   if (data && typeof data === "object") {
     return Object.entries(data as Record<string, unknown>)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: ${value.join(", ")}`;
-        }
-        return `${key}: ${String(value)}`;
-      })
+      .map(([k, v]) =>
+        Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
+      )
       .join("\n");
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error && error.message) return error.message;
 
   return "Something went wrong while processing the request.";
 };
-
 
 export default function DistrictListPage() {
   const [districts, setDistricts] = useState<DistrictRecord[]>([]);
@@ -92,8 +71,8 @@ export default function DistrictListPage() {
   const fetchDistricts = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await districtApi.list(); // Keep original ref
-      const data = res as any[];            // Convert to array
+      const res = await districtApi.list();
+      const data = res as any[];
 
       const mapped: DistrictRecord[] = data.map((d: any) => ({
         unique_id: d.unique_id,
@@ -104,10 +83,8 @@ export default function DistrictListPage() {
       }));
 
       mapped.sort((a, b) => a.name.localeCompare(b.name));
-
       setDistricts(mapped);
     } catch (error) {
-      console.error("Failed loading districts:", error);
       Swal.fire({
         icon: "error",
         title: "Unable to load districts",
@@ -118,11 +95,9 @@ export default function DistrictListPage() {
     }
   }, []);
 
-
-
   useEffect(() => {
     fetchDistricts();
-  }, []);
+  }, [fetchDistricts]);
 
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
@@ -131,7 +106,6 @@ export default function DistrictListPage() {
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
       confirmButtonText: "Yes, delete it!",
     });
 
@@ -175,7 +149,6 @@ export default function DistrictListPage() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // Toggle Component Body
   const statusTemplate = (row: DistrictRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
@@ -186,15 +159,12 @@ export default function DistrictListPage() {
       }
     };
 
-    return (
-      <Switch checked={row.is_active} onCheckedChange={updateStatus} />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   const actionTemplate = (row: DistrictRecord) => (
     <div className="flex gap-3 justify-center">
       <button
-        title="Edit"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
@@ -202,7 +172,6 @@ export default function DistrictListPage() {
       </button>
 
       <button
-        title="Delete"
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
@@ -236,6 +205,7 @@ export default function DistrictListPage() {
           loading={loading}
           paginator
           rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           filters={filters}
           header={renderHeader()}
           stripedRows
@@ -263,19 +233,8 @@ export default function DistrictListPage() {
             body={(row) => cap(row.name)}
             sortable
           />
-
-          {/* 🔥 Toggle Column */}
-          <Column
-            header="Status"
-            body={statusTemplate}
-            style={{ width: "150px" }}
-          />
-
-          <Column
-            header="Actions"
-            body={actionTemplate}
-            style={{ width: "150px", textAlign: "center" }}
-          />
+          <Column header="Status" body={statusTemplate} />
+          <Column header="Actions" body={actionTemplate} />
         </DataTable>
       </div>
     </div>

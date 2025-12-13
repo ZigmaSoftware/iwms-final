@@ -14,8 +14,7 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import { Switch } from "@/components/ui/switch";   // 
-
+import { Switch } from "@/components/ui/switch";
 
 import { propertiesApi } from "@/helpers/admin";
 
@@ -63,7 +62,6 @@ export default function PropertyList() {
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
       confirmButtonText: "Yes, delete it!",
     });
 
@@ -84,7 +82,7 @@ export default function PropertyList() {
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const _filters = { ...filters };
-    _filters["global"].value = value;
+    _filters.global.value = value;
     setFilters(_filters);
     setGlobalFilterValue(value);
   };
@@ -103,8 +101,6 @@ export default function PropertyList() {
     </div>
   );
 
-  const header = renderHeader();
-
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
@@ -112,30 +108,22 @@ export default function PropertyList() {
   const statusTemplate = (row: Property) => {
     const updateStatus = async (value: boolean) => {
       try {
-        
-       await propertiesApi.update(row.unique_id, {
-  property_name: row.property_name,   // required
-  is_active: value,                      // toggle
-});
-
+        await propertiesApi.update(row.unique_id, {
+          property_name: row.property_name,
+          is_active: value,
+        });
         fetchProperties();
       } catch (err) {
         console.error("Status update failed:", err);
       }
     };
 
-    return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
   const actionTemplate = (row: Property) => (
     <div className="flex gap-3 justify-center">
       <button
-        title="Edit"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
@@ -143,7 +131,6 @@ export default function PropertyList() {
       </button>
 
       <button
-        title="Delete"
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
@@ -158,11 +145,14 @@ export default function PropertyList() {
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Properties</h1>
-            <p className="text-gray-500 text-sm">Manage property records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              Properties
+            </h1>
+            <p className="text-gray-500 text-sm">
+              Manage property records
+            </p>
           </div>
 
           <Button
@@ -178,9 +168,10 @@ export default function PropertyList() {
           dataKey="unique_id"
           paginator
           rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           loading={loading}
           filters={filters}
-          header={header}
+          header={renderHeader()}
           stripedRows
           showGridlines
           emptyMessage="No properties found."
@@ -196,7 +187,6 @@ export default function PropertyList() {
             body={(row: Property) => cap(row.property_name)}
           />
 
-          {/* 🔥 Toggle */}
           <Column
             header="Status"
             body={statusTemplate}

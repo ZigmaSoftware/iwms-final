@@ -14,10 +14,8 @@ import "primeicons/primeicons.css";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { encryptSegment } from "@/utils/routeCrypto";
-import { Switch } from "@/components/ui/switch";   
+import { Switch } from "@/components/ui/switch";
 import { wardApi } from "@/helpers/admin";
-
-
 
 type WardRecord = {
   unique_id: string;
@@ -37,43 +35,26 @@ type ErrorWithResponse = {
 };
 
 const extractErrorMessage = (error: unknown) => {
-  if (!error) {
-    return "Something went wrong while processing the request.";
-  }
+  if (!error) return "Something went wrong while processing the request.";
+  if (typeof error === "string") return error;
 
-  if (typeof error === "string") {
-    return error;
-  }
+  const data = (error as ErrorWithResponse)?.response?.data;
 
-  const withResponse = error as ErrorWithResponse;
-  const data = withResponse.response?.data;
-
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.join(", ");
-  }
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return data.join(", ");
 
   if (data && typeof data === "object") {
     return Object.entries(data as Record<string, unknown>)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: ${value.join(", ")}`;
-        }
-        return `${key}: ${String(value)}`;
-      })
+      .map(([k, v]) =>
+        Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
+      )
       .join("\n");
   }
 
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
+  if (error instanceof Error && error.message) return error.message;
 
   return "Something went wrong while processing the request.";
 };
-
 
 export default function WardList() {
   const [wards, setWards] = useState<WardRecord[]>([]);
@@ -97,15 +78,12 @@ export default function WardList() {
   // ===========================
   //   Load Data
   // ===========================
-
-
   const fetchWards = useCallback(async () => {
     setLoading(true);
     try {
       const data = (await wardApi.list()) as WardRecord[];
       setWards(data);
     } catch (error) {
-      console.error("Failed loading wards:", error);
       Swal.fire({
         icon: "error",
         title: "Unable to load wards",
@@ -118,8 +96,11 @@ export default function WardList() {
 
   useEffect(() => {
     fetchWards();
-  }, []);
+  }, [fetchWards]);
 
+  // ===========================
+  //   Delete
+  // ===========================
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
@@ -127,13 +108,13 @@ export default function WardList() {
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
       confirmButtonText: "Delete",
     });
 
     if (!confirm.isConfirmed) return;
 
     await wardApi.remove(id);
+
     Swal.fire({
       icon: "success",
       title: "Deleted successfully!",
@@ -144,36 +125,37 @@ export default function WardList() {
     fetchWards();
   };
 
+  // ===========================
+  //   Search
+  // ===========================
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const _filters = { ...filters };
-    _filters["global"].value = value;
+    _filters.global.value = value;
     setFilters(_filters);
     setGlobalFilterValue(value);
   };
 
-  const renderHeader = () => {
-    return (
-      <div className="flex justify-end items-center">
-        <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
-          <i className="pi pi-search text-gray-500" />
-          <InputText
-            value={globalFilterValue}
-            onChange={onGlobalFilterChange}
-            placeholder="Search Wards..."
-            className="p-inputtext-sm !border-0 !shadow-none !outline-none"
-          />
-        </div>
+  const renderHeader = () => (
+    <div className="flex justify-end items-center">
+      <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
+        <i className="pi pi-search text-gray-500" />
+        <InputText
+          value={globalFilterValue}
+          onChange={onGlobalFilterChange}
+          placeholder="Search Wards..."
+          className="p-inputtext-sm !border-0 !shadow-none !outline-none"
+        />
       </div>
-    );
-  };
-
-  const header = renderHeader();
+    </div>
+  );
 
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  // Toggle Status (PATCH)
+  // ===========================
+  //   Toggle Status
+  // ===========================
   const statusTemplate = (row: WardRecord) => {
     const updateStatus = async (value: boolean) => {
       try {
@@ -184,18 +166,15 @@ export default function WardList() {
       }
     };
 
-    return (
-      <Switch
-        checked={row.is_active}
-        onCheckedChange={updateStatus}
-      />
-    );
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
+  // ===========================
+  //   Actions
+  // ===========================
   const actionTemplate = (row: WardRecord) => (
     <div className="flex gap-3 justify-center">
       <button
-        title="Edit"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
@@ -203,7 +182,6 @@ export default function WardList() {
       </button>
 
       <button
-        title="Delete"
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
@@ -215,11 +193,12 @@ export default function WardList() {
   const indexTemplate = (_: WardRecord, { rowIndex }: { rowIndex: number }) =>
     rowIndex + 1;
 
+  // ===========================
+  //   UI
+  // ===========================
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
-
-        {/* Page Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">Wards</h1>
@@ -234,14 +213,15 @@ export default function WardList() {
           />
         </div>
 
-        {/* Table */}
         <DataTable
           value={wards}
+          dataKey="unique_id"
           paginator
           rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           loading={loading}
           filters={filters}
-          header={header}
+          header={renderHeader()}
           stripedRows
           showGridlines
           emptyMessage="No wards found."
@@ -261,24 +241,23 @@ export default function WardList() {
             field="zone_name"
             header="Zone"
             sortable
-            body={(row: WardRecord) => cap(row.zone_name)}
+            body={(row) => cap(row.zone_name)}
           />
 
           <Column
             field="city_name"
             header="City"
             sortable
-            body={(row: WardRecord) => cap(row.city_name)}
+            body={(row) => cap(row.city_name)}
           />
 
           <Column
             field="name"
             header="Ward"
             sortable
-            body={(row: WardRecord) => cap(row.name)}
+            body={(row) => cap(row.name)}
           />
 
-          {/* 🔥 ***TOGGLE REPLACED TAG*** */}
           <Column
             header="Status"
             body={statusTemplate}

@@ -15,7 +15,6 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
-
 import { subPropertiesApi } from "@/helpers/admin";
 
 type SubProperty = {
@@ -37,15 +36,15 @@ export default function SubPropertyList() {
   });
 
   const navigate = useNavigate();
-
   const { encMasters, encSubProperties } = getEncryptedRoute();
 
   const ENC_NEW_PATH = `/${encMasters}/${encSubProperties}/new`;
-  const ENC_EDIT_PATH = (unique_id: string) =>
-    `/${encMasters}/${encSubProperties}/${unique_id}/edit`;
+  const ENC_EDIT_PATH = (id: string) =>
+    `/${encMasters}/${encSubProperties}/${id}/edit`;
 
-
+  /* ================= Fetch ================= */
   const fetchSubProperties = async () => {
+    setLoading(true);
     try {
       const res = await subPropertiesApi.list();
       setSubProperties(res);
@@ -58,6 +57,7 @@ export default function SubPropertyList() {
     fetchSubProperties();
   }, []);
 
+  /* ================= Delete ================= */
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
       title: "Are you sure?",
@@ -71,7 +71,7 @@ export default function SubPropertyList() {
 
     if (!confirm.isConfirmed) return;
 
-    await subPropertiesApi.remove(id as string);
+    await subPropertiesApi.remove(id);
 
     Swal.fire({
       icon: "success",
@@ -83,11 +83,13 @@ export default function SubPropertyList() {
     fetchSubProperties();
   };
 
+  /* ================= Search ================= */
   const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const _filters = { ...filters };
-    _filters["global"].value = value;
-    setFilters(_filters);
+    setFilters({
+      ...filters,
+      global: { ...filters.global, value },
+    });
     setGlobalFilterValue(value);
   };
 
@@ -105,30 +107,27 @@ export default function SubPropertyList() {
     </div>
   );
 
-  const header = renderHeader();
+  const cap = (s?: string) =>
+    s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : "";
 
-  const cap = (str?: string) =>
-    str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
-
-  // 🔥 Toggle (PATCH)
+  /* ================= Toggle ================= */
   const statusTemplate = (row: SubProperty) => {
     const updateStatus = async (value: boolean) => {
-      try {
-        await subPropertiesApi.update(row.unique_id, { sub_property_name: row.sub_property_name, is_active: value , property_id: row.property_id});
-
-        fetchSubProperties();
-      } catch (err) {
-        console.error("Status update failed:", err);
-      }
+      await subPropertiesApi.update(row.unique_id, {
+        sub_property_name: row.sub_property_name,
+        property_id: row.property_id,
+        is_active: value,
+      });
+      fetchSubProperties();
     };
 
     return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
   };
 
+  /* ================= Actions ================= */
   const actionTemplate = (row: SubProperty) => (
     <div className="flex gap-3 justify-center">
       <button
-        title="Edit"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
@@ -136,7 +135,6 @@ export default function SubPropertyList() {
       </button>
 
       <button
-        title="Delete"
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
@@ -145,9 +143,9 @@ export default function SubPropertyList() {
     </div>
   );
 
-  const indexTemplate = (_: SubProperty, { rowIndex }: { rowIndex: number }) =>
-    rowIndex + 1;
+  const indexTemplate = (_: SubProperty, { rowIndex }: any) => rowIndex + 1;
 
+  /* ================= UI ================= */
   return (
     <div className="p-3">
       <div className="bg-white rounded-lg shadow-lg p-6">
@@ -156,7 +154,9 @@ export default function SubPropertyList() {
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
               Sub Property
             </h1>
-            <p className="text-gray-500 text-sm">Manage sub-property records</p>
+            <p className="text-gray-500 text-sm">
+              Manage sub-property records
+            </p>
           </div>
 
           <Button
@@ -172,36 +172,32 @@ export default function SubPropertyList() {
           dataKey="unique_id"
           paginator
           rows={10}
+          rowsPerPageOptions={[5, 10, 25, 50]}
           loading={loading}
           filters={filters}
-          header={header}
+          header={renderHeader()}
           stripedRows
           showGridlines
           emptyMessage="No sub properties found."
           globalFilterFields={["sub_property_name", "property_name"]}
           className="p-datatable-sm"
         >
-          <Column
-            header="S.No"
-            body={indexTemplate}
-            style={{ width: "80px" }}
-          />
+          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
             field="property_name"
             header="Property"
             sortable
-            body={(row: SubProperty) => cap(row.property_name)}
+            body={(row) => cap(row.property_name)}
           />
 
           <Column
             field="sub_property_name"
             header="Sub Property"
             sortable
-            body={(row: SubProperty) => cap(row.sub_property_name)}
+            body={(row) => cap(row.sub_property_name)}
           />
 
-          {/* 🔥 Toggle */}
           <Column
             header="Status"
             body={statusTemplate}
