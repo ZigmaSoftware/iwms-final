@@ -146,7 +146,10 @@ export default function AdminHome() {
     }
   };
 
-  const totalMaster = Object.values(stats.masterData).reduce((a, b) => a + b, 0);
+  const totalMaster = Object.values(stats.masterData).reduce(
+    (a, b) => a + b,
+    0
+  );
   const totalOps = Object.values(stats.operations).reduce((a, b) => a + b, 0);
 
   const userPie = [
@@ -163,6 +166,15 @@ export default function AdminHome() {
     name: k,
     value: v,
   }));
+
+  const hasUserPieData =
+    Array.isArray(userPie) && userPie.some((d) => d.value > 0);
+
+  const hasMasterBarData =
+    Array.isArray(masterBar) && masterBar.some((d) => d.value > 0);
+
+  const hasOpsLineData =
+    Array.isArray(opsLine) && opsLine.some((d) => d.value > 0);
 
   return (
     <div className="space-y-8 p-6">
@@ -182,56 +194,124 @@ export default function AdminHome() {
 
       {/* KPI STRIP */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Total Master Data" value={totalMaster} icon="public" loading={loading} />
-        <MetricCard title="Total Users" value={stats.users["Total Users"] || 0} icon="group" loading={loading} />
-        <MetricCard title="Total Operations" value={totalOps} icon="assignment" loading={loading} />
-        <MetricCard title="Active Users" value={stats.users["Active Users"] || 0} icon="check_circle" loading={loading} />
+        <MetricCard
+          title="Total Master Data"
+          value={totalMaster}
+          icon="public"
+          loading={loading}
+        />
+        <MetricCard
+          title="Total Users"
+          value={stats.users["Total Users"] || 0}
+          icon="group"
+          loading={loading}
+        />
+        <MetricCard
+          title="Total Operations"
+          value={totalOps}
+          icon="assignment"
+          loading={loading}
+        />
+        <MetricCard
+          title="Active Users"
+          value={stats.users["Active Users"] || 0}
+          icon="check_circle"
+          loading={loading}
+        />
       </div>
 
       {/* CHARTS */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <ChartCard title="User Distribution" icon="pie_chart">
-          <ResponsiveContainer width="100%" height={220}>
-            <PieChart>
-              <Pie data={userPie} dataKey="value" nameKey="name" outerRadius={80} label>
-                <Cell fill="#22c55e" />
-                <Cell fill="#3b82f6" />
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
+          {hasUserPieData ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <PieChart>
+                <Pie
+                  data={userPie}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={80}
+                  label
+                >
+                  <Cell fill="#22c55e" />
+                  <Cell fill="#3b82f6" />
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart
+              icon="pie_chart"
+              title="No user data available"
+              subtitle=" Add staff or customers to see insights"
+            />
+          )}
         </ChartCard>
 
         <ChartCard title="Master Data Overview" icon="bar_chart">
-          <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={masterBar}>
-              <XAxis dataKey="name" hide />
-              <Tooltip />
-              <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {hasMasterBarData ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <BarChart data={masterBar}>
+                <XAxis dataKey="name" hide />
+                <Tooltip />
+                <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart
+              icon="bar_chart"
+              title="No master data available"
+              subtitle="Add locations or properties to view analytics"
+            />
+          )}
         </ChartCard>
 
         <ChartCard title="Operations Snapshot" icon="show_chart">
-          <ResponsiveContainer width="100%" height={220}>
-            <LineChart data={opsLine}>
-              <Tooltip />
-              <Line type="monotone" dataKey="value" stroke="#f97316" strokeWidth={3} dot={{ r: 4 }} />
-            </LineChart>
-          </ResponsiveContainer>
+          {hasOpsLineData ? (
+            <ResponsiveContainer width="100%" height={220}>
+              <LineChart data={opsLine}>
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  stroke="#f97316"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart
+              icon="show_chart"
+              title="No operations data available"
+              subtitle="Start collections or register complaints to see trends"
+            />
+          )}
         </ChartCard>
       </div>
 
       {/* DETAIL SECTIONS */}
       <DashboardSection title="Master Data" icon="location_on">
         {Object.entries(stats.masterData).map(([k, v]) => (
-          <MetricCard key={k} title={k} value={v} icon="database" loading={loading} />
+          <MetricCard
+            key={k}
+            title={k}
+            value={v}
+            icon="database"
+            loading={loading}
+          />
         ))}
       </DashboardSection>
 
       <DashboardSection title="User Management" icon="people">
         {Object.entries(stats.users).map(([k, v]) => (
-          <MetricCard key={k} title={k} value={v} icon="person" loading={loading} />
+          <MetricCard
+            key={k}
+            title={k}
+            value={v}
+            icon="person"
+            loading={loading}
+          />
         ))}
       </DashboardSection>
     </div>
@@ -247,5 +327,21 @@ const ChartCard = ({ title, icon, children }: any) => (
       <h3 className="text-sm font-semibold">{title}</h3>
     </div>
     {children}
+  </div>
+);
+
+const EmptyChart = ({
+  icon,
+  title,
+  subtitle,
+}: {
+  icon: string;
+  title: string;
+  subtitle: string;
+}) => (
+  <div className="flex h-[220px] flex-col items-center justify-center text-center">
+    <GIcon name={icon} className="mb-2 text-4xl text-muted-foreground" />
+    <p className="text-sm font-medium text-muted-foreground">{title}</p>
+    <p className="text-xs text-muted-foreground">{subtitle}</p>
   </div>
 );
