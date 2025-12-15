@@ -1,110 +1,90 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import { adminApi } from "@/helpers/admin/registry";
-import { Input } from "@/components/ui/input";
+
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
+import { Input } from "@/components/ui/input";
+
+import { adminApi } from "@/helpers/admin/registry";
 import { getEncryptedRoute } from "@/utils/routeCache";
-import {
-  filterActiveCustomers,
-  normalizeCustomerArray,
-} from "@/utils/customerUtils";
 
 type Customer = {
   id: number;
+  unique_id?: string;
   customer_name: string;
-  contact_no: string;
   building_no: string;
   street: string;
   area: string;
-  pincode: string;
   zone_name: string;
-  city_name: string;
   ward_name: string;
-  country_name: string;
+  city_name: string;
   district_name: string;
   state_name: string;
+  country_name: string;
 };
 
 function WasteCollectedForm() {
-
-  const [customerId, setCustomerId] = useState<string>(""); // always a string
-
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [wetWaste, setWetWaste] = useState<number>(0);
-  const [dryWaste, setDryWaste] = useState<number>(0);
-  const [mixedWaste, setMixedWaste] = useState<number>(0);
+  const [customerId, setCustomerId] = useState<string>("");
+
+  const [wetWaste, setWetWaste] = useState(0);
+  const [dryWaste, setDryWaste] = useState(0);
+  const [mixedWaste, setMixedWaste] = useState(0);
+  const [totalQuantity, setTotalQuantity] = useState(0);
+
   const [loading, setLoading] = useState(false);
-  const [totalQuantity, setTotalQuantity] = useState<number>();
 
   const navigate = useNavigate();
-
-
-  const { encWasteManagementMaster, encWasteCollectedData } = getEncryptedRoute();
-
-  const ENC_LIST_PATH = `/${encWasteManagementMaster}/${encWasteCollectedData}`;
   const { id } = useParams();
   const isEdit = Boolean(id);
 
-  // Calculate total quantity whenever individual quantities change
+  const { encWasteManagementMaster, encWasteCollectedData } =
+    getEncryptedRoute();
+  const LIST_PATH = `/${encWasteManagementMaster}/${encWasteCollectedData}`;
+
+  const resolveId = (c: Customer) => c.unique_id ?? String(c.id);
+
+  /* ---------------- TOTAL ---------------- */
   useEffect(() => {
     setTotalQuantity(wetWaste + dryWaste + mixedWaste);
   }, [wetWaste, dryWaste, mixedWaste]);
 
-  const fetchCustomers = async (includeCustomerId?: number | string) => {
-    try {
-      const res = await adminApi.customerCreations.list();
-      const data = normalizeCustomerArray(res as any);
-      setCustomers(
-        filterActiveCustomers(
-          data,
-          includeCustomerId ? [includeCustomerId] : []
-        )
+  /* ---------------- LOAD CUSTOMERS ---------------- */
+  useEffect(() => {
+    adminApi.customerCreations.list().then((res) => {
+      setCustomers(res || []);
+      if (!isEdit && res?.length) {
+        setCustomerId(resolveId(res[0])); // same as Feedback
+      }
+    });
+  }, [isEdit]);
+
+  /* ---------------- EDIT MODE ---------------- */
+  useEffect(() => {
+    if (!isEdit) return;
+
+    adminApi.wasteCollections.get(id as string).then((res: any) => {
+      setCustomerId(
+        res.customer ?? res.customer_id ?? res.customer_unique_id
       );
-    } catch (err) {
-      console.error("Failed to fetch customers:", err);
-    }
-  };
-
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
-  // Fetch existing waste collection if editing
-  useEffect(() => {
-    if (isEdit) {
-      adminApi.wasteCollections
-        .get(id as string)
-        .then((res: any) => {
-          const customerIdFromApi = res.customer ?? res.customer_id ?? "";
-          setCustomerId(String(customerIdFromApi));
-          setWetWaste(res.wet_waste);
-          setDryWaste(res.dry_waste);
-          setMixedWaste(res.mixed_waste);
-          fetchCustomers(customerIdFromApi);
-        })
-        .catch((err: any) => {
-          console.error("Failed to fetch waste collection:", err);
-          Swal.fire({
-            icon: "error",
-            title: "Failed to load data",
-            text: err.response?.data?.detail || "Something went wrong!",
-          });
-        });
-    }
+      setWetWaste(res.wet_waste || 0);
+      setDryWaste(res.dry_waste || 0);
+      setMixedWaste(res.mixed_waste || 0);
+    });
   }, [id, isEdit]);
 
+  const selectedCustomer = customers.find(
+    (c) => resolveId(c) === customerId
+  );
+
+  /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!customerId) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "Please select a customer.",
-      });
+      Swal.fire("Warning", "Customer is required", "warning");
       return;
     }
 
@@ -118,248 +98,174 @@ function WasteCollectedForm() {
         total_quantity: totalQuantity,
       };
 
-      if (isEdit) {
-        await adminApi.wasteCollections.update(id as string, payload);
-        Swal.fire({
-          icon: "success",
-          title: "Updated successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        await adminApi.wasteCollections.create(payload);
-        Swal.fire({
-          icon: "success",
-          title: "Added successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      }
+      isEdit
+        ? await adminApi.wasteCollections.update(id as string, payload)
+        : await adminApi.wasteCollections.create(payload);
 
-      navigate(ENC_LIST_PATH);
-    } catch (err: any) {
-      console.error("Failed to save:", err);
-      let message = "Something went wrong while saving.";
-      const data = err.response?.data;
-      if (data && typeof data === "object") {
-        message = Object.entries(data)
-          .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
-          .join("\n");
-      }
-      Swal.fire({ icon: "error", title: "Save failed", text: message });
+      Swal.fire("Success", "Saved successfully", "success");
+      navigate(LIST_PATH);
+    } catch {
+      Swal.fire("Error", "Save failed", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  // Get selected customer object for display
-  const resolveId = (c: any) =>
-    c?.unique_id ?? (c?.id !== undefined ? String(c.id) : "");
-
-  const selectedCustomer = customers.find((c: any) => resolveId(c) === customerId);
-
+  /* ---------------- RENDER ---------------- */
   return (
-    <ComponentCard
-      title={isEdit ? "Edit Waste Collection" : "Add Waste Collection"}
-    >
-      <form onSubmit={handleSubmit} noValidate>
+    <ComponentCard title={isEdit ? "Edit Waste Collection" : "Add Waste Collection"}>
+      <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Customer Select */}
+
+          {/* Customer */}
           <div>
-            <Label htmlFor="customer">
+            <Label>
               Customer <span className="text-red-500">*</span>
             </Label>
             <Select
-              id="customer"
-              value={customerId}                          // string
-              onChange={(val) => setCustomerId(val)}      // keep as string
-              options={customers.map((c: any) => ({
+              value={customerId}
+              onChange={(val) => setCustomerId(val)}
+              options={customers.map((c) => ({
                 value: resolveId(c),
                 label: c.customer_name,
               }))}
-              className="w-full"
-              required
             />
-
           </div>
 
           {/* Address */}
           <div>
-            <Label htmlFor="customerAddress">Customer Address</Label>
+            <Label>Customer Address</Label>
             <Input
-              id="customerAddress"
-              type="text"
+              disabled
+              className="bg-gray-100"
               value={
                 selectedCustomer
                   ? [
-                    selectedCustomer.building_no,
-                    selectedCustomer.street,
-                    selectedCustomer.area,
-                  ]
-                    .filter(Boolean) // removes undefined or empty parts
-                    .join(", ")
+                      selectedCustomer.building_no,
+                      selectedCustomer.street,
+                      selectedCustomer.area,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")
                   : ""
               }
-              disabled
-              className="w-full bg-gray-100"
             />
           </div>
 
-          {/* Zone (Auto-filled) */}
+          {/* Zone */}
           <div>
-            <Label htmlFor="customerZone">Customer Zone</Label>
+            <Label>Customer Zone</Label>
             <Input
-              id="customerZone"
-              type="text"
+              disabled
+              className="bg-gray-100"
               value={selectedCustomer?.zone_name || ""}
-              disabled
-              className="w-full bg-gray-100"
             />
           </div>
 
-          {/* Ward (Auto-filled) */}
+          {/* Ward */}
           <div>
-            <Label htmlFor="customerWard">Customer Ward</Label>
+            <Label>Customer Ward</Label>
             <Input
-              id="customerWard"
-              type="text"
+              disabled
+              className="bg-gray-100"
               value={selectedCustomer?.ward_name || ""}
-              disabled
-              className="w-full bg-gray-100"
             />
           </div>
 
-          {/* City (Auto-filled) */}
+          {/* City */}
           <div>
-            <Label htmlFor="customerCity">Customer City</Label>
+            <Label>Customer City</Label>
             <Input
-              id="customerCity"
-              type="text"
+              disabled
+              className="bg-gray-100"
               value={selectedCustomer?.city_name || ""}
-              disabled
-              className="w-full bg-gray-100"
             />
           </div>
 
-          {/* District (Auto-filled) */}
+          {/* District */}
           <div>
-            <Label htmlFor="customerDistrict">Customer District</Label>
+            <Label>Customer District</Label>
             <Input
-              id="customerDistrict"
-              type="text"
+              disabled
+              className="bg-gray-100"
               value={selectedCustomer?.district_name || ""}
-              disabled
-              className="w-full bg-gray-100"
             />
           </div>
 
-          {/* State (Auto-filled) */}
+          {/* State */}
           <div>
-            <Label htmlFor="customerState">Customer State</Label>
+            <Label>Customer State</Label>
             <Input
-              id="customerState"
-              type="text"
+              disabled
+              className="bg-gray-100"
               value={selectedCustomer?.state_name || ""}
-              disabled
-              className="w-full bg-gray-100"
             />
           </div>
 
-          {/* Country (Auto-filled) */}
+          {/* Country */}
           <div>
-            <Label htmlFor="customerCountry">Customer Country</Label>
+            <Label>Customer Country</Label>
             <Input
-              id="customerCountry"
-              type="text"
+              disabled
+              className="bg-gray-100"
               value={selectedCustomer?.country_name || ""}
-              disabled
-              className="w-full bg-gray-100"
             />
           </div>
 
-          {/* Dry Waste */}
+          {/* Dry */}
           <div>
-            <Label htmlFor="dryWaste">Dry Waste (kg)</Label>
+            <Label>Dry Waste (kg)</Label>
             <Input
-              id="dryWaste"
               type="number"
               value={dryWaste}
-              onChange={(e) => {
-                const value = Math.max(0, Number(e.target.value) || 0);
-                setDryWaste(value);
-              }}
-              className="input-validate w-full"
-              required
+              onChange={(e) => setDryWaste(Math.max(0, +e.target.value || 0))}
             />
           </div>
 
-          {/* Wet Waste */}
+          {/* Wet */}
           <div>
-            <Label htmlFor="wetWaste">Wet Waste (kg)</Label>
+            <Label>Wet Waste (kg)</Label>
             <Input
-              id="wetWaste"
               type="number"
               value={wetWaste}
-              onChange={(e) => {
-                const value = Math.max(0, Number(e.target.value) || 0);
-                setWetWaste(value);
-              }}
-              className="w-full"
-              required
+              onChange={(e) => setWetWaste(Math.max(0, +e.target.value || 0))}
             />
           </div>
 
-          {/* Mixed Waste */}
+          {/* Mixed */}
           <div>
-            <Label htmlFor="mixedWaste">Mixed Waste (kg)</Label>
+            <Label>Mixed Waste (kg)</Label>
             <Input
-              id="mixedWaste"
               type="number"
               value={mixedWaste}
-              onChange={(e) => {
-                const value = Math.max(0, Number(e.target.value) || 0);
-                setMixedWaste(value);
-              }}
-              className="w-full"
-              required
+              onChange={(e) => setMixedWaste(Math.max(0, +e.target.value || 0))}
             />
           </div>
 
-          {/* Total Quantity */}
+          {/* Total */}
           <div>
-            <Label htmlFor="totalQuantity">Total Quantity (kg)</Label>
+            <Label>Total Quantity (kg)</Label>
             <Input
-              id="totalQuantity"
-              type="number"
-              value={totalQuantity}
               disabled
-              className="w-full bg-gray-100"
-              required
+              className="bg-gray-100"
+              value={totalQuantity}
             />
           </div>
         </div>
 
-        {/* Buttons */}
+        {/* Actions */}
         <div className="flex justify-end gap-3 mt-6">
           <button
             type="submit"
             disabled={loading}
-            className="bg-green-custom text-white px-4 py-2 rounded disabled:opacity-50 transition-colors"
+            className="bg-green-custom text-white px-4 py-2 rounded"
           >
-            {loading
-              ? isEdit
-                ? "Updating..."
-                : "Saving..."
-              : isEdit
-                ? "Update"
-                : "Save"}
+            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
           </button>
           <button
             type="button"
-            onClick={() =>
-              navigate(ENC_LIST_PATH)
-            }
-            className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
+            onClick={() => navigate(LIST_PATH)}
+            className="bg-red-400 text-white px-4 py-2 rounded"
           >
             Cancel
           </button>
