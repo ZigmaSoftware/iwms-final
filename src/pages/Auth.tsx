@@ -109,6 +109,8 @@ export default function Auth() {
     }
   };
 
+  console.log(username+" "+password);
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f3f6f4] p-4 font-sans">
 
