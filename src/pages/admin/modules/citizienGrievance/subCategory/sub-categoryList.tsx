@@ -93,13 +93,13 @@ export default function SubComplaintCategoryList() {
       >
         <PencilIcon className="size-5" />
       </button>
-
+{/* 
       <button
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
-      </button>
+      </button> */}
     </div>
   );
 

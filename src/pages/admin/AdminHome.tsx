@@ -1,12 +1,19 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { useUser } from "@/contexts/UserContext";
+import { GIcon } from "@/components/ui/gicon";
+
 import {
-  ADMIN_VIEW_MODE_DASHBOARD,
-  clearAdminViewPreference,
-  setAdminViewPreference,
-} from "@/types/roles";
+  PieChart,
+  Pie,
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  Tooltip,
+  ResponsiveContainer,
+  XAxis,
+  Cell,
+} from "recharts";
 
 import {
   continentApi,
@@ -38,7 +45,6 @@ import {
 
 import { MetricCard } from "./MetricCard";
 import { DashboardSection } from "./DashboardSection";
-import { GIcon } from "@/components/ui/gicon";
 
 interface DashboardStats {
   masterData: Record<string, number>;
@@ -48,11 +54,8 @@ interface DashboardStats {
   system: Record<string, number>;
 }
 
-const AdminHome = () => {
-  const navigate = useNavigate();
-  const { setUser } = useUser();
+export default function AdminHome() {
   const [loading, setLoading] = useState(true);
-
   const [stats, setStats] = useState<DashboardStats>({
     masterData: {},
     users: {},
@@ -69,33 +72,7 @@ const AdminHome = () => {
     try {
       setLoading(true);
 
-      const [
-        continents,
-        countries,
-        states,
-        districts,
-        cities,
-        zones,
-        wards,
-        properties,
-        subProperties,
-        users,
-        userTypes,
-        staffUserTypes,
-        staff,
-        customers,
-        vehicles,
-        vehicleTypes,
-        fuels,
-        wasteCollections,
-        complaints,
-        feedbacks,
-        mainScreenTypes,
-        mainScreens,
-        userScreens,
-        screenActions,
-        permissions,
-      ] = await Promise.all([
+      const r = await Promise.all([
         continentApi.list(),
         countryApi.list(),
         stateApi.list(),
@@ -123,176 +100,152 @@ const AdminHome = () => {
         userScreenPermissionApi.list(),
       ]);
 
-      const safeCount = (arr: any[]) => (Array.isArray(arr) ? arr.length : 0);
-
-      const activeUsers = Array.isArray(users)
-        ? users.filter((u: any) => u.is_active).length
-        : 0;
+      const safe = (a: any[]) => (Array.isArray(a) ? a.length : 0);
+      const users = r[9];
 
       setStats({
         masterData: {
-          Continents: safeCount(continents),
-          Countries: safeCount(countries),
-          States: safeCount(states),
-          Districts: safeCount(districts),
-          Cities: safeCount(cities),
-          Zones: safeCount(zones),
-          Wards: safeCount(wards),
-          Properties: safeCount(properties),
-          "Sub Properties": safeCount(subProperties),
+          Continents: safe(r[0]),
+          Countries: safe(r[1]),
+          States: safe(r[2]),
+          Districts: safe(r[3]),
+          Cities: safe(r[4]),
+          Zones: safe(r[5]),
+          Wards: safe(r[6]),
+          Properties: safe(r[7]),
+          "Sub Properties": safe(r[8]),
         },
         users: {
-          "Total Users": safeCount(users),
-          Staff: safeCount(staff),
-          Customers: safeCount(customers),
-          "User Types": safeCount(userTypes),
-          "Staff User Types": safeCount(staffUserTypes),
-          "Active Users": activeUsers,
+          "Total Users": safe(r[9]),
+          Staff: safe(r[12]),
+          Customers: safe(r[13]),
+          "User Types": safe(r[10]),
+          "Staff User Types": safe(r[11]),
+          "Active Users": users?.filter((u: any) => u.is_active)?.length || 0,
         },
         transport: {
-          Vehicles: safeCount(vehicles),
-          "Vehicle Types": safeCount(vehicleTypes),
-          "Fuel Types": safeCount(fuels),
+          Vehicles: safe(r[14]),
+          "Vehicle Types": safe(r[15]),
+          "Fuel Types": safe(r[16]),
         },
         operations: {
-          "Waste Collections": safeCount(wasteCollections),
-          Complaints: safeCount(complaints),
-          Feedbacks: safeCount(feedbacks),
+          "Waste Collections": safe(r[17]),
+          Complaints: safe(r[18]),
+          Feedbacks: safe(r[19]),
         },
         system: {
-          "Main Screen Types": safeCount(mainScreenTypes),
-          "Main Screens": safeCount(mainScreens),
-          "User Screens": safeCount(userScreens),
-          "Screen Actions": safeCount(screenActions),
-          Permissions: safeCount(permissions),
+          "Main Screen Types": safe(r[20]),
+          "Main Screens": safe(r[21]),
+          "User Screens": safe(r[22]),
+          "Screen Actions": safe(r[23]),
+          Permissions: safe(r[24]),
         },
       });
-    } catch (error) {
-      console.error("Dashboard fetch failed", error);
     } finally {
       setLoading(false);
     }
   };
 
+  const totalMaster = Object.values(stats.masterData).reduce((a, b) => a + b, 0);
+  const totalOps = Object.values(stats.operations).reduce((a, b) => a + b, 0);
 
-  const totalMasterData = Object.values(stats.masterData).reduce(
-    (a, b) => a + b,
-    0
-  );
-  const totalOperations = Object.values(stats.operations).reduce(
-    (a, b) => a + b,
-    0
-  );
+  const userPie = [
+    { name: "Staff", value: stats.users.Staff || 0 },
+    { name: "Customers", value: stats.users.Customers || 0 },
+  ];
+
+  const masterBar = Object.entries(stats.masterData).map(([k, v]) => ({
+    name: k,
+    value: v,
+  }));
+
+  const opsLine = Object.entries(stats.operations).map(([k, v]) => ({
+    name: k,
+    value: v,
+  }));
 
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-8 p-6">
       {/* HEADER */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
           <p className="text-sm text-muted-foreground">
             Centralized operational intelligence
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={fetchDashboardData}>
-            <GIcon name="refresh" className="mr-2" />
-            Refresh
-          </Button>
-   
-        </div>
+        <Button variant="outline" onClick={fetchDashboardData}>
+          <GIcon name="refresh" className="mr-2" />
+          Refresh
+        </Button>
       </div>
 
       {/* KPI STRIP */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title="Total Master Data"
-          value={totalMasterData}
-          icon="public"
-          loading={loading}
-        />
-        <MetricCard
-          title="Total Users"
-          value={stats.users["Total Users"] || 0}
-          icon="group"
-          loading={loading}
-        />
-        <MetricCard
-          title="Total Operations"
-          value={totalOperations}
-          icon="assignment"
-          loading={loading}
-        />
-        <MetricCard
-          title="Active Users"
-          value={stats.users["Active Users"] || 0}
-          icon="check_circle"
-          loading={loading}
-        />
+        <MetricCard title="Total Master Data" value={totalMaster} icon="public" loading={loading} />
+        <MetricCard title="Total Users" value={stats.users["Total Users"] || 0} icon="group" loading={loading} />
+        <MetricCard title="Total Operations" value={totalOps} icon="assignment" loading={loading} />
+        <MetricCard title="Active Users" value={stats.users["Active Users"] || 0} icon="check_circle" loading={loading} />
       </div>
 
-      {/* SECTIONS */}
+      {/* CHARTS */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <ChartCard title="User Distribution" icon="pie_chart">
+          <ResponsiveContainer width="100%" height={220}>
+            <PieChart>
+              <Pie data={userPie} dataKey="value" nameKey="name" outerRadius={80} label>
+                <Cell fill="#22c55e" />
+                <Cell fill="#3b82f6" />
+              </Pie>
+              <Tooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Master Data Overview" icon="bar_chart">
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={masterBar}>
+              <XAxis dataKey="name" hide />
+              <Tooltip />
+              <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </ChartCard>
+
+        <ChartCard title="Operations Snapshot" icon="show_chart">
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={opsLine}>
+              <Tooltip />
+              <Line type="monotone" dataKey="value" stroke="#f97316" strokeWidth={3} dot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </ChartCard>
+      </div>
+
+      {/* DETAIL SECTIONS */}
       <DashboardSection title="Master Data" icon="location_on">
         {Object.entries(stats.masterData).map(([k, v]) => (
-          <MetricCard
-            key={k}
-            title={k}
-            value={v}
-            icon="database"
-            loading={loading}
-          />
+          <MetricCard key={k} title={k} value={v} icon="database" loading={loading} />
         ))}
       </DashboardSection>
 
       <DashboardSection title="User Management" icon="people">
         {Object.entries(stats.users).map(([k, v]) => (
-          <MetricCard
-            key={k}
-            title={k}
-            value={v}
-            icon="person"
-            loading={loading}
-          />
-        ))}
-      </DashboardSection>
-
-      <DashboardSection title="Transport Management" icon="local_shipping">
-        {Object.entries(stats.transport).map(([k, v]) => (
-          <MetricCard
-            key={k}
-            title={k}
-            value={v}
-            icon="directions_car"
-            loading={loading}
-          />
-        ))}
-      </DashboardSection>
-
-      <DashboardSection title="Operations" icon="assignment">
-        {Object.entries(stats.operations).map(([k, v]) => (
-          <MetricCard
-            key={k}
-            title={k}
-            value={v}
-            icon="analytics"
-            loading={loading}
-          />
-        ))}
-      </DashboardSection>
-
-      <DashboardSection title="System Configuration" icon="settings">
-        {Object.entries(stats.system).map(([k, v]) => (
-          <MetricCard
-            key={k}
-            title={k}
-            value={v}
-            icon="settings"
-            loading={loading}
-          />
+          <MetricCard key={k} title={k} value={v} icon="person" loading={loading} />
         ))}
       </DashboardSection>
     </div>
   );
-};
+}
 
-export default AdminHome;
+/* ---------- Chart Card ---------- */
+
+const ChartCard = ({ title, icon, children }: any) => (
+  <div className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md dark:bg-slate-900">
+    <div className="mb-3 flex items-center gap-2">
+      <GIcon name={icon} className="text-primary" />
+      <h3 className="text-sm font-semibold">{title}</h3>
+    </div>
+    {children}
+  </div>
+);

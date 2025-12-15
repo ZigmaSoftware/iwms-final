@@ -115,9 +115,7 @@ export default function StaffCreationList() {
     fetchStaffs(filterParams);
   };
 
-  /**
-   * 🔥 FIXED TOGGLE — FORM DATA PATCH (NO MORE 415)
-   */
+ 
   const statusTemplate = (row: Staff) => {
     const updateStatus = async (value: boolean) => {
       try {
@@ -191,13 +189,13 @@ export default function StaffCreationList() {
         <PencilIcon className="size-5" />
       </button>
 
-      <button
+      {/* <button
         title="Delete"
         onClick={() => handleDelete(row.unique_id)}
         className="text-red-600 hover:text-red-800"
       >
         <TrashBinIcon className="size-5" />
-      </button>
+      </button> */}
     </div>
   );
 
