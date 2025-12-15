@@ -13,6 +13,10 @@ import {
   ResponsiveContainer,
   XAxis,
   Cell,
+  YAxis,
+  CartesianGrid,
+  AreaChart,
+  Area,
 } from "recharts";
 
 import {
@@ -175,6 +179,7 @@ export default function AdminHome() {
 
   const hasOpsLineData =
     Array.isArray(opsLine) && opsLine.some((d) => d.value > 0);
+  console.log("ops", opsLine);
 
   return (
     <div className="space-y-8 p-6">
@@ -268,23 +273,73 @@ export default function AdminHome() {
 
         <ChartCard title="Operations Snapshot" icon="show_chart">
           {hasOpsLineData ? (
-            <ResponsiveContainer width="100%" height={220}>
-              <LineChart data={opsLine}>
-                <Tooltip />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#f97316"
-                  strokeWidth={3}
-                  dot={{ r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="group relative">
+              <ResponsiveContainer width="100%" height={220}>
+                <AreaChart
+                  data={opsLine}
+                  margin={{ top: 20, right: 20, left: 0, bottom: 50 }}
+                >
+                  <CartesianGrid
+                    strokeDasharray="3 6"
+                    opacity={0.12}
+                    vertical={false}
+                  />
+
+                  <XAxis
+                    dataKey="name"
+                    interval={0}
+                    height={40}
+                    angle={-100}
+                    textAnchor="end"
+                    tickFormatter={(value: string) =>
+                      value.length > 14 ? value.slice(0, 14) + "…" : value
+                    }
+                    tick={{ fontSize: 11, opacity: 0.75 }}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+
+                  <YAxis hide />
+
+                  <Tooltip
+                    cursor={{
+                      stroke: "#6366F1",
+                      strokeWidth: 1,
+                      strokeDasharray: "4 4",
+                    }}
+                    contentStyle={{
+                      background: "hsl(var(--background))",
+                      borderRadius: "12px",
+                      border: "1px solid hsl(var(--border))",
+                      boxShadow: "0 12px 30px rgba(0,0,0,0.15)",
+                      padding: "10px 14px",
+                    }}
+                    labelStyle={{ fontWeight: 600 }}
+                    formatter={(value: number) => [value, "Total Count"]}
+                  />
+
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#6366F1"
+                    strokeWidth={2.5}
+                    fill="rgba(99,102,241,0.18)"
+                    dot={false}
+                    activeDot={{
+                      r: 6,
+                      strokeWidth: 2,
+                      stroke: "#6366F1",
+                      fill: "hsl(var(--background))",
+                    }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
           ) : (
             <EmptyChart
               icon="show_chart"
               title="No operations data available"
-              subtitle="Start collections or register complaints to see trends"
+              subtitle="Data will appear once operations start"
             />
           )}
         </ChartCard>
