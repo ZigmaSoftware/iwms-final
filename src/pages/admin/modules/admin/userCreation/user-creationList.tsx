@@ -23,6 +23,7 @@ import { Switch } from "@/components/ui/switch";
 export default function UserCreationList() {
   const navigate = useNavigate();
   const { encAdmins, encUserCreation } = getEncryptedRoute();
+
   const ENC_NEW = `/${encAdmins}/${encUserCreation}/new`;
   const ENC_EDIT = (unique_id: string) =>
     `/${encAdmins}/${encUserCreation}/${unique_id}/edit`;
@@ -31,10 +32,11 @@ export default function UserCreationList() {
   const [customerMap, setCustomerMap] = useState<Record<string, any>>({});
   const [globalFilter, setGlobalFilter] = useState("");
 
-  const [filters, setFilters] = useState<any>({
+  const [filters, setFilters] = useState({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
+  /* ---------------- FETCH ---------------- */
   const fetchUsers = async () => {
     try {
       const [usersRes, customersRes] = await Promise.all([
@@ -64,7 +66,7 @@ export default function UserCreationList() {
     fetchUsers();
   }, []);
 
-  /* ---------------- FILTER LISTS ---------------- */
+  /* ---------------- FILTERS ---------------- */
   const staffList = users.filter(
     (u) => u.user_type_name?.toLowerCase() === "staff"
   );
@@ -136,18 +138,23 @@ export default function UserCreationList() {
     fetchUsers();
   };
 
+  /**
+   * 🔥 ONLY FIX APPLIED HERE
+   * Backend expects 1 / 0, not true / false
+   */
   const handleStatusToggle = async (unique_id: string, value: boolean) => {
     try {
       await desktopApi.patch(`users-creation/${unique_id}/`, {
-        is_active: value,
+        is_active: value ? 1 : 0,
       });
       fetchUsers();
-    } catch {
+    } catch (err: any) {
+      console.error("Status update error:", err?.response?.data || err);
       Swal.fire("Update failed", "Unable to change status", "error");
     }
   };
 
-  /* ---------------- UTILS ---------------- */
+  /* ---------------- SEARCH ---------------- */
   const cap = (t?: string) =>
     t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : "";
 
@@ -171,6 +178,7 @@ export default function UserCreationList() {
     </div>
   );
 
+  /* ================= RENDER ================= */
   return (
     <div className="p-4 bg-white rounded-lg shadow">
       <div className="flex justify-between mb-4">
@@ -225,7 +233,7 @@ export default function UserCreationList() {
               header="Status"
               body={(r) => (
                 <Switch
-                  checked={r.is_active}
+                  checked={!!r.is_active}
                   onCheckedChange={(v) =>
                     handleStatusToggle(r.unique_id, v)
                   }
@@ -237,10 +245,6 @@ export default function UserCreationList() {
               body={(r) => (
                 <div className="flex gap-3">
                   <PencilIcon onClick={() => navigate(ENC_EDIT(r.unique_id))} />
-                  {/* <TrashBinIcon
-                    className="text-red-600"
-                    onClick={() => handleDelete(r.unique_id)}
-                  /> */}
                 </div>
               )}
             />
@@ -293,7 +297,7 @@ export default function UserCreationList() {
               header="Status"
               body={(r) => (
                 <Switch
-                  checked={r.is_active}
+                  checked={!!r.is_active}
                   onCheckedChange={(v) =>
                     handleStatusToggle(r.unique_id, v)
                   }
@@ -305,10 +309,6 @@ export default function UserCreationList() {
               body={(r) => (
                 <div className="flex gap-3">
                   <PencilIcon onClick={() => navigate(ENC_EDIT(r.unique_id))} />
-                  {/* <TrashBinIcon
-                    className="text-red-600"
-                    onClick={() => handleDelete(r.unique_id)}
-                  /> */}
                 </div>
               )}
             />
