@@ -1,113 +1,82 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import { Input } from "@/components/ui/input";
+
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
-import { getEncryptedRoute } from "@/utils/routeCache";
-import {
-  filterActiveCustomers,
-  normalizeCustomerArray,
-} from "@/utils/customerUtils";
+import { Input } from "@/components/ui/input";
+
 import { adminApi } from "@/helpers/admin/registry";
+import { getEncryptedRoute } from "@/utils/routeCache";
 
 const customerApi = adminApi.customerCreations;
 const feedbackApi = adminApi.feedbacks;
 
 type Customer = {
   id: number;
+  unique_id?: string;
   customer_name: string;
-  contact_no: string;
   building_no: string;
   street: string;
   area: string;
-  pincode: string;
   zone_name: string;
-  city_name: string;
   ward_name: string;
-  country_name: string;
+  city_name: string;
   district_name: string;
   state_name: string;
+  country_name: string;
 };
 
 function FeedBackForm() {
-  const [customerId, setCustomerId] = useState<string>("");
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [feedbackCategory, setFeedBackCategory] = useState<string>(""); // use string, not String
-  const [feedbackDetails, setFeedBackDetails] = useState<string>(""); // use string, not String
+  const [customerId, setCustomerId] = useState<string>("");
+  const [feedbackCategory, setFeedbackCategory] = useState("Excellent");
+  const [feedbackDetails, setFeedbackDetails] = useState("");
   const [loading, setLoading] = useState(false);
-  const [customerFallbackId, setCustomerFallbackId] = useState<string | null>(null);
 
   const navigate = useNavigate();
-
-  const { encCitizenGrivence, encFeedback } = getEncryptedRoute();
-
-  const ENC_LIST_PATH = `/${encCitizenGrivence}/${encFeedback}`;
-
-  const loadCustomers = useCallback(async (includeId?: string) => {
-    try {
-      const response = await customerApi.list();
-      const normalized = normalizeCustomerArray(response);
-      setCustomers(
-        filterActiveCustomers(normalized, includeId ? [includeId] : [])
-      );
-    } catch (err) {
-      console.error("Failed to fetch customers:", err);
-    }
-  }, []);
-
-  const resolveId = (c: any) =>
-    c?.unique_id ?? (c?.id !== undefined ? String(c.id) : "");
-
-  useEffect(() => {
-    loadCustomers(customerFallbackId ?? undefined);
-  }, [customerFallbackId, loadCustomers]);
-
   const { id } = useParams();
   const isEdit = Boolean(id);
 
-  // Fetch feedback for edit mode
-  useEffect(() => {
-    if (isEdit) {
-      feedbackApi
-        .get(id as string)
-        .then((res) => {
-          const customerValue = String(
-            res.customer ?? res.customer_id ?? res.customer_unique_id ?? ""
-          );
-          setCustomerId(customerValue);
-          setFeedBackCategory(res.category || "");
-          setFeedBackDetails(res.feedback_details || "");
-          if (customerValue) {
-            setCustomerFallbackId(customerValue);
-          }
-        })
-        .catch((err) => {
-          Swal.fire({
-            icon: "error",
-            title: "Failed to load data",
-            text: err.response?.data?.detail || "Something went wrong!",
-          });
-        });
-    }
-  }, [id, isEdit]);
+  const { encCitizenGrivence, encFeedback } = getEncryptedRoute();
+  const LIST_PATH = `/${encCitizenGrivence}/${encFeedback}`;
 
+  const resolveId = (c: Customer) => c.unique_id ?? String(c.id);
+
+  /* ---------------- LOAD CUSTOMERS ---------------- */
   useEffect(() => {
-    if (!isEdit) {
-      setCustomerFallbackId(null);
-    }
+    customerApi.list().then((res) => {
+      setCustomers(res || []);
+      if (!isEdit && res?.length) {
+        setCustomerId(resolveId(res[0])); // SAFE default
+      }
+    });
   }, [isEdit]);
 
+  /* ---------------- EDIT MODE ---------------- */
+  useEffect(() => {
+    if (!isEdit) return;
+
+    feedbackApi.get(id as string).then((res) => {
+      setCustomerId(
+        res.customer ?? res.customer_id ?? res.customer_unique_id
+      );
+      setFeedbackCategory(res.category || "Excellent");
+      setFeedbackDetails(res.feedback_details || "");
+    });
+  }, [id, isEdit]);
+
+  const selectedCustomer = customers.find(
+    (c) => resolveId(c) === customerId
+  );
+
+  /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!customerId || !feedbackCategory) {
-      Swal.fire({
-        icon: "warning",
-        title: "Missing Fields",
-        text: "Please select a customer and feedback category.",
-      });
+    if (!customerId) {
+      Swal.fire("Warning", "Customer is required", "warning");
       return;
     }
 
@@ -119,136 +88,123 @@ function FeedBackForm() {
         feedback_details: feedbackDetails,
       };
 
-      if (isEdit) {
-        await feedbackApi.update(id as string, payload);
-        Swal.fire({
-          icon: "success",
-          title: "Updated successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      } else {
-        await feedbackApi.create(payload);
-        Swal.fire({
-          icon: "success",
-          title: "Added successfully!",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-      }
+      isEdit
+        ? await feedbackApi.update(id as string, payload)
+        : await feedbackApi.create(payload);
 
-      navigate(ENC_LIST_PATH);
-    } catch (err: any) {
-      const data = err.response?.data;
-      const message =
-        data && typeof data === "object"
-          ? Object.entries(data)
-            .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
-            .join("\n")
-          : "Something went wrong while saving.";
-      Swal.fire({ icon: "error", title: "Save failed", text: message });
+      Swal.fire("Success", "Saved successfully", "success");
+      navigate(LIST_PATH);
+    } catch {
+      Swal.fire("Error", "Save failed", "error");
     } finally {
       setLoading(false);
     }
   };
 
-  const selectedCustomer = customers.find(
-    (c) => resolveId(c) === customerId
-  );
-
+  /* ---------------- RENDER ---------------- */
   return (
-    <ComponentCard title={isEdit ? "Edit Feedback" : "Add Feedback"}>
-      <form onSubmit={handleSubmit} noValidate>
+    <ComponentCard title="Add Feedback">
+      <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Customer Select */}
+
+          {/* Customer */}
           <div>
-            <Label htmlFor="customer">
+            <Label>
               Customer <span className="text-red-500">*</span>
             </Label>
             <Select
-              id="customer"
               value={customerId}
               onChange={(val) => setCustomerId(val)}
-              options={customers.map((c: any) => ({
+              options={customers.map((c) => ({
                 value: resolveId(c),
                 label: c.customer_name,
               }))}
-              className="w-full"
-              required
             />
           </div>
 
           {/* Address */}
           <div>
-            <Label htmlFor="customerAddress">Customer Address</Label>
+            <Label>Customer Address</Label>
             <Input
-              id="customerAddress"
-              type="text"
+              disabled
+              className="bg-gray-100"
               value={
                 selectedCustomer
                   ? [
-                    selectedCustomer.building_no,
-                    selectedCustomer.street,
-                    selectedCustomer.area,
-                  ]
-                    .filter(Boolean)
-                    .join(", ")
+                      selectedCustomer.building_no,
+                      selectedCustomer.street,
+                      selectedCustomer.area,
+                    ]
+                      .filter(Boolean)
+                      .join(", ")
                   : ""
               }
-              disabled
-              className="w-full bg-gray-100"
             />
           </div>
 
-          {/* Zone, Ward, City, etc. */}
-          {[
-            ["Zone", "zone_name"],
-            ["Ward", "ward_name"],
-            ["City", "city_name"],
-            ["District", "district_name"],
-            ["State", "state_name"],
-            ["Country", "country_name"],
-          ].map(([label, key]) => (
-            <div key={key}>
-              <Label htmlFor={`customer${label}`}>{`Customer ${label}`}</Label>
-              <Input
-                id={`customer${label}`}
-                type="text"
-                value={selectedCustomer?.[key as keyof Customer] || ""}
-                disabled
-                className="w-full bg-gray-100"
-              />
-            </div>
-          ))}
+          {/* Zone */}
+          <div>
+            <Label>Customer Zone</Label>
+            <Input disabled className="bg-gray-100"
+              value={selectedCustomer?.zone_name || ""} />
+          </div>
+
+          {/* Ward */}
+          <div>
+            <Label>Customer Ward</Label>
+            <Input disabled className="bg-gray-100"
+              value={selectedCustomer?.ward_name || ""} />
+          </div>
+
+          {/* City */}
+          <div>
+            <Label>Customer City</Label>
+            <Input disabled className="bg-gray-100"
+              value={selectedCustomer?.city_name || ""} />
+          </div>
+
+          {/* District */}
+          <div>
+            <Label>Customer District</Label>
+            <Input disabled className="bg-gray-100"
+              value={selectedCustomer?.district_name || ""} />
+          </div>
+
+          {/* State */}
+          <div>
+            <Label>Customer State</Label>
+            <Input disabled className="bg-gray-100"
+              value={selectedCustomer?.state_name || ""} />
+          </div>
+
+          {/* Country */}
+          <div>
+            <Label>Customer Country</Label>
+            <Input disabled className="bg-gray-100"
+              value={selectedCustomer?.country_name || ""} />
+          </div>
 
           {/* Feedback Category */}
           <div>
-            <Label htmlFor="feedbackCategory">Feedback Category</Label>
+            <Label>Feedback Category</Label>
             <Select
-              id="feedbackCategory"
               value={feedbackCategory}
-              onChange={(val) => setFeedBackCategory(val)}
+              onChange={(val) => setFeedbackCategory(val)}
               options={[
                 { value: "Excellent", label: "Excellent" },
                 { value: "Satisfied", label: "Satisfied" },
                 { value: "Not Satisfied", label: "Not Satisfied" },
                 { value: "Poor", label: "Poor" },
               ]}
-              className="w-full"
-              required
             />
           </div>
 
           {/* Feedback Details */}
           <div>
-            <Label htmlFor="feedbackDetails">Feedback Details</Label>
+            <Label>Feedback Details</Label>
             <Input
-              id="feedbackDetails"
-              type="text"
               value={feedbackDetails}
-              onChange={(e) => setFeedBackDetails(e.target.value)}
-              className="w-full"
-              required
+              onChange={(e) => setFeedbackDetails(e.target.value)}
             />
           </div>
         </div>
@@ -258,20 +214,14 @@ function FeedBackForm() {
           <button
             type="submit"
             disabled={loading}
-            className="bg-green-custom text-white px-4 py-2 rounded disabled:opacity-50 transition-colors"
+            className="bg-green-custom text-white px-4 py-2 rounded"
           >
-            {loading
-              ? isEdit
-                ? "Updating..."
-                : "Saving..."
-              : isEdit
-                ? "Update"
-                : "Save"}
+            {loading ? "Saving..." : "Save"}
           </button>
           <button
             type="button"
-            onClick={() => navigate(ENC_LIST_PATH)}
-            className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
+            onClick={() => navigate(LIST_PATH)}
+            className="bg-red-400 text-white px-4 py-2 rounded"
           >
             Cancel
           </button>
