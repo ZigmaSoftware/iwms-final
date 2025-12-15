@@ -98,8 +98,8 @@ export default function UserTypeForm() {
      RENDER UI
   ----------------------------------------------------------- */
   return (
-    <div className="bg-[#f9fafb] min-h-screen p-8">
-      <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">
+    <div className="p-8">
+      <div className=" mx-auto bg-white rounded-xl shadow-sm border">
         <div className="px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-800">
             {isEdit ? "Edit User Type" : "Add User Type"}
