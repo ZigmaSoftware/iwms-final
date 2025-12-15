@@ -308,7 +308,9 @@ export default function UserCreationList() {
               header="Actions"
               body={(r) => (
                 <div className="flex gap-3">
-                  <PencilIcon onClick={() => navigate(ENC_EDIT(r.unique_id))} />
+                  <PencilIcon 
+                  className="text-blue-600 hover:text-blue-800"
+                  onClick={() => navigate(ENC_EDIT(r.unique_id))} />
                 </div>
               )}
             />

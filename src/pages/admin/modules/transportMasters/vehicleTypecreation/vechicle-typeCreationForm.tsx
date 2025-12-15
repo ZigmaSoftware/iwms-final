@@ -102,8 +102,8 @@ export default function VehicleTypeCreationForm() {
   };
 
   return (
-    <div className="bg-[#f9fafb] min-h-screen p-8">
-      <div className="max-w-6xl mx-auto bg-white rounded-xl shadow-sm border">
+    <div className="p-8">
+      <div className="mx-auto bg-white rounded-xl shadow-sm border">
         {/* Header */}
         <div className="px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-800">
