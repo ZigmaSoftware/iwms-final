@@ -3,362 +3,275 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./vehicletracking.css";
 
-
-type RawRecord = Record<string, any>;
-
 type Status = "Running" | "Idle" | "Parked" | "No Data";
 
 type Vehicle = {
   id: string;
   label: string;
-  name: string;
   lat: number;
   lng: number;
-  speedKmph: number;
+  speed: number;
   ignition: "ON" | "OFF" | "NA";
   status: Status;
-  distanceKm: number | null;
+  distance: number;
   updatedAt: string;
 };
 
-const STATUS_ORDER: readonly Status[] = ["Running", "Idle", "Parked", "No Data"];
+const API_URL =
+  "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM";
 
-const STATUS_COLOR: Record<Status, string> = {
-  Running: "#16a34a",
-  Idle: "#f59e0b",
-  Parked: "#3b82f6",
-  "No Data": "#ef4444",
-};
-
-const API_URL = "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM";
-
-const createIcon = (color: string) =>
+/* ================= MAP ICON ================= */
+const createVehicleIcon = (status: Status) =>
   L.divIcon({
-    html: `<div class="truck-marker" style="background:${color}">&#128666;</div>`,
     className: "custom-marker",
-    iconSize: [28, 28],
+    html: `<div class="vehicle-icon ${status
+      .toLowerCase()
+      .replace(" ", "")}">🚚</div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
   });
 
-const STATUS_ICON: Record<Status, L.DivIcon> = {
-  Running: createIcon(STATUS_COLOR.Running),
-  Idle: createIcon(STATUS_COLOR.Idle),
-  Parked: createIcon(STATUS_COLOR.Parked),
-  "No Data": createIcon(STATUS_COLOR["No Data"]),
-};
-
-const pickStr = (source: RawRecord, keys: string[], fallback = ""): string => {
-  for (const key of keys) {
-    const value = source?.[key];
-    if (value !== undefined && value !== null) {
-      const str = String(value).trim();
-      if (str) return str;
-    }
-  }
-  return fallback;
-};
-
-const pickNum = (source: RawRecord, keys: string[], fallback = Number.NaN): number => {
-  for (const key of keys) {
-    const value = source?.[key];
-    if (value === 0 || value === "0") return 0;
-    if (value !== undefined && value !== null && value !== "" && !Number.isNaN(Number(value))) {
-      return Number(value);
-    }
-  }
-  return fallback;
-};
-
-const normalizeIgnition = (value: string): "ON" | "OFF" | "NA" => {
-  const normalized = value.trim().toUpperCase();
-  if (["ON", "1", "TRUE", "YES"].includes(normalized)) return "ON";
-  if (["OFF", "0", "FALSE", "NO"].includes(normalized)) return "OFF";
-  return "NA";
-};
-
-const deriveStatus = (speed: number, ignition: "ON" | "OFF" | "NA", raw: RawRecord): Status => {
-  const rawStatus = pickStr(raw, ["status", "vehicleStatus", "vehicleMode", "mode"], "").toLowerCase();
-  const noData = Number(pickNum(raw, ["noDataStatus"], 0)) === 1;
-
-  if (noData || rawStatus.includes("no data") || rawStatus.includes("nodata")) {
-    return "No Data";
-  }
-
-  if (speed > 0.5 || rawStatus.includes("run") || rawStatus.includes("move")) {
-    return "Running";
-  }
-
-  if (ignition === "OFF" || rawStatus.includes("park") || rawStatus.includes("stop")) {
-    return "Parked";
-  }
-
-  return "Idle";
-};
-
-const normalizeVehicle = (record: RawRecord): Vehicle | null => {
-  const id = pickStr(record, [
-    "vehicleId",
-    "vehicle_id",
-    "vehicleID",
-    "vehicle",
-    "vehicle_number",
-    "vehicleNo",
-    "regNo",
-    "shortName",
-  ]);
-
-  const lat = pickNum(record, ["lat", "latitude", "Latitude"]);
-  const lng = pickNum(record, ["lng", "lon", "longitude", "Longitude"]);
-
-  if (!id || Number.isNaN(lat) || Number.isNaN(lng)) {
-    return null;
-  }
-
-  const speed = pickNum(record, ["speed", "speedKmph", "speedKMH", "maxSpeed"]);
-  const ignition = normalizeIgnition(pickStr(record, ["ignitionStatus", "ignition", "ign", "engineStatus"], "NA"));
-  const distance = pickNum(record, ["distance", "distanceCovered", "odoDistance", "todayDistance"]);
-  const updated =
-    pickStr(record, ["updatedTime", "lastSeen", "lastComunicationTime", "date", "timestamp"], "") ||
-    new Date().toLocaleString();
-
-  const status = deriveStatus(speed, ignition, record);
-
-  return {
-    id,
-    label: pickStr(record, ["vehicle_number", "vehicleNo", "regNo", "vehicleId"], id),
-    name: pickStr(record, ["vehicle_name", "vehicleName", "description", "vehicleTypeLabel"], "Unknown"),
-    lat,
-    lng,
-    speedKmph: Number.isFinite(speed) ? speed : 0,
-    ignition,
-    status,
-    distanceKm: Number.isFinite(distance) ? distance : null,
-    updatedAt: updated,
-  };
-};
-
-export default function VehicleTracking(): React.ReactElement {
+export default function VehicleTracking() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [search, setSearch] = useState("");
+  const [selectedVehicle, setSelectedVehicle] = useState("");
   const [filters, setFilters] = useState<Record<Status, boolean>>({
     Running: true,
     Idle: true,
     Parked: true,
     "No Data": true,
   });
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
-  const markersRef = useRef<Map<string, L.Marker>>(new Map());
-  const previousPositionsRef = useRef<Map<string, L.LatLngTuple>>(new Map());
   const mapDivRef = useRef<HTMLDivElement | null>(null);
+  const carouselRef = useRef<HTMLDivElement | null>(null);
 
+  /* ================= FETCH DATA ================= */
   const fetchData = async () => {
-    try {
-      setLoading(true);
-      setErrorMsg(null);
-      const response = await fetch(API_URL);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+    const res = await fetch(API_URL);
+    const json = await res.json();
 
-      const body = await response.json();
-      const payload = Array.isArray(body) ? body : Array.isArray(body?.data) ? body.data : [];
+    const rows = Array.isArray(json)
+      ? json
+      : Array.isArray(json?.data)
+      ? json.data
+      : [];
 
-      const normalized = payload
-        .map((item: RawRecord) => normalizeVehicle(item))
-        .filter((item:any): item is Vehicle => Boolean(item));
+    const normalized: Vehicle[] = rows
+      .map((r: any) => {
+        const lat = Number(r.latitude);
+        const lng = Number(r.longitude);
+        if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
 
-      setVehicles(normalized);
-      setLastUpdated(new Date().toLocaleTimeString());
-    } catch (error) {
-      console.error("Vehicle tracking fetch failed:", error);
-      setVehicles([]);
-      setErrorMsg("Unable to load live tracking data.");
-      setLastUpdated(null);
-    } finally {
-      setLoading(false);
-    }
+        const speed = Number(r.speedKmph ?? r.speed ?? 0);
+        const ignitionRaw = String(
+          r.ignitionStatus ?? r.ignition ?? ""
+        ).toUpperCase();
+
+        const ignition: "ON" | "OFF" | "NA" =
+          ignitionRaw === "ON" || ignitionRaw === "1"
+            ? "ON"
+            : ignitionRaw === "OFF" || ignitionRaw === "0"
+            ? "OFF"
+            : "NA";
+
+        let status: Status = "Idle";
+        if (Number(r.noDataStatus) === 1) status = "No Data";
+        else if (speed > 2) status = "Running";
+        else if (ignition === "OFF") status = "Parked";
+
+        return {
+          id: r.vehicleNo || r.vehicle_number || r.regNo,
+          label: r.vehicleNo || r.vehicle_number || r.regNo,
+          lat,
+          lng,
+          speed,
+          ignition,
+          status,
+          distance: Number(r.distanceCovered ?? r.distance ?? 0),
+          updatedAt:
+            r.updatedTime ||
+            r.lastComunicationTime ||
+            new Date().toLocaleString(),
+        };
+      })
+      .filter(Boolean) as Vehicle[];
+
+    setVehicles(normalized);
   };
 
+  /* ================= MAP INIT ================= */
   useEffect(() => {
     fetchData();
-    const timer = window.setInterval(fetchData, 15000);
-    return () => window.clearInterval(timer);
-  }, []);
 
-  useEffect(() => {
-    if (mapRef.current || !mapDivRef.current) {
-      return;
-    }
-
-    const map = L.map(mapDivRef.current).setView([28.476, 77.51], 11);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: "&copy; OpenStreetMap contributors",
-    }).addTo(map);
+    const map = L.map(mapDivRef.current!).setView([28.61, 77.23], 11);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
     const layer = L.layerGroup().addTo(map);
     mapRef.current = map;
     layerRef.current = layer;
 
+    /* -------- STATUS FILTER (KEEP) -------- */
+    const StatusControl = L.Control.extend({
+      onAdd: () => {
+        const div = L.DomUtil.create(
+          "div",
+          "leaflet-control vehicle-status-control"
+        );
+
+        div.innerHTML = `
+          <label class="running"><input type="checkbox" checked /> Running</label>
+          <label class="idle"><input type="checkbox" checked /> Idle</label>
+          <label class="parked"><input type="checkbox" checked /> Parked</label>
+          <label class="nodata"><input type="checkbox" checked /> No Data</label>
+        `;
+
+        L.DomEvent.disableClickPropagation(div);
+
+        const statuses: Status[] = ["Running", "Idle", "Parked", "No Data"];
+        div.querySelectorAll("input").forEach((input, i) => {
+          input.addEventListener("change", () => {
+            setFilters((prev) => ({
+              ...prev,
+              [statuses[i]]: (input as HTMLInputElement).checked,
+            }));
+          });
+        });
+
+        return div;
+      },
+    });
+
+    map.addControl(new StatusControl({ position: "topleft" }));
+
+    const timer = setInterval(fetchData, 15000);
     return () => {
+      clearInterval(timer);
       map.remove();
-      markersRef.current.clear();
-      previousPositionsRef.current.clear();
-      layerRef.current = null;
-      mapRef.current = null;
     };
   }, []);
 
-  const filteredVehicles = useMemo(() => vehicles.filter((v) => filters[v.status]), [vehicles, filters]);
+  /* ================= FILTER PIPELINE ================= */
+  const filteredVehicles = useMemo(() => {
+    return vehicles.filter(
+      (v) =>
+        filters[v.status] &&
+        (!selectedVehicle || v.id === selectedVehicle) &&
+        v.label.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [vehicles, filters, search, selectedVehicle]);
 
-  const counts = useMemo(() => {
-    const base: Record<Status, number> = {
-      Running: 0,
-      Idle: 0,
-      Parked: 0,
-      "No Data": 0,
-    };
-    vehicles.forEach((v) => {
-      base[v.status] += 1;
-    });
-    return base;
-  }, [vehicles]);
-
+  /* ================= MARKERS + POPUP ================= */
   useEffect(() => {
-    const map = mapRef.current;
-    const layer = layerRef.current;
-    if (!map || !layer) {
-      return;
-    }
+    if (!layerRef.current || !mapRef.current) return;
 
-    const activeIds = new Set(filteredVehicles.map((v) => v.id));
+    layerRef.current.clearLayers();
 
-    for (const [id, marker] of markersRef.current.entries()) {
-      if (!activeIds.has(id)) {
-        layer.removeLayer(marker);
-        markersRef.current.delete(id);
-        previousPositionsRef.current.delete(id);
-      }
-    }
-
-    const highlightMarker = (marker: L.Marker) => {
-      const el = marker.getElement();
-      if (!el) return;
-      el.classList.add("pulse");
-      window.setTimeout(() => el.classList.remove("pulse"), 900);
-    };
-
-    filteredVehicles.forEach((vehicle) => {
-      const position: L.LatLngTuple = [vehicle.lat, vehicle.lng];
-      const popup = `
-        <strong>${vehicle.label}</strong><br/>
-        ${vehicle.name}<br/>
-        Status: ${vehicle.status}<br/>
-        Speed: ${vehicle.speedKmph.toFixed(0)} km/h<br/>
-        Ignition: ${vehicle.ignition}<br/>
-        Distance: ${(vehicle.distanceKm ?? 0).toFixed(1)} km<br/>
-        Updated: ${vehicle.updatedAt}
+    filteredVehicles.forEach((v) => {
+      const popupHtml = `
+        <div class="vehicle-popup">
+          <div class="popup-title">${v.label}</div>
+          <div class="popup-row">
+            <span class="popup-label">Status:</span>
+            <span class="popup-value">${v.status}</span>
+          </div>
+          <div class="popup-row">
+            <span class="popup-label">Speed:</span>
+            <span class="popup-value">${v.speed.toFixed(1)} km/h</span>
+          </div>
+        </div>
       `;
 
-      const existing = markersRef.current.get(vehicle.id);
-      if (existing) {
-        const previous = previousPositionsRef.current.get(vehicle.id);
-        existing.setLatLng(position);
-        existing.setIcon(STATUS_ICON[vehicle.status]);
-        existing.setPopupContent(popup);
-        if (
-          previous &&
-          (Math.abs(previous[0] - position[0]) > 0.00005 || Math.abs(previous[1] - position[1]) > 0.00005)
-        ) {
-          highlightMarker(existing);
-        }
-      } else {
-        const marker = L.marker(position, { icon: STATUS_ICON[vehicle.status], title: vehicle.label }).bindPopup(
-          popup
-        );
-        marker.addTo(layer);
-        markersRef.current.set(vehicle.id, marker);
-        highlightMarker(marker);
-      }
-
-      previousPositionsRef.current.set(vehicle.id, position);
+      L.marker([v.lat, v.lng], {
+        icon: createVehicleIcon(v.status),
+      })
+        .bindPopup(popupHtml, {
+          closeButton: true,
+          autoPan: true,
+          offset: [0, -8],
+        })
+        .addTo(layerRef.current!);
     });
-
-    if (filteredVehicles.length && markersRef.current.size === filteredVehicles.length) {
-      try {
-        const group = L.featureGroup(Array.from(markersRef.current.values()));
-        map.fitBounds(group.getBounds().pad(0.2));
-      } catch (err) {
-        console.debug("Unable to fit bounds", err);
-      }
-    }
   }, [filteredVehicles]);
 
-  const toggleFilter = (status: Status) => {
-    setFilters((prev) => ({
-      ...prev,
-      [status]: !prev[status],
-    }));
+  /* ================= AUTO FIT ================= */
+  useEffect(() => {
+    if (!mapRef.current || filteredVehicles.length === 0) return;
+
+    const bounds = L.latLngBounds(
+      filteredVehicles.map((v) => [v.lat, v.lng] as [number, number])
+    );
+
+    mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+  }, [filteredVehicles]);
+
+  /* ================= SCROLL ================= */
+  const scroll = (dir: "left" | "right") => {
+    carouselRef.current?.scrollBy({
+      left: dir === "left" ? -340 : 340,
+      behavior: "smooth",
+    });
   };
 
+  /* ================= JSX ================= */
   return (
-    <div className="dashboard">
-      <div id="map" ref={mapDivRef}>
-        <div className="filter-bar">
-          {STATUS_ORDER.map((status) => (
-            <label key={status}>
-              <input
-                type="checkbox"
-                checked={filters[status]}
-                onChange={() => toggleFilter(status)}
-              />
-              <span className={status.toLowerCase().replace(" ", "")}>
-                {status} ({counts[status]})
-              </span>
-            </label>
-          ))}
-        </div>
+    <div className="tracking-page">
+      <div className="map-wrap">
+        <div id="map" ref={mapDivRef} />
       </div>
 
-      <div className="sidebar">
-        <div className="vehicle-list">
-          {loading && !vehicles.length && (
-            <div className="vehicle-card">Loading live vehicles...</div>
-          )}
-          {errorMsg && (
-            <div className="vehicle-card nodata">{errorMsg}</div>
-          )}
-          {!filteredVehicles.length && !loading && !errorMsg && (
-            <div className="vehicle-card nodata">No vehicles for selected filters.</div>
-          )}
-          {filteredVehicles.map((vehicle) => (
-            <div
-              key={vehicle.id}
-              className={`vehicle-card ${vehicle.status.toLowerCase().replace(" ", "")}`}
+      <div className="carousel-wrap">
+        <div className="carousel-header-row">
+          <div className="carousel-header">(12) Vehicles details</div>
+
+          <div className="vehicle-search-group">
+            <input
+              className="vehicle-search"
+              placeholder="Search vehicle..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+
+            <select
+              className="vehicle-dropdown"
+              value={selectedVehicle}
+              onChange={(e) => setSelectedVehicle(e.target.value)}
             >
+              <option value="">All Vehicles</option>
+              {vehicles.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <button className="carousel-btn left" onClick={() => scroll("left")}>
+          ‹
+        </button>
+
+        <div className="vehicle-carousel" ref={carouselRef}>
+          {filteredVehicles.slice(0, 12).map((v) => (
+            <div key={v.id} className={`vehicle-card ${v.status.toLowerCase()}`}>
               <div className="vehicle-header">
-                <span>{vehicle.label}</span>
-                <span className="status">{vehicle.status}</span>
+                <span>{v.label}</span>
+                <span className="status">{v.status}</span>
               </div>
               <div className="vehicle-body">
-                <p>{vehicle.name}</p>
-                <p>Speed: {vehicle.speedKmph.toFixed(0)} km/h</p>
-                <p>
-                  Ignition: {" "}
-                  <span className={vehicle.ignition === "ON" ? "on" : "off"}>{vehicle.ignition}</span>
-                </p>
-                <p>Distance: {(vehicle.distanceKm ?? 0).toFixed(1)} km</p>
-                <p className="text-xs text-gray-500 mt-1">Updated: {vehicle.updatedAt}</p>
+                <p>Speed: {v.speed} km/h</p>
+                <p>Ignition: {v.ignition}</p>
+                <p>Distance: {v.distance.toFixed(1)} km</p>
+                <p>Updated: {v.updatedAt}</p>
               </div>
             </div>
           ))}
         </div>
-        {lastUpdated && (
-          <div className="px-3 py-2 text-xs text-gray-500 border-t">Last refreshed at {lastUpdated}</div>
-        )}
+
+        <button className="carousel-btn right" onClick={() => scroll("right")}>
+          ›
+        </button>
       </div>
     </div>
   );
