@@ -19,12 +19,24 @@ import {
   type UserRole,
 } from "@/types/roles";
 import ZigmaLogo from "../images/logo.png";
-import BgImg from "../images/bgSignin.png"
+import BgImg from "../images/bgSignin.png";
+
+type LoginResponse = {
+  access_token: string;
+  role: string;
+  unique_id: string;
+  name?: string;
+  username?: string;
+  email?: string;
+};
 
 const DUMMY_ACCESS_TOKEN =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjQxMDI0NDQ4MDAsInN1YiI6IklXTVNfUk5EIn0.dHVubmVsLXNpZ25hdHVyZQ";
 
-const RND_PROFILES: Record<UserRole, { name: string; email: string; uniqueId: string }> = {
+const RND_PROFILES: Record<
+  UserRole,
+  { name: string; email: string; uniqueId: string }
+> = {
   admin: {
     name: "Admin Preview",
     email: "admin-preview@rnd.local",
@@ -47,7 +59,8 @@ export default function Auth() {
   const { setUser } = useUser();
 
   const handleRndAccess = (targetRole: UserRole) => {
-    const normalizedRole: UserRole = targetRole === ADMIN_ROLE ? ADMIN_ROLE : DEFAULT_ROLE;
+    const normalizedRole: UserRole =
+      targetRole === ADMIN_ROLE ? ADMIN_ROLE : DEFAULT_ROLE;
     const profile = RND_PROFILES[normalizedRole] ?? RND_PROFILES[DEFAULT_ROLE];
 
     localStorage.setItem("access_token", DUMMY_ACCESS_TOKEN);
@@ -67,53 +80,65 @@ export default function Auth() {
     navigate(normalizedRole === ADMIN_ROLE ? "/admin" : "/", { replace: true });
   };
 
-  const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
+const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
+  e.preventDefault();
+  setLoading(true);
 
-    try {
-      console.log(username, password);
-      const res = await desktopApi.post("login-user/", {
-        username,
-        password,
-      });
-      console.log(res);
+  try {
+    const res = await desktopApi.post<LoginResponse>(
+      "/login/login-user/",
+      { username, password }
+    );
 
-      const { access_token, role, unique_id, name, username: apiUsername, email } = res.data;
-      const normalizedRole = normalizeRole(role) ?? DEFAULT_ROLE;
+    const {
+      access_token,
+      role,
+      unique_id,
+      name,
+      username: apiUsername,
+      email,
+    } = res.data;
 
-      localStorage.setItem("access_token", access_token);
-      localStorage.setItem(USER_ROLE_STORAGE_KEY, normalizedRole);
-      localStorage.setItem("unique_id", unique_id);
-      setUser({
-        name: name ?? apiUsername ?? username,
-        email: email ?? "",
-      });
+    const normalizedRole = normalizeRole(role) ?? DEFAULT_ROLE;
 
-      if (normalizedRole === ADMIN_ROLE) {
-        navigate("/admin", { replace: true });
-        setAdminViewPreference(ADMIN_VIEW_MODE_ADMIN);
-      } else {
-        navigate("/", { replace: true });
-        clearAdminViewPreference();
-      }
-    } catch (error: any) {
-      toast({
-        title: t("login.title"),
-        description:
-          error?.response?.data?.detail || "Invalid credentials",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+    // ✅ 1. STORE TOKEN FIRST
+    localStorage.setItem("access_token", access_token);
+    localStorage.setItem(USER_ROLE_STORAGE_KEY, normalizedRole);
+    localStorage.setItem("unique_id", unique_id);
+
+    // ✅ 2. FORCE STORAGE SYNC (CRITICAL)
+    await Promise.resolve();
+
+    // ✅ 3. UPDATE CONTEXT
+    setUser({
+      name: name ?? apiUsername ?? username,
+      email: email ?? "",
+    });
+
+    // ✅ 4. NAVIGATE AFTER TOKEN IS READY
+    if (normalizedRole === ADMIN_ROLE) {
+      setAdminViewPreference(ADMIN_VIEW_MODE_ADMIN);
+      navigate("/admin", { replace: true });
+    } else {
+      clearAdminViewPreference();
+      navigate("/", { replace: true });
     }
-  };
 
-  console.log(username+" "+password);
+  } catch (error: any) {
+    toast({
+      title: t("login.title"),
+      description: error?.response?.data?.detail || "Invalid credentials",
+      variant: "destructive",
+    });
+  } finally {
+    setLoading(false);
+  }
+};
+
+  console.log(username + " " + password);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f3f6f4] p-4 font-sans">
-
       {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
@@ -125,7 +150,6 @@ export default function Auth() {
 
       {/* Content Container */}
       <div className="relative w-full max-w-5xl grid md:grid-cols-2 rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
-
         {/* LEFT */}
         <div className="flex flex-col items-center justify-center p-10 bg-[#e8f5e9] text-center border-r border-gray-200">
           <img src={ZigmaLogo} className="h-40 w-40 mb-4" />
