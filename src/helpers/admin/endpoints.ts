@@ -1,41 +1,70 @@
 /* --------------------------------------------------------
-   Admin endpoint registry
+   Admin endpoint registry (Grouped)
 -------------------------------------------------------- */
 export const adminEndpoints = {
-  continents: "continents",
-  countries: "countries",
-  states: "states",
-  districts: "districts",
-  cities: "cities",
-  zones: "zones",
-  wards: "wards",
-  properties: "properties",
-  subProperties: "subproperties",
-  staffCreation: "staffcreation",
-  fuels: "fuels",
-  vehicleTypes: "vehicle-type",
-  vehicleCreation: "vehicle-creation",
-  customerCreations: "customercreations",
-  wasteCollections: "wastecollections",
-  complaints: "complaints",
-  feedbacks: "feedbacks",
-  userTypes: "user-type",
-  usercreations: "users-creation",
-  staffUserTypes: "staffusertypes",
+  /* =========================
+     MASTERS
+  ========================= */
+  continents: "masters/continents",
+  countries: "masters/countries",
+  states: "masters/states",
+  districts: "masters/districts",
+  cities: "masters/cities",
+  zones: "masters/zones",
+  wards: "masters/wards",
 
-  /* NEW */
-  mainscreentype: "mainscreentype",
-  userscreenaction: "userscreen-action",
-  mainscreens: "mainscreens",
-  userscreens: "userscreens",
+  /* =========================
+     ASSETS
+  ========================= */
+  fuels: "assets/fuels",
+  properties: "assets/properties",
+  subProperties: "assets/subproperties",
 
-  /* NEW — Add userscreenpermissions */
-  userscreenpermissions: "userscreenpermissions",
+  /* =========================
+     SCREEN MANAGEMENT
+  ========================= */
+  mainscreentype: "screen-management/mainscreentype",
+  mainscreens: "screen-management/mainscreens",
+  userscreens: "screen-management/userscreens",
+  userscreenaction: "screen-management/userscreen-action",
+  userscreenpermissions: "screen-management/userscreenpermissions",
+
+  /* =========================
+     ROLE ASSIGNMENT
+  ========================= */
+  userTypes: "role-assign/user-type",
+  staffUserTypes: "role-assign/staffusertypes",
+
+  /* =========================
+     USER CREATION
+  ========================= */
+  usercreations: "user-creation/users-creation",
+  staffCreation: "user-creation/staffcreation",
+
+  /* =========================
+     Login
+  ========================= */
+  
+  loginUser: "login/login-user",
+
+  /* =========================
+     CUSTOMERS
+  ========================= */
+  customerCreations: "customers/customercreations",
+  wasteCollections: "customers/wastecollections",
+  feedbacks: "customers/feedbacks",
+  complaints: "customers/complaints",
+
+  /* =========================
+     VEHICLES
+  ========================= */
+  vehicleTypes: "vehicles/vehicle-type",
+  vehicleCreation: "vehicles/vehicle-creation",
 } as const;
 
 export type AdminEntity = keyof typeof adminEndpoints;
 
 export const getAdminEndpointPath = (entity: AdminEntity): string => {
-  const normalized = adminEndpoints[entity];
-  return normalized.startsWith("/") ? normalized : `/${normalized}`;
+  const path = adminEndpoints[entity];
+  return path.startsWith("/") ? path : `/${path}`;
 };
