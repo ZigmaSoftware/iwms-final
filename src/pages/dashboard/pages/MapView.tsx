@@ -369,7 +369,7 @@ export default function MapView() {
 
       <div className="grid gap-5 lg:grid-cols-3 -mt-2">
         <div className="lg:col-span-2">
-          <Card className="h-[540px] overflow-visible">
+          <Card className="h-[760px] overflow-visible">
             <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <CardTitle>Fleet Location Map</CardTitle>
@@ -432,7 +432,7 @@ export default function MapView() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="relative h-[440px] bg-gradient-to-br from-secondary to-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
+              <div className="relative h-[640px] bg-gradient-to-br from-secondary to-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
                 <div ref={mapDivRef} className="absolute inset-0" />
                 <div className="absolute left-3 bottom-3 rounded-md bg-background/80 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow">
                   <div>{`Live vehicles: ${liveVehicles.length}`}</div>
@@ -501,7 +501,7 @@ export default function MapView() {
                   Active Vehicles
                 </CardTitle>
               </CardHeader>
-            <CardContent className="space-y-3 max-h-[270px] overflow-y-auto pr-1">
+            <CardContent className="space-y-3 max-h-[475px] overflow-y-auto pr-1">
               {displayVehicles.map((vehicle) => {
                 const statusMeta = STATUS_META[vehicle.status];
                 const isSelected = vehicle.id === vehicleId;
