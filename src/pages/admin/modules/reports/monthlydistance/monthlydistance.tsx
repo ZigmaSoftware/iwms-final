@@ -128,7 +128,6 @@ export default function MonthlyDistance() {
   const [selectedMonth, setSelectedMonth] = useState(monthInput);
 
   const [fleetRows, setFleetRows] = useState<VehicleDistanceRow[]>([]);
-  const [loading, setLoading] = useState(false);
   const [rosterError, setRosterError] = useState("");
   const [fetchError, setFetchError] = useState("");
 
@@ -182,7 +181,6 @@ export default function MonthlyDistance() {
       return;
     }
 
-    setLoading(true);
     setFetchError("");
 
     const [y, m] = selectedMonth.split("-").map(Number);
@@ -231,7 +229,6 @@ export default function MonthlyDistance() {
 
     cacheRef.current[selectedMonth] = finalRows;
     setFleetRows(finalRows);
-    setLoading(false);
   }, [vehicles, monthDays, selectedMonth]);
 
   useEffect(() => {
@@ -302,6 +299,7 @@ export default function MonthlyDistance() {
               type="month"
               value={monthInput}
               onChange={(e) => setMonthInput(e.target.value)}
+              className="md-month-input"
             />
             <button
               onClick={() => setSelectedMonth(monthInput)}
@@ -326,7 +324,6 @@ export default function MonthlyDistance() {
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          loading={loading}
           filters={filters}
           header={renderHeader()}
           stripedRows

@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
+import { InputText } from "primereact/inputtext";
 import { Button } from "primereact/button";
+import { FilterMatchMode } from "primereact/api";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -55,8 +57,63 @@ export default function DateReport() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /* ================= Filters ================= */
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
+  const [filters, setFilters] = useState<any>({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  });
+
+  const onGlobalFilterChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFilters({
+      global: { value, matchMode: FilterMatchMode.CONTAINS },
+    });
+    setGlobalFilterValue(value);
+  };
+
+  const renderHeader = () => (
+    <div className="flex justify-between items-center">
+      <div className="flex gap-3 items-center">
+        <label>
+          From
+          <input
+            type="date"
+            value={fromDate}
+            onChange={(e) => setFromDate(e.target.value)}
+            className="ml-2 wf-date-input"
+          />
+        </label>
+
+        <label>
+          To
+          <input
+            type="date"
+            value={toDate}
+            onChange={(e) => setToDate(e.target.value)}
+            className="ml-2 wf-date-input"
+          />
+        </label>
+
+        <Button
+          label="Go"
+          // icon="pi pi-search"
+          onClick={loadData}
+        />
+      </div>
+
+      <span className="p-input-icon-left">
+        {/* <span className="pi pi-search" /> */}
+        <InputText
+          value={globalFilterValue}
+          onChange={onGlobalFilterChange}
+          placeholder="Search Date / Time / Weights"
+        />
+      </span>
+    </div>
+  );
+
   /* ================= Fetch ================= */
-  const loadData = async () => {
+  async function loadData() {
     if (new Date(fromDate) > new Date(toDate)) {
       setError("From Date cannot be later than To Date");
       return;
@@ -86,7 +143,7 @@ export default function DateReport() {
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   useEffect(() => {
     loadData();
@@ -111,42 +168,12 @@ export default function DateReport() {
           <Button
             icon="pi pi-arrow-left"
             label="Back"
-            severity="secondary"
+            severity="success"
             onClick={() =>
               navigate(
                 `/${encWorkforceManagement}/${encWorkforceManagement}`
               )
             }
-          />
-        </div>
-
-        {/* Controls */}
-        <div className="flex gap-4 items-end mb-4">
-          <label>
-            From Date
-            <input
-              type="date"
-              value={fromDate}
-              onChange={(e) => setFromDate(e.target.value)}
-              className="ml-2"
-            />
-          </label>
-
-          <label>
-            To Date
-            <input
-              type="date"
-              value={toDate}
-              onChange={(e) => setToDate(e.target.value)}
-              className="ml-2"
-            />
-          </label>
-
-          <Button
-            label="Go"
-            icon="pi pi-search"
-            onClick={loadData}
-            loading={loading}
           />
         </div>
 
@@ -160,9 +187,22 @@ export default function DateReport() {
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25, 50]}
+          filters={filters}
+          header={renderHeader()}
           loading={loading}
           stripedRows
           showGridlines
+          globalFilterFields={[
+            "date",
+            "Start_Time",
+            "End_Time",
+            "total_trip",
+            "dry_weight",
+            "wet_weight",
+            "mix_weight",
+            "total_net_weight",
+            "average_weight_per_trip",
+          ]}
           emptyMessage="No records found"
           className="p-datatable-sm"
         >

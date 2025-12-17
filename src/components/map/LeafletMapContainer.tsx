@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
+import { useTheme } from "@/contexts/ThemeContext";
 
 /* ================= API ================= */
 const VEHICLE_API_URL =
@@ -48,6 +49,62 @@ function parseLatLng(latlong: string[]): LatLngTuple[] {
     .filter(Boolean) as LatLngTuple[];
 }
 
+type RawRecord = Record<string, any>;
+
+function pickString(
+  source: RawRecord,
+  keys: string[],
+  fallback = ""
+): string {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value === undefined || value === null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return fallback;
+}
+
+function pickNumber(source: RawRecord, keys: string[]): number | null {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value === undefined || value === null || value === "") continue;
+    const num = Number(value);
+    if (!Number.isNaN(num)) return num;
+  }
+  return null;
+}
+
+const VEHICLE_COLLECTION_KEYS = [
+  "data",
+  "vehicles",
+  "vehicleData",
+  "vehicleList",
+  "vehicleDetails",
+];
+
+function extractVehicleRows(payload: any): RawRecord[] {
+  if (Array.isArray(payload)) return payload;
+
+  if (payload && typeof payload === "object") {
+    for (const key of VEHICLE_COLLECTION_KEYS) {
+      const candidate = payload[key];
+      if (Array.isArray(candidate)) return candidate;
+    }
+
+    for (const key of VEHICLE_COLLECTION_KEYS) {
+      const nestedParent = payload[key];
+      if (!nestedParent || typeof nestedParent !== "object") continue;
+      for (const nestedKey of VEHICLE_COLLECTION_KEYS) {
+        const nested = nestedParent[nestedKey];
+        if (Array.isArray(nested)) return nested;
+      }
+    }
+  }
+
+  return [];
+}
+
 /* ================= VEHICLE ICON ================= */
 function getVehicleIcon(status: VehicleStatus) {
   const color = STATUS_COLORS[status];
@@ -79,6 +136,7 @@ function getVehicleIcon(status: VehicleStatus) {
 
 /* ================= COMPONENT ================= */
 export function LeafletMapContainer() {
+  const { theme } = useTheme();
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
 
@@ -87,6 +145,7 @@ export function LeafletMapContainer() {
 
   const [vehicles, setVehicles] = useState<VehicleData[]>([]);
   const [geofenceSites, setGeofenceSites] = useState<GeofenceSite[]>([]);
+  const isDarkMode = theme === "dark";
 
   const [statusFilter, setStatusFilter] = useState<Record<VehicleStatus, boolean>>({
     Running: true,
@@ -136,35 +195,83 @@ export function LeafletMapContainer() {
   /* ================= FETCH VEHICLES ================= */
   useEffect(() => {
     const fetchVehicles = async () => {
-      const res = await fetch(VEHICLE_API_URL);
-      const json = await res.json();
+      try {
+        const res = await fetch(VEHICLE_API_URL);
+        const json = await res.json();
 
-      const list = Array.isArray(json) ? json : [];
+        const rows = extractVehicleRows(json);
 
-      const normalized: VehicleData[] = list
-        .map((v: any) => {
-          const lat = parseFloat(v.lat ?? v.latitude);
-          const lng = parseFloat(v.lng ?? v.longitude);
-          if (Number.isNaN(lat) || Number.isNaN(lng)) return null;
+        const normalized: VehicleData[] = rows
+          .map((entry: RawRecord) => {
+            const lat = pickNumber(entry, ["lat", "Lat", "latitude", "Latitude"]);
+            const lng = pickNumber(entry, ["lng", "lon", "longitude", "Longitude"]);
+            if (lat == null || lng == null) return null;
 
-          let status: VehicleStatus = "No Data";
-          if (v.ignitionStatus === "ON") status = "Running";
-          else if (v.ignitionStatus === "OFF") status = "Parked";
-          else if (v.speed > 0) status = "Idle";
+            const speed =
+              pickNumber(entry, ["speedKmph", "speed", "speed_kmph", "speedKMH"]) ?? 0;
+            const ignitionRaw = pickString(
+              entry,
+              ["ignitionStatus", "ignition", "ign"],
+              ""
+            ).toUpperCase();
 
-          return {
-            vehicle_no: v.regNo || "UNKNOWN",
-            lat,
-            lng,
-            speed: Number(v.speed ?? 0),
-            status,
-            driver: v.driverName || "-",
-            updated_at: v.lastSeen || "",
-          };
-        })
-        .filter(Boolean);
+            const ignition =
+              ignitionRaw === "ON" || ignitionRaw === "1"
+                ? "ON"
+                : ignitionRaw === "OFF" || ignitionRaw === "0"
+                ? "OFF"
+                : "NA";
 
-      setVehicles(normalized);
+            const noData =
+              Number(entry.noDataStatus ?? entry.noData ?? entry.statusNoData ?? 0) === 1;
+
+            let status: VehicleStatus = "Idle";
+            if (noData) status = "No Data";
+            else if (speed > 2) status = "Running";
+            else if (ignition === "OFF") status = "Parked";
+
+            return {
+              vehicle_no:
+                pickString(
+                  entry,
+                  [
+                    "vehicle_no",
+                    "vehicleNo",
+                    "vehicle_number",
+                    "vehicleNumber",
+                    "regNo",
+                  ],
+                  "UNKNOWN"
+                ) || "UNKNOWN",
+              lat,
+              lng,
+              speed,
+              status,
+              driver:
+                pickString(entry, ["driverName", "driver_name", "driver"], "-") || "-",
+              updated_at:
+                pickString(
+                  entry,
+                  [
+                    "updatedTime",
+                    "lastComunicationTime",
+                    "lastCommunication",
+                    "gpsTime",
+                    "deviceTime",
+                    "serverTime",
+                    "lastSeen",
+                    "updated_at",
+                  ],
+                  ""
+                ) || "",
+            };
+          })
+          .filter(Boolean) as VehicleData[];
+
+        setVehicles(normalized);
+      } catch (err) {
+        console.error("Failed to fetch vehicles", err);
+      }
     };
 
     fetchVehicles();
@@ -225,7 +332,14 @@ export function LeafletMapContainer() {
 
   /* ================= UI ================= */
   return (
-    <div style={{ position: "relative", width: "100%", height: "600px" }}>
+    <div
+      style={{
+        position: "relative",
+        width: "100%",
+        height: "600px",
+        backgroundColor: isDarkMode ? "#0f172a" : "#fff",
+      }}
+    >
       {/* STATUS FILTER */}
       <div
         style={{
@@ -234,13 +348,17 @@ export function LeafletMapContainer() {
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 1000,
-          background: "#fff",
+          background: isDarkMode ? "rgba(15,23,42,.96)" : "#fff",
           padding: "6px 10px",
           borderRadius: 8,
           display: "flex",
           gap: 10,
           fontSize: 12,
-          boxShadow: "0 4px 10px rgba(0,0,0,.15)",
+          boxShadow: isDarkMode
+            ? "0 10px 30px rgba(0,0,0,.45)"
+            : "0 4px 10px rgba(0,0,0,.15)",
+          color: isDarkMode ? "#f8fafc" : "#0f172a",
+          border: isDarkMode ? "1px solid rgba(148,163,184,.35)" : undefined,
         }}
       >
         {(Object.keys(statusFilter) as VehicleStatus[]).map((s) => (

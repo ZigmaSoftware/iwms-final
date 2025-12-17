@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Pie } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import type { ChartData } from "chart.js";
+import { useTheme } from "@/contexts/ThemeContext";
+import { cn } from "@/lib/utils";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -951,6 +953,36 @@ export default function WasteCollection() {
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStat[]>(
     FALLBACK_MONTHLY_STATS
   );
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+
+  const pageBgClass = cn(
+    "min-h-screen p-6 transition-colors duration-300",
+    isDarkMode
+      ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 text-slate-100"
+      : "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-slate-900"
+  );
+
+  const heroPanelClass = cn(
+    "flex items-center justify-between rounded-2xl p-6 shadow-lg border",
+    isDarkMode
+      ? "bg-slate-900/80 backdrop-blur border-slate-800 shadow-[0_35px_80px_rgba(2,6,23,0.65)]"
+      : "bg-white/70 backdrop-blur-sm border-white/50"
+  );
+
+  const tabsCardClass = cn(
+    "border-0 shadow-xl",
+    isDarkMode
+      ? "bg-slate-900/70 border border-slate-800 text-slate-100"
+      : "bg-white/80 backdrop-blur-sm text-slate-900"
+  );
+
+  const tableContainerClass = isDarkMode
+    ? "rounded-xl overflow-hidden border border-slate-800 bg-slate-900/70 shadow-lg"
+    : "rounded-xl overflow-hidden border shadow bg-white";
+
+  const tableHeadClass = isDarkMode ? "bg-slate-900/60 text-slate-200" : "bg-slate-50";
+  const tableRowHoverClass = isDarkMode ? "hover:bg-slate-800/60" : "hover:bg-indigo-50";
 
   // Zone → Ward → Property drilldown states
   const [selectedCity, setSelectedCity] = useState("Delhi");
@@ -1180,15 +1212,15 @@ export default function WasteCollection() {
   // ---------------------------- RENDER START ------------------------------
   // -----------------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+    <div className={pageBgClass}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+        <div className={heroPanelClass}>
           <div>
             <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
               Waste Collection Dashboard
             </h2>
-            <p className="text-slate-600 mt-2 text-lg">
+            <p className={cn("mt-2 text-lg", isDarkMode ? "text-slate-300" : "text-slate-600")}>
               Real-time tracking and analytics for waste management
             </p>
           </div>
@@ -1283,12 +1315,22 @@ export default function WasteCollection() {
         </div>
 
         {/* TABS SECTION */}
-        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+        <Card className={tabsCardClass}>
           <Tabs defaultValue="daily" className="p-6">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-1 rounded-xl">
+            <TabsList
+              className={cn(
+                "grid w-full grid-cols-3 p-1 rounded-xl",
+                isDarkMode ? "bg-slate-900/60" : "bg-slate-100"
+              )}
+            >
               <TabsTrigger
                 value="daily"
-                className="rounded-lg data-[state=active]:bg-white"
+                className={cn(
+                  "rounded-lg transition-colors",
+                  isDarkMode
+                    ? "text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white"
+                    : "text-slate-600 data-[state=active]:bg-white"
+                )}
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Daily Data
@@ -1296,7 +1338,12 @@ export default function WasteCollection() {
 
               <TabsTrigger
                 value="monthly"
-                className="rounded-lg data-[state=active]:bg-white"
+                className={cn(
+                  "rounded-lg transition-colors",
+                  isDarkMode
+                    ? "text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white"
+                    : "text-slate-600 data-[state=active]:bg-white"
+                )}
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Monthly Summary
@@ -1304,7 +1351,12 @@ export default function WasteCollection() {
 
               <TabsTrigger
                 value="zone"
-                className="rounded-lg data-[state=active]:bg-white"
+                className={cn(
+                  "rounded-lg transition-colors",
+                  isDarkMode
+                    ? "text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white"
+                    : "text-slate-600 data-[state=active]:bg-white"
+                )}
               >
                 <MapPin className="h-4 w-4 mr-2" />
                 Zone Analysis
@@ -1323,10 +1375,10 @@ export default function WasteCollection() {
                   </p>
                 </div>
 
-                <div className="rounded-xl overflow-hidden border shadow bg-white">
+                <div className={tableContainerClass}>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50">
+                      <TableRow className={tableHeadClass}>
                         <TableHead>Date</TableHead>
                         <TableHead>Zone</TableHead>
                         <TableHead>Wet (Tons)</TableHead>
@@ -1337,13 +1389,18 @@ export default function WasteCollection() {
 
                     <TableBody>
                       {dailyData.map((row, index) => (
-                        <TableRow key={index} className="hover:bg-indigo-50">
+                        <TableRow key={index} className={tableRowHoverClass}>
                           <TableCell>
                             {new Date(row.date).toLocaleDateString("en-US")}
                           </TableCell>
 
                           <TableCell>
-                            <Badge variant="outline">{row.zone}</Badge>
+                            <Badge
+                              variant="outline"
+                              className={isDarkMode ? "border-slate-600 text-slate-200" : undefined}
+                            >
+                              {row.zone}
+                            </Badge>
                           </TableCell>
 
                           <TableCell className="font-bold text-emerald-700">
@@ -1370,10 +1427,10 @@ export default function WasteCollection() {
               <div className="space-y-4">
                 <h3 className="text-xl font-bold">Monthly Summary</h3>
 
-                <div className="rounded-xl border shadow bg-white">
+                <div className={tableContainerClass}>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50">
+                      <TableRow className={tableHeadClass}>
                         <TableHead>Month</TableHead>
                         <TableHead>Wet (Tons)</TableHead>
                         <TableHead>Dry (Tons)</TableHead>
@@ -1433,7 +1490,12 @@ export default function WasteCollection() {
                         setWardDialog(false);
                         setZoneDialog(true);
                       }}
-                      className="cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all bg-indigo-50"
+                      className={cn(
+                        "cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all",
+                        isDarkMode
+                          ? "bg-slate-900/70 border border-slate-800 text-slate-100"
+                          : "bg-indigo-50"
+                      )}
                     >
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -1455,7 +1517,12 @@ export default function WasteCollection() {
 
                 {/* DIALOG 1 — WARDS */}
                 <Dialog open={zoneDialog} onOpenChange={setZoneDialog}>
-                  <DialogContent className="h-[700px] overflow-y-auto lg:max-w-7xl">
+                  <DialogContent
+                    className={cn(
+                      "h-[700px] overflow-y-auto lg:max-w-7xl",
+                      isDarkMode ? "bg-slate-950 text-slate-100" : ""
+                    )}
+                  >
                     <DialogHeader>
                       <DialogTitle>
                         <button
@@ -1469,7 +1536,12 @@ export default function WasteCollection() {
                     </DialogHeader>
 
                     {/* -------------------- PIE CHART -------------------- */}
-                    <div className="bg-white rounded-xl p-4 shadow border mb-6">
+                    <div
+                      className={cn(
+                        "rounded-xl p-4 shadow border mb-6",
+                        isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-white"
+                      )}
+                    >
                       <h3 className="text-lg font-semibold mb-4 text-center">
                         Total Waste Summary for {selectedZone}
                       </h3>
@@ -1495,7 +1567,12 @@ export default function WasteCollection() {
                             <Button
                               key={ward}
                               variant="outline"
-                              className="w-full justify-between"
+                              className={cn(
+                                "w-full justify-between",
+                                isDarkMode
+                                  ? "border-slate-700 text-slate-100 hover:bg-slate-900/60"
+                                  : undefined
+                              )}
                               onClick={() => handleWardSelection(ward)}
                             >
                               {ward}
@@ -1509,7 +1586,12 @@ export default function WasteCollection() {
 
                 {/* DIALOG 2 — WARD VIEW */}
                 <Dialog open={wardDialog} onOpenChange={setWardDialog}>
-                  <DialogContent className="h-[700px]  overflow-y-auto lg:max-w-7xl">
+                  <DialogContent
+                    className={cn(
+                      "h-[700px]  overflow-y-auto lg:max-w-7xl",
+                      isDarkMode ? "bg-slate-950 text-slate-100" : ""
+                    )}
+                  >
                     <DialogHeader>
                       <DialogTitle>
                         <button
@@ -1527,7 +1609,12 @@ export default function WasteCollection() {
 
                     {selectedWard ? (
                       <div className="space-y-6">
-                        <div className="bg-white rounded-xl p-4 shadow border">
+                        <div
+                          className={cn(
+                            "rounded-xl p-4 shadow border",
+                            isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-white"
+                          )}
+                        >
                           <h3 className="text-lg font-semibold mb-4 text-center">
                             Ward Waste Mix · {selectedWard}
                           </h3>
@@ -1590,7 +1677,12 @@ export default function WasteCollection() {
                           })}
                         </div> */}
 {/* 
-                        <Card className="border shadow-sm">
+                        <Card
+                          className={cn(
+                            "border shadow-sm",
+                            isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-white"
+                          )}
+                        >
                           <CardHeader>
                             <CardTitle>
                               {WASTE_CATEGORY_META[selectedWasteType].label}{" "}
@@ -1700,7 +1792,7 @@ export default function WasteCollection() {
                             <div className="rounded-xl border overflow-hidden">
                               <Table>
                                 <TableHeader>
-                                  <TableRow className="bg-slate-50">
+                                  <TableRow className={tableHeadClass}>
                                     <TableHead>ID</TableHead>
                                     <TableHead>Location</TableHead>
                                     <TableHead>Dry</TableHead>
@@ -1711,7 +1803,7 @@ export default function WasteCollection() {
                                 </TableHeader>
                                 <TableBody>
                                   {propertyRecords.map((record) => (
-                                    <TableRow key={record.id}>
+                                    <TableRow key={record.id} className={tableRowHoverClass}>
                                       <TableCell className="font-semibold">
                                         {record.id}
                                       </TableCell>
@@ -1732,7 +1824,12 @@ export default function WasteCollection() {
                                       <TableCell>
                                         {record.mixed.toFixed(2)} t
                                       </TableCell>
-                                      <TableCell className="text-sm text-slate-600">
+                                      <TableCell
+                                        className={cn(
+                                          "text-sm",
+                                          isDarkMode ? "text-slate-300" : "text-slate-600"
+                                        )}
+                                      >
                                         {record.lastPickup}
                                       </TableCell>
                                     </TableRow>

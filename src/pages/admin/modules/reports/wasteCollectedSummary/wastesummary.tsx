@@ -59,7 +59,6 @@ export default function WasteSummary() {
 
   const [monthValue, setMonthValue] = useState(initialMonth);
   const [rows, setRows] = useState<ApiRow[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const [totalHouseholdCount, setTotalHouseholdCount] = useState<number | null>(null);
   const [totalWasteCollectedCount, setTotalWasteCollectedCount] = useState<number | null>(null);
@@ -108,7 +107,6 @@ export default function WasteSummary() {
   /* ================= FETCH MONTH DATA ================= */
 
   const fetchMonthData = async () => {
-    setLoading(true);
     try {
       const url = `${ZIGMA_API_BASE}/waste_collected_summary_report/waste_collected_data_api.php?from_date=${monthValue}-01&key=ZIGMA-DELHI-WEIGHMENT-2025-SECURE`;
       const res = await fetch(url);
@@ -116,8 +114,6 @@ export default function WasteSummary() {
       setRows(Array.isArray(json?.data) ? json.data : []);
     } catch {
       setRows([]);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -243,7 +239,6 @@ export default function WasteSummary() {
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          loading={loading}
           filters={filters}
           header={renderHeader()}
           stripedRows
