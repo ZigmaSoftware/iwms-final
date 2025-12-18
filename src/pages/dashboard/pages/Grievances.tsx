@@ -3,6 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -22,7 +23,8 @@ import {
   Search,
   Clock,
   CheckCircle2,
-  AlertCircle,
+  Sparkles,
+  ShieldAlert,
 } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +32,8 @@ import { fetchGrievances } from "@/features/grievances/api";
 import { AttachmentPreview } from "@/features/grievances/components/AttachmentPreview";
 import { InfoField } from "@/features/grievances/components/InfoField";
 import type { Grievance } from "@/features/grievances/types";
+import { useTheme } from "@/contexts/ThemeContext";
+import { cn } from "@/lib/utils";
 
 export default function Grievances() {
   const [complaints, setComplaints] = useState<Grievance[]>([]);
@@ -168,219 +172,317 @@ export default function Grievances() {
     });
   };
 
-  // STATUS STYLES
-  const getStatusColor = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case "open":
-        return "bg-red-100 text-red-700 border-red-300";
-      case "processing":
-      case "in-progress":
-      case "progressing":
-        return "bg-yellow-100 text-yellow-700 border-yellow-300";
-      case "resolved":
-      case "closed":
-        return "bg-green-100 text-green-700 border-green-300";
-      default:
-        return "bg-gray-100 text-gray-700 border-gray-300";
+  const statusTokens: Record<
+    string,
+    {
+      badge: string;
+      chip: string;
+      ring: string;
+      glow: string;
+      icon: string;
     }
+  > = {
+    open: {
+      badge: "border-rose-300 text-rose-600 bg-rose-50 dark:border-rose-500/50 dark:text-rose-200 dark:bg-rose-950/40",
+      chip: "bg-gradient-to-br from-white via-rose-50 to-rose-100 dark:from-rose-950/40 dark:to-rose-900/50",
+      ring: "ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 ring-rose-200/60 dark:ring-rose-500/40",
+      glow: "bg-gradient-to-r from-rose-400/50 via-transparent to-transparent",
+      icon: "text-rose-600 dark:text-rose-200",
+    },
+    processing: {
+      badge: "border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-500/50 dark:text-amber-200 dark:bg-amber-950/40",
+      chip: "bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:from-amber-950/40 dark:to-amber-900/50",
+      ring: "ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 ring-amber-200/60 dark:ring-amber-500/40",
+      glow: "bg-gradient-to-r from-amber-400/40 via-transparent to-transparent",
+      icon: "text-amber-600 dark:text-amber-200",
+    },
+    "in-progress": {
+      badge: "border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-500/50 dark:text-amber-200 dark:bg-amber-950/40",
+      chip: "bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:from-amber-950/40 dark:to-amber-900/50",
+      ring: "ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 ring-amber-200/60 dark:ring-amber-500/40",
+      glow: "bg-gradient-to-r from-amber-400/40 via-transparent to-transparent",
+      icon: "text-amber-600 dark:text-amber-200",
+    },
+    progressing: {
+      badge: "border-amber-300 text-amber-600 bg-amber-50 dark:border-amber-500/50 dark:text-amber-200 dark:bg-amber-950/40",
+      chip: "bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:from-amber-950/40 dark:to-amber-900/50",
+      ring: "ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 ring-amber-200/60 dark:ring-amber-500/40",
+      glow: "bg-gradient-to-r from-amber-400/40 via-transparent to-transparent",
+      icon: "text-amber-600 dark:text-amber-200",
+    },
+    resolved: {
+      badge: "border-emerald-300 text-emerald-600 bg-emerald-50 dark:border-emerald-500/50 dark:text-emerald-200 dark:bg-emerald-950/40",
+      chip: "bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:from-emerald-950/40 dark:to-emerald-900/50",
+      ring: "ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 ring-emerald-200/60 dark:ring-emerald-500/40",
+      glow: "bg-gradient-to-r from-emerald-400/40 via-transparent to-transparent",
+      icon: "text-emerald-600 dark:text-emerald-200",
+    },
+    closed: {
+      badge: "border-emerald-300 text-emerald-600 bg-emerald-50 dark:border-emerald-500/50 dark:text-emerald-200 dark:bg-emerald-950/40",
+      chip: "bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:from-emerald-950/40 dark:to-emerald-900/50",
+      ring: "ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 ring-emerald-200/60 dark:ring-emerald-500/40",
+      glow: "bg-gradient-to-r from-emerald-400/40 via-transparent to-transparent",
+      icon: "text-emerald-600 dark:text-emerald-200",
+    },
+    default: {
+      badge: "border-slate-300 text-slate-600 bg-slate-50 dark:border-slate-600 dark:text-slate-200 dark:bg-slate-900/50",
+      chip: "bg-gradient-to-br from-white via-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-950",
+      ring: "ring-1 ring-offset-2 ring-offset-white dark:ring-offset-slate-950 ring-slate-200/50 dark:ring-slate-700/50",
+      glow: "bg-gradient-to-r from-slate-300/30 via-transparent to-transparent",
+      icon: "text-slate-500 dark:text-slate-300",
+    },
   };
 
-  const getBorderColor = (status?: string) => {
-    switch (status?.toLowerCase()) {
-      case "open":
-        return "border-l-4 border-red-500";
-      case "processing":
-      case "progressing":
-      case "in-progress":
-        return "border-l-4 border-yellow-500";
-      case "resolved":
-      case "closed":
-        return "border-l-4 border-green-600";
-      default:
-        return "border-l-4 border-gray-400";
-    }
-  };
+  const getStatusStyles = (status?: string) =>
+    statusTokens[status?.toLowerCase() ?? ""] ?? statusTokens.default;
 
   const handleRefresh = () => loadComplaints();
 
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+
+  const pageBgClass = cn(
+    "min-h-screen p-6 transition-colors duration-300",
+    isDarkMode
+      ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 text-slate-100"
+      : "bg-white text-slate-900"
+  );
+
+  const heroPanelClass = cn(
+    "flex flex-wrap gap-4 items-center justify-between rounded-2xl p-6 border shadow-sm",
+    isDarkMode
+      ? "bg-slate-900/80 backdrop-blur border-slate-800"
+      : "bg-gradient-to-r from-white via-sky-50 to-slate-100 backdrop-blur border-slate-200"
+  );
+
+  const surfaceCardClass = cn(
+    "relative overflow-hidden rounded-2xl border backdrop-blur transition-all duration-500",
+    isDarkMode
+      ? "bg-slate-900/70 border-slate-800 shadow-2xl shadow-black/30"
+      : "bg-white/90 border-slate-200 shadow-lg"
+  );
+
+  const tabsListClass = cn(
+    "grid w-full grid-cols-4 rounded-xl p-1",
+    isDarkMode ? "bg-slate-900/70 border border-slate-800" : "bg-slate-100"
+  );
+
+  const summaryCards = [
+    {
+      label: "Total Grievances",
+      value: complaints.length,
+      subtext: "All records",
+      gradient: "bg-gradient-to-br from-white via-sky-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900/30 dark:to-slate-900",
+      border: "border-sky-200/80 dark:border-sky-500/40",
+      iconColor: "text-sky-600 dark:text-sky-200",
+      iconBg: "bg-white/70 dark:bg-slate-900/60",
+      Icon: MessageSquare,
+    },
+    {
+      label: "Open Items",
+      value: openCount,
+      subtext: "Awaiting action",
+      gradient: "bg-gradient-to-br from-white via-rose-50 to-rose-100 dark:from-slate-950 dark:via-rose-950/20 dark:to-slate-900",
+      border: "border-rose-200/80 dark:border-rose-500/40",
+      iconColor: "text-rose-600 dark:text-rose-200",
+      iconBg: "bg-white/70 dark:bg-slate-900/60",
+      Icon: ShieldAlert,
+    },
+    {
+      label: "New Today",
+      value: todayNewCount,
+      subtext: "Filed today",
+      gradient: "bg-gradient-to-br from-white via-blue-50 to-blue-100 dark:from-slate-950 dark:via-blue-950/20 dark:to-slate-900",
+      border: "border-blue-200/80 dark:border-blue-500/40",
+      iconColor: "text-blue-600 dark:text-blue-200",
+      iconBg: "bg-white/70 dark:bg-slate-900/60",
+      Icon: Sparkles,
+    },
+    {
+      label: "In Progress",
+      value: inProgressCount,
+      subtext: "Being worked on",
+      gradient: "bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:from-slate-950 dark:via-amber-950/20 dark:to-slate-900",
+      border: "border-amber-200/80 dark:border-amber-500/40",
+      iconColor: "text-amber-600 dark:text-amber-200",
+      iconBg: "bg-white/70 dark:bg-slate-900/60",
+      Icon: Clock,
+    },
+    {
+      label: "Resolved",
+      value: resolvedCount,
+      subtext: "Successfully closed",
+      gradient: "bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-900",
+      border: "border-emerald-200/80 dark:border-emerald-500/40",
+      iconColor: "text-emerald-600 dark:text-emerald-200",
+      iconBg: "bg-white/70 dark:bg-slate-900/60",
+      Icon: CheckCircle2,
+    },
+  ];
+
   // MAIN UI --------------------------------------------------------
   return (
-    <div className="space-y-6 h-[calc(100vh-80px)] overflow-y-auto pr-2 pb-6">
-      <div>
-        <h2 className="text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-          Grievance Management
-        </h2>
-        <p className="text-muted-foreground">Track and resolve complaints</p>
-      </div>
-
-      {/* KPI CARDS */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card className="bg-gray-50 border border-gray-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-bold">Total</CardTitle>
-            <MessageSquare className="h-4 w-4 text-gray-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{complaints.length}</div>
-            <p className="text-xs text-gray-500">All records</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-red-50 border border-red-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-semibold text-red-800">
-              Open
-            </CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-700" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-900">
-              {openCount}
-            </div>
-            <p className="text-xs text-red-700">Awaiting action</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-blue-50 border border-blue-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-blue-800">
-              New
-            </CardTitle>
-            <AlertCircle className="h-4 w-4 text-blue-700" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-900">
-              {todayNewCount}
-            </div>
-            <p className="text-xs text-blue-700">Created today</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-yellow-50 border border-yellow-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-medium text-yellow-800">
-              In Progress
-            </CardTitle>
-            <Clock className="h-4 w-4 text-yellow-700" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-yellow-900">
-              {inProgressCount}
-            </div>
-            <p className="text-xs text-yellow-700">Being worked</p>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-green-50 border border-green-200">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-lg font-medium text-green-800">
-              Resolved
-            </CardTitle>
-            <CheckCircle2 className="h-4 w-4 text-green-700" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-900">
-              {resolvedCount}
-            </div>
-            <p className="text-xs text-green-700">Successfully closed</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* SEARCH */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-        <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <Input
-            placeholder="Search grievances..."
-            className="pl-10"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
+    <div className={pageBgClass}>
+      <div className="space-y-6 h-[calc(100vh-80px)] overflow-y-auto pr-2 pb-10">
+        <div className={heroPanelClass}>
+          <div>
+            <h2 className="text-3xl font-bold bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
+              Grievance Management
+            </h2>
+            <p className="text-muted-foreground">Track and resolve complaints</p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="border-sky-200 text-sky-600 hover:bg-sky-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900/70"
+          >
+            Refresh Data
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          onClick={handleRefresh}
-          disabled={loading}
-          className="w-full lg:w-auto"
-        >
-          Refresh
-        </Button>
-      </div>
 
-      {error && (
-        <Card className="border-red-200 bg-red-50">
-          <CardContent className="py-4 text-red-800">
-            {error}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* TABS */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="all">All</TabsTrigger>
-          <TabsTrigger value="new">New</TabsTrigger>
-          <TabsTrigger value="open">Open</TabsTrigger>
-          <TabsTrigger value="resolved">Resolved</TabsTrigger>
-        </TabsList>
-
-        {["all", "new", "open", "resolved"].map((tab) => {
-          const tabItems = tabFiltered(tab);
-          return (
-            <TabsContent key={tab} value={tab} className="space-y-4">
-              {tabItems.length === 0 ? (
-                <Card className="border-dashed">
-                  <CardContent className="py-6 text-center text-sm text-muted-foreground">
-                    No grievances found for this filter.
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid gap-4">
-                  {tabItems.map((g) => (
-                    <Card
-                      key={g.id}
-                      className={`p-4 transition-shadow hover:shadow-lg ${getBorderColor(
-                        g.status,
-                      )}`}
-                    >
-                      <div className="grid gap-4 text-sm md:grid-cols-5">
-                        <InfoField label="ID" value={g.unique_id} />
-                        <InfoField
-                          label="Category"
-                          value={`${cap(g.main_category)} / ${cap(g.sub_category)}`}
-                        />
-
-                        <InfoField label="Zone" value={cap(g.zone_name)} />
-                        <InfoField label="Ward" value={cap(g.ward_name)} />
-
-                        <div>
-                          <p className="text-xs text-gray-500">Status</p>
-                          <Badge className={getStatusColor(g.status)}>
-                            {g.status ?? "Unknown"}
-                          </Badge>
-                        </div>4yoe
-                      </div>
-
-                      <Button
-                        onClick={() => {
-                          setSelectedComplaint(g);
-                          setOpenDialog(true);
-                        }}
-                        size="sm"
-                        variant="outline"
-                        className="mt-4"
-                      >
-                        View Details
-                      </Button>
-                    </Card>
-                  ))}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          {summaryCards.map((card) => {
+            const Icon = card.Icon;
+            return (
+              <Card
+                key={card.label}
+                className={cn(
+                  surfaceCardClass,
+                  card.gradient,
+                  card.border,
+                  "text-slate-900 dark:text-slate-100 hover:-translate-y-1"
+                )}
+              >
+                <div className="pointer-events-none absolute inset-0">
+                  <div className="card-shimmer absolute -right-10 top-10 h-24 w-24 rounded-full bg-white/40 dark:bg-white/5 blur-3xl" />
                 </div>
+                <CardHeader className="relative z-10 flex flex-row items-start justify-between space-y-0 pb-2">
+                  <div>
+                    <CardTitle className="text-base font-semibold">{card.label}</CardTitle>
+                    <CardDescription className="text-xs text-muted-foreground">
+                      {card.subtext}
+                    </CardDescription>
+                  </div>
+                  <div className={cn("p-2 rounded-xl shadow-inner", card.iconBg)}>
+                    <Icon className={cn("h-5 w-5", card.iconColor)} />
+                  </div>
+                </CardHeader>
+                <CardContent className="relative z-10">
+                  <p className="text-4xl font-bold">{card.value}</p>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        <Card className={cn(surfaceCardClass, "p-4 flex flex-col gap-3 lg:flex-row lg:items-center")}>
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search grievances..."
+              className={cn(
+                "pl-10",
+                isDarkMode ? "bg-slate-900/60 border-slate-800" : "bg-white/90"
               )}
-            </TabsContent>
-          );
-        })}
-      </Tabs>
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <Button
+            variant="secondary"
+            onClick={handleRefresh}
+            disabled={loading}
+            className="w-full lg:w-auto bg-gradient-to-r from-sky-400 to-indigo-500 text-white hover:from-sky-500 hover:to-indigo-600"
+          >
+            Reload
+          </Button>
+        </Card>
+
+        {error && (
+          <Card className={cn(surfaceCardClass, "border-rose-200/70 dark:border-rose-500/40")}>
+            <CardContent className="py-4 text-rose-600 dark:text-rose-200">
+              {error}
+            </CardContent>
+          </Card>
+        )}
+
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+          <TabsList className={tabsListClass}>
+            {["all", "new", "open", "resolved"].map((tab) => (
+              <TabsTrigger
+                key={tab}
+                value={tab}
+                className="text-sm font-semibold rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-900 dark:data-[state=active]:bg-slate-950/70 dark:data-[state=active]:text-slate-100 transition"
+              >
+                {cap(tab)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          {["all", "new", "open", "resolved"].map((tab) => {
+            const tabItems = tabFiltered(tab);
+            return (
+              <TabsContent key={tab} value={tab} className="space-y-4">
+                {tabItems.length === 0 ? (
+                  <Card className={cn(surfaceCardClass, "border-dashed text-center text-sm text-muted-foreground")}>
+                    <CardContent className="py-6">
+                      No grievances found for this filter.
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="grid gap-4">
+                    {tabItems.map((g, index) => {
+                      const statusStyles = getStatusStyles(g.status);
+                      return (
+                        <Card
+                          key={g.id}
+                          className={cn(
+                            surfaceCardClass,
+                            "p-5 hover:-translate-y-1",
+                            statusStyles.ring
+                          )}
+                          style={{ animationDelay: `${index * 0.03}s` }}
+                        >
+                          <div className={cn("pointer-events-none absolute inset-x-6 top-2 h-1 rounded-full opacity-60", statusStyles.glow)} />
+                          <div className="relative grid gap-4 text-sm md:grid-cols-5">
+                            <InfoField label="ID" value={g.unique_id} />
+                            <InfoField
+                              label="Category"
+                              value={`${cap(g.main_category)} / ${cap(g.sub_category)}`}
+                            />
+
+                            <InfoField label="Zone" value={cap(g.zone_name)} />
+                            <InfoField label="Ward" value={cap(g.ward_name)} />
+
+                            <div>
+                              <p className="text-xs text-muted-foreground">Status</p>
+                              <Badge className={cn("mt-1", statusStyles.badge)}>
+                                {g.status ?? "Unknown"}
+                              </Badge>
+                            </div>
+                          </div>
+
+                          <Button
+                            onClick={() => {
+                              setSelectedComplaint(g);
+                              setOpenDialog(true);
+                            }}
+                            size="sm"
+                            variant="outline"
+                            className="mt-4"
+                          >
+                            View Details
+                          </Button>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+            );
+          })}
+        </Tabs>
 
       {/* VIEW DETAILS MODAL */}
       <Dialog open={openDialog} onOpenChange={setOpenDialog}>
@@ -413,8 +515,8 @@ export default function Grievances() {
                     <InfoField label="Created" value={formatDateTime(selectedComplaint.created)} />
 
                     <div>
-                      <p className="text-xs text-gray-500">Status</p>
-                      <Badge className={getStatusColor(selectedComplaint.status) + " px-3 py-1"}>
+                      <p className="text-xs text-muted-foreground">Status</p>
+                      <Badge className={cn("px-3 py-1", getStatusStyles(selectedComplaint.status).badge)}>
                         {selectedComplaint.status ?? "Unknown"}
                       </Badge>
                     </div>
@@ -438,6 +540,7 @@ export default function Grievances() {
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }

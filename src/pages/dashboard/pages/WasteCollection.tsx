@@ -972,29 +972,43 @@ export default function WasteCollection() {
     "min-h-screen p-6 transition-colors duration-300",
     isDarkMode
       ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 text-slate-100"
-      : "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 text-slate-900"
+      : "bg-white text-slate-900"
   );
 
   const heroPanelClass = cn(
-    "flex items-center justify-between rounded-2xl p-6 shadow-lg border",
+    "flex items-center justify-between rounded-2xl p-6 border",
     isDarkMode
-      ? "bg-slate-900/80 backdrop-blur border-slate-800 shadow-[0_35px_80px_rgba(2,6,23,0.65)]"
-      : "bg-white/70 backdrop-blur-sm border-white/50"
+      ? "bg-slate-900/80 backdrop-blur border-slate-800"
+      : "bg-gradient-to-r from-white via-sky-50 to-slate-100 backdrop-blur border-slate-200"
   );
 
   const tabsCardClass = cn(
-    "border-0 shadow-xl",
+    "border-0",
     isDarkMode
       ? "bg-slate-900/70 border border-slate-800 text-slate-100"
-      : "bg-white/80 backdrop-blur-sm text-slate-900"
+      : "bg-white/85 backdrop-blur-sm text-slate-900 border border-slate-100"
   );
 
   const tableContainerClass = isDarkMode
-    ? "rounded-xl overflow-hidden border border-slate-800 bg-slate-900/70 shadow-lg"
-    : "rounded-xl overflow-hidden border shadow bg-white";
+    ? "rounded-xl overflow-hidden border border-slate-800 bg-slate-900/70"
+    : "rounded-xl overflow-hidden border bg-white";
 
   const tableHeadClass = isDarkMode ? "bg-slate-900/60 text-slate-200" : "bg-slate-50";
-  const tableRowHoverClass = isDarkMode ? "hover:bg-slate-800/60" : "hover:bg-indigo-50";
+  const tableRowHoverClass = isDarkMode ? "hover:bg-slate-800/60" : "hover:bg-slate-50";
+  const paginationFooterClass = cn(
+    "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border-t",
+    isDarkMode ? "bg-slate-900/60 border-slate-800 text-slate-200" : "bg-slate-50"
+  );
+  const paginationButtonClass = cn(
+    "transition-colors",
+    isDarkMode
+      ? "bg-slate-900/40 border-slate-700 text-slate-200 hover:bg-slate-800/80"
+      : ""
+  );
+  const paginationLabelClass = cn(
+    "text-sm",
+    isDarkMode ? "text-slate-300" : "text-slate-600"
+  );
 
   // Zone → Ward → Property drilldown states
   const [selectedCity, setSelectedCity] = useState("Delhi");
@@ -1271,14 +1285,14 @@ export default function WasteCollection() {
         {/* Header */}
         <div className={heroPanelClass}>
           <div>
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
               Waste Collection Dashboard
             </h2>
             <p className={cn("mt-2 text-lg", isDarkMode ? "text-slate-300" : "text-slate-600")}>
               Real-time tracking and analytics for waste management
             </p>
           </div>
-          <Button className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg">
+          <Button className="gap-2 bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white">
             <Download className="h-4 w-4" />
             Export Report
           </Button>
@@ -1287,82 +1301,78 @@ export default function WasteCollection() {
         {/* KPI GRID */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           {/* TODAY TOTAL */}
-          <Card className="border-0 bg-gradient-to-br from-[#D8B4FE] to-[#C084FC] text-white shadow-md hover:-translate-y-1 transition-all">
-            <CardHeader className="flex justify-between">
-              <CardTitle className="text-sm text-white/90">
+          <Card className="border border-sky-200 bg-gradient-to-br from-white via-sky-50 to-indigo-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-sky-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-sky-600 dark:text-sky-200">
                 Today's Collection
               </CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Trash2 className="h-5 w-5" />
-              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
                 {yesterdayEntry ? formatTons(yesterdayEntry.total) : "--"}
               </div>
-
+              <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
+                <Trash2 className="h-6 w-6 text-sky-600 dark:text-sky-200" />
+              </div>
             </CardContent>
           </Card>
 
           {/* WET */}
-          <Card className="border-0 bg-gradient-to-br from-[#A7F3D0] to-[#6EE7B7] text-white shadow-md hover:-translate-y-1 transition-all">
-            <CardHeader className="flex justify-between">
-              <CardTitle className="text-sm text-white/90">Wet Waste</CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Droplets className="h-5 w-5" />
-              </div>
+          <Card className="border border-emerald-200 bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-emerald-600 dark:text-emerald-200">Wet Waste</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
                 {yesterdayEntry ? formatTons(yesterdayEntry.wet) : "--"}
               </div>
-
+              <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
+                <Droplets className="h-6 w-6 text-emerald-600 dark:text-emerald-200" />
+              </div>
             </CardContent>
           </Card>
 
           {/* DRY */}
-          <Card className="border-0 bg-gradient-to-br from-[#BAE6FD] to-[#7DD3FC] text-white shadow-md hover:-translate-y-1 transition-all">
-            <CardHeader className="flex justify-between">
-              <CardTitle className="text-sm text-white/90">Dry Waste</CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Recycle className="h-5 w-5" />
-              </div>
+          <Card className="border border-rose-200 bg-gradient-to-br from-white via-rose-50 to-rose-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-rose-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-rose-600 dark:text-rose-200">Dry Waste</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
                 {yesterdayEntry ? formatTons(yesterdayEntry.dry) : "--"}
               </div>
-
+              <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
+                <Recycle className="h-6 w-6 text-rose-600 dark:text-rose-200" />
+              </div>
             </CardContent>
           </Card>
-          <Card className="border-0 bg-gradient-to-br from-[#DDD6FE] to-[#A78BFA] text-white shadow-md hover:-translate-y-1 transition-all">
-            <CardHeader className="flex justify-between">
-              <CardTitle className="text-sm text-white/90">Mixed Waste</CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Recycle className="h-5 w-5" />
-              </div>
+          <Card className="border border-purple-200 bg-gradient-to-br from-white via-purple-50 to-purple-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-purple-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-purple-600 dark:text-purple-200">Mixed Waste</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
                 {yesterdayEntry ? formatTons(yesterdayEntry.mix) : "--"}
               </div>
-
+              <div className="p-2 bg-white/70 dark:bg-slate-900/60 rounded-lg">
+                <Recycle className="h-6 w-6 text-purple-600 dark:text-purple-200" />
+              </div>
             </CardContent>
           </Card>
 
           {/* MONTHLY */}
-          <Card className="border-0 bg-gradient-to-br from-[#FDE68A] to-[#FCD34D] text-white shadow-md hover:-translate-y-1 transition-all">
-            <CardHeader className="flex justify-between">
-              <CardTitle className="text-sm text-white/90">
+          <Card className="border border-amber-200 bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-amber-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-amber-600 dark:text-amber-200">
                 Monthly Total
               </CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Calendar className="h-5 w-5" />
-              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
                 {monthStat ? formatTons(monthStat.total) : "401 Tons"}
+              </div>
+              <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
+                <Calendar className="h-6 w-6 text-amber-600 dark:text-amber-200" />
               </div>
             </CardContent>
           </Card>
@@ -1461,7 +1471,7 @@ export default function WasteCollection() {
                 </div>
 
                 {/* Table */}
-                <div className="rounded-xl overflow-hidden border shadow bg-white">
+                <div className={tableContainerClass}>
                   <Table>
                     <TableHeader>
                       <TableRow className={tableHeadClass}>
@@ -1476,7 +1486,7 @@ export default function WasteCollection() {
 
                     <TableBody>
                       {paginatedDailyData.map((row, index) => (
-                        <TableRow key={index} className="hover:bg-indigo-50">
+                        <TableRow key={index} className={tableRowHoverClass}>
                           <TableCell>
                             {new Date(row.date).toLocaleDateString("en-US")}
                           </TableCell>
@@ -1511,7 +1521,7 @@ export default function WasteCollection() {
                   </Table>
 
                   {/* Pagination Footer */}
-                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border-t bg-slate-50">
+                  <div className={paginationFooterClass}>
                     {/* Rows per page */}
                     <div className="flex items-center gap-2 text-sm">
                       <span>Rows per page</span>
@@ -1539,11 +1549,12 @@ export default function WasteCollection() {
                         variant="outline"
                         disabled={dailyPage === 1}
                         onClick={() => setDailyPage((p) => Math.max(1, p - 1))}
+                        className={paginationButtonClass}
                       >
                         <ChevronLeft className="h-4 w-4" />
                       </Button>
 
-                      <span className="text-sm text-slate-600">
+                      <span className={paginationLabelClass}>
                         Page {dailyPage} of {totalDailyPages}
                       </span>
 
@@ -1554,6 +1565,7 @@ export default function WasteCollection() {
                         onClick={() =>
                           setDailyPage((p) => Math.min(totalDailyPages, p + 1))
                         }
+                        className={paginationButtonClass}
                       >
                         <ChevronRight className="h-4 w-4" />
                       </Button>
@@ -1635,7 +1647,7 @@ export default function WasteCollection() {
                         setZoneDialog(true);
                       }}
                       className={cn(
-                        "cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all",
+                        "cursor-pointer hover:-translate-y-1 transition-all",
                         isDarkMode
                           ? "bg-slate-900/70 border border-slate-800 text-slate-100"
                           : "bg-indigo-50"
@@ -1682,7 +1694,7 @@ export default function WasteCollection() {
                     {/* -------------------- PIE CHART -------------------- */}
                     <div
                       className={cn(
-                        "rounded-xl p-4 shadow border mb-6",
+                        "rounded-xl p-4 border mb-6",
                         isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-white"
                       )}
                     >
@@ -1755,7 +1767,7 @@ export default function WasteCollection() {
                       <div className="space-y-6">
                         <div
                           className={cn(
-                            "rounded-xl p-4 shadow border",
+                            "rounded-xl p-4 border",
                             isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-white"
                           )}
                         >
@@ -1796,7 +1808,7 @@ export default function WasteCollection() {
                                 key={key}
                                 type="button"
                                 onClick={() => setSelectedWasteType(key)}
-                                className={`rounded-xl p-4 text-left border shadow-sm bg-gradient-to-br ${meta.gradient} ${
+                                className={`rounded-xl p-4 text-left border bg-gradient-to-br ${meta.gradient} ${
                                   selectedWasteType === key
                                     ? "ring-2 ring-indigo-500"
                                     : ""
@@ -1821,7 +1833,7 @@ export default function WasteCollection() {
                           })}
                         </div> */}
                         {/* 
-                        <Card className="border shadow-sm">
+                        <Card className="border">
                           <CardHeader>
                             <CardTitle>
                               {WASTE_CATEGORY_META[selectedWasteType].label}{" "}
@@ -1862,7 +1874,7 @@ export default function WasteCollection() {
                           </CardContent>
                         </Card> */}
 
-                        <Card className="border shadow-sm">
+                        <Card className="border">
                           <CardHeader>
                             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                               <div>

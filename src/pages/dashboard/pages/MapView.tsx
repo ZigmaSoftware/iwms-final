@@ -459,7 +459,7 @@ export default function MapView() {
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Live Map View</h2>
+        <h2 className="text-3xl font-bold text-sky-500">Live Map View</h2>
         <p className="text-muted-foreground">Real-time GPS tracking of all vehicles</p>
       </div>
 
@@ -569,7 +569,6 @@ export default function MapView() {
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
-                <div className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Vehicle Status</div>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                   {STATUS_FILTERS.map((filter) => {
                     const isActive = statusFilter === filter.key;
@@ -619,7 +618,7 @@ export default function MapView() {
                   Active Vehicles
                 </CardTitle>
               </CardHeader>
-            <CardContent className="space-y-3 max-h-[475px] overflow-y-auto pr-1">
+            <CardContent className="space-y-3 max-h-[495px] overflow-y-auto pr-1">
               {displayVehicles.map((vehicle) => {
                 const statusMeta = STATUS_META[vehicle.status];
                 const isSelected = vehicle.id === vehicleId;

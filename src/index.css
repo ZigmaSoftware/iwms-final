@@ -162,6 +162,19 @@
   -webkit-font-smoothing: antialiased;
 }
 
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(150%);
+  }
+}
+
+.card-shimmer {
+  animation: shimmer-slide 6s ease-in-out infinite;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
