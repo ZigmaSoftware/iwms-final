@@ -12,7 +12,7 @@
 .leaflet-control.vehicle-status-control {
   position: absolute !important;
   top: 12px !important;
-  left: 500% !important;
+  left: 1600% !important;
   transform: translateX(-50%) !important;
   background: transparent;
   padding: 10px 20px;

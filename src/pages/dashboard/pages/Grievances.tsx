@@ -48,6 +48,7 @@ export default function Grievances() {
         setError(null);
         setLoading(true);
         const data = await fetchGrievances(signal);
+        console.log("data", data)
         setComplaints(data);
       } catch (err) {
         if (signal?.aborted) return;
@@ -345,7 +346,11 @@ export default function Grievances() {
                     >
                       <div className="grid gap-4 text-sm md:grid-cols-5">
                         <InfoField label="ID" value={g.unique_id} />
-                        <InfoField label="Category" value={cap(g.category)} />
+                        <InfoField
+                          label="Category"
+                          value={`${cap(g.main_category)} / ${cap(g.sub_category)}`}
+                        />
+
                         <InfoField label="Zone" value={cap(g.zone_name)} />
                         <InfoField label="Ward" value={cap(g.ward_name)} />
 
@@ -354,7 +359,7 @@ export default function Grievances() {
                           <Badge className={getStatusColor(g.status)}>
                             {g.status ?? "Unknown"}
                           </Badge>
-                        </div>
+                        </div>4yoe
                       </div>
 
                       <Button
