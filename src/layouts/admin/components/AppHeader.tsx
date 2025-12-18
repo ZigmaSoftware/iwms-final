@@ -6,13 +6,13 @@ import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useSidebar } from "../../../contexts/SideBarContext";
+import { useSidebar } from "@/contexts/SideBarContext";
 import { cn } from "@/lib/utils";
 import {
   ADMIN_VIEW_MODE_DASHBOARD,
   setAdminViewPreference,
 } from "@/types/roles";
-import ZigmaLogo from "../../../images/logo.png";
+import ZigmaLogo from "@/images/logo.png";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);

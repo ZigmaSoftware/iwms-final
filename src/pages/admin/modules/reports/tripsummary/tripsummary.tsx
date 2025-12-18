@@ -1,4 +1,5 @@
-import { ChangeEvent, JSX, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import type { ChangeEvent, JSX } from "react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import "./tripsummary.css";

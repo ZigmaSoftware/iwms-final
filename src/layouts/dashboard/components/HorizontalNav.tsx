@@ -1,17 +1,31 @@
 import { LayoutDashboard, MapPin, Bell, FileText, Scale, Truck, Trash2, Users, MessageSquare } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { getEncryptedRoute } from "@/utils/routeCache";
+
+const {
+  encDashboardLiveMap,
+  encDashboardVehicleManagement,
+  encDashboardWasteCollection,
+  encDashboardResources,
+  encDashboardGrievances,
+  encDashboardAlerts,
+  encDashboardReports,
+  encDashboardWeighBridge,
+} = getEncryptedRoute();
 
 const menuItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
-  { title: "Live Map", url: "/map", icon: MapPin },
-  { title: "Vehicle", url: "/vehicle", icon: Truck },
-  { title: "Waste Collection", url: "/waste-collection", icon: Trash2 },
-  { title: "Resources", url: "/resources", icon: Users },
-  { title: "Grievances", url: "/grievances", icon: MessageSquare },
-  { title: "Alerts", url: "/alerts", icon: Bell },
-  { title: "Reports", url: "/reports", icon: FileText },
-  { title: "Weighbridge", url: "/weighbridge", icon: Scale },
+
+  { title: "Live Map", url: `/dashboard/${encDashboardLiveMap}`, icon: MapPin },
+  { title: "Vehicle", url: `/dashboard/${encDashboardVehicleManagement}`, icon: Truck },
+  { title: "Waste Collection", url: `/dashboard/${encDashboardWasteCollection}`, icon: Trash2 },
+  { title: "Resources", url: `/dashboard/${encDashboardResources}`, icon: Users },
+  { title: "Grievances", url: `/dashboard/${encDashboardGrievances}`, icon: MessageSquare },
+  { title: "Alerts", url: `/dashboard/${encDashboardAlerts}`, icon: Bell },
+  { title: "Reports", url: `/dashboard/${encDashboardReports}`, icon: FileText },
+  { title: "Weighbridge", url: `/dashboard/${encDashboardWeighBridge}`, icon: Scale },
 ];
+
 
 export function HorizontalNav() {
   return (

@@ -13,7 +13,7 @@ import {
   Truck,
 } from "lucide-react";
 
-import { useSidebar } from "../../../contexts/SideBarContext";
+import { useSidebar } from "@/contexts/SideBarContext";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 const {

@@ -150,7 +150,7 @@ export default function UserScreenPermissionForm() {
         );
 
         // map DB permissions
-        const dbMap = new Map(
+        const dbMap = new Map<string, { actions?: string[] }>(
           (formatted.screens || []).map((s: any) => [s.userscreen_id, s])
         );
 
