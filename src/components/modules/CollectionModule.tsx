@@ -18,6 +18,7 @@ const mockVehicles = [
     status: "Running" as const,
     driver: "Rajesh Kumar",
     speed: 48,
+    updated_at: "2024-01-01T09:00:00Z",
     geo: {
       continent: "Asia",
       country: "India",
@@ -34,6 +35,7 @@ const mockVehicles = [
     status: "Idle" as const,
     driver: "Suresh M",
     speed: 0,
+    updated_at: "2024-01-01T09:05:00Z",
     geo: {
       continent: "Asia",
       country: "India",
@@ -47,9 +49,10 @@ const mockVehicles = [
     vehicle_no: "TN-37-EF-9012",
     lat: 11.0298,
     lng: 76.9732,
-    status: "Overspeeding" as const,
+    status: "Running" as const,
     driver: "Kumar S",
     speed: 84,
+    updated_at: "2024-01-01T09:12:00Z",
     geo: {
       continent: "Asia",
       country: "India",

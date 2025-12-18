@@ -77,7 +77,7 @@ export default function Auth() {
       clearAdminViewPreference();
     }
 
-    navigate(normalizedRole === ADMIN_ROLE ? "/admin" : "/", { replace: true });
+    navigate(normalizedRole === ADMIN_ROLE ? "/admin" : "/dashboard", { replace: true });
   };
 
 const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
