@@ -319,7 +319,7 @@ export default function Vehicle() {
           <div className="ml-3 pb-6">
             <Button
               variant="ghost"
-              className="w-full border bg-gradient-to-r from-sky-100 to-blue-100 hover:from-sky-200 hover:to-blue-200 transition-colors"
+              className="w-full border text-slate-700 dark:text-white bg-gradient-to-r from-sky-100 via-slate-100 to-blue-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 hover:from-sky-200 hover:to-blue-200 dark:hover:from-slate-700 dark:hover:to-slate-800 transition-colors"
               onClick={clearFilters}
             >
               Clear
@@ -330,7 +330,7 @@ export default function Vehicle() {
 
         {/* RIGHT COLUMN 70% */}
         <div className="col-span-9 overflow-y-auto pl-2 flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-8">
             {fleetStats.map((stat) => {
               const valueSize = stat.emphasis ? "text-4xl font-bold" : "text-3xl font-semibold";
               const accentOpacity = stat.emphasis ? "opacity-60" : "opacity-35";
@@ -346,14 +346,14 @@ export default function Vehicle() {
                   onClick={() => setStatusFilter(stat.filterValue ?? "all")}
                   className={`relative overflow-hidden rounded-2xl border ${
                     stat.border ?? "border-border/40 dark:border-border/50"
-                  } bg-white/80 dark:bg-slate-950/70 backdrop-blur shadow-lg shadow-primary/5 dark:shadow-black/30 p-4 w-full transition-transform duration-500 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:dark:ring-offset-slate-900 ${
+                  } bg-white/80 dark:bg-slate-950/70 backdrop-blur p-4 w-full transition-transform duration-500 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:dark:ring-offset-slate-900 ${
                     stat.backgroundClass ?? ""
                   } ${activeRing} text-left`}
                 >
                   <div
                     className={`absolute inset-0 bg-gradient-to-r ${stat.accent} ${accentOpacity} animate-[pulse_6s_ease-in-out_infinite]`}
                   />
-                  <div className="relative space-y-2">
+                  <div className="relative space-y-2 pt-2">
                     <p className={`text-sm flex items-center gap-1 ${stat.colors?.label ?? "text-muted-foreground"}`}>
                       <Sparkles className={`h-3.5 w-3.5 ${stat.colors?.sparkle ?? "text-primary"}`} />
                       {stat.label}

@@ -197,6 +197,13 @@ export default function ResourceManagement() {
     "on-leave": "from-white via-amber-50 to-amber-200 dark:from-slate-900 dark:via-amber-900/30 dark:to-amber-800",
   };
 
+  const roleAccentLines: Record<string, string> = {
+    driver: "from-white via-emerald-100 to-emerald-400 dark:from-emerald-900 dark:via-emerald-800 dark:to-emerald-700",
+    supervisor: "from-white via-amber-100 to-amber-400 dark:from-amber-900 dark:via-amber-800 dark:to-amber-700",
+    helper: "from-white via-rose-100 to-rose-400 dark:from-rose-900 dark:via-rose-800 dark:to-rose-700",
+    default: "from-white via-slate-100 to-slate-300 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700",
+  };
+
   const statusGlowColors: Record<string, string> = {
     active: "bg-emerald-100/70 dark:bg-emerald-900/40",
     "on-leave": "bg-amber-100/70 dark:bg-amber-900/40",
@@ -313,7 +320,7 @@ export default function ResourceManagement() {
             {/* CLEAR BUTTON */}
             <Button
               variant="ghost"
-              className="w-full border bg-gradient-to-r from-sky-100 to-blue-100 hover:from-sky-200 hover:to-blue-200 transition-colors"
+              className="w-full border text-slate-700 dark:text-white bg-gradient-to-r from-sky-100 via-slate-100 to-blue-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 hover:from-sky-200 hover:to-blue-200 dark:hover:from-slate-700 dark:hover:to-slate-800 transition-colors"
               onClick={clearFilters}
             >
               Clear
@@ -323,7 +330,7 @@ export default function ResourceManagement() {
 
         {/* RIGHT PANEL — 70% */}
         <div className="col-span-9 overflow-y-auto pl-2 flex flex-col gap-4">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-8">
             {workforceStats.map((stat) => {
               const valueSize = stat.emphasis ? "text-4xl font-bold" : "text-3xl font-semibold";
               const accentOpacity = stat.emphasis ? "opacity-60" : "opacity-35";
@@ -339,9 +346,7 @@ export default function ResourceManagement() {
                   onClick={() => setRoleFilter(stat.filterValue ?? "All Roles")}
                   className={`relative overflow-hidden rounded-2xl border ${
                     stat.border ?? "border-border/40 dark:border-border/60"
-                  } bg-white/80 dark:bg-slate-950/70 backdrop-blur shadow-lg shadow-primary/5 dark:shadow-black/30 p-4 w-full transition-transform duration-500 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:dark:ring-offset-slate-900 ${
-                    stat.emphasis ? "shadow-blue-100 dark:shadow-sky-900/30" : ""
-                  } ${activeRing} text-left`}
+                  } bg-white/80 dark:bg-slate-950/70 backdrop-blur p-4 w-full transition-transform duration-500 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:dark:ring-offset-slate-900 ${activeRing} text-left`}
                 >
                   <div
                     className={`absolute inset-0 bg-gradient-to-r ${stat.accent} ${accentOpacity} animate-[pulse_6s_ease-in-out_infinite]`}
@@ -378,9 +383,8 @@ export default function ResourceManagement() {
                 </div>
                 <div
                   className={`absolute inset-x-4 top-2 h-1 rounded-full bg-gradient-to-r z-10 ${
-                    statusCardGradients[emp.status] ??
-                    "from-white via-slate-50 to-slate-200 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700"
-                  } animate-[pulse_3s_ease-in-out_infinite] opacity-60`}
+                    roleAccentLines[emp.role.toLowerCase()] ?? roleAccentLines.default
+                  }`}
                 />
                 <CardHeader className="relative z-10">
                   <div className="flex items-start gap-4">

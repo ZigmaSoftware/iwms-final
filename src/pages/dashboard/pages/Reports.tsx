@@ -13,8 +13,10 @@ export default function Reports() {
       icon: FileText,
       overlay: "from-sky-50 via-white/40 to-blue-100 dark:from-slate-900/80 dark:via-transparent dark:to-slate-900",
       border: "border-sky-200/60 dark:border-sky-500/40",
-      shadow: "shadow-blue-100 dark:shadow-sky-900/30",
+      shadow: "",
       valueColor: "text-sky-600 dark:text-sky-100",
+      iconBg: "bg-white/70 border border-sky-100 dark:bg-slate-900/70 dark:border-slate-700",
+      iconColor: "text-sky-600 dark:text-sky-200",
     },
     {
       title: "Fuel Efficiency",
@@ -24,8 +26,10 @@ export default function Reports() {
       icon: Fuel,
       overlay: "from-emerald-50 via-white/40 to-emerald-100 dark:from-slate-900/80 dark:via-transparent dark:to-slate-900",
       border: "border-emerald-200/60 dark:border-emerald-500/40",
-      shadow: "shadow-emerald-100 dark:shadow-emerald-900/30",
+      shadow: "",
       valueColor: "text-emerald-600 dark:text-emerald-100",
+      iconBg: "bg-white/70 border border-emerald-100 dark:bg-slate-900/70 dark:border-slate-700",
+      iconColor: "text-emerald-600 dark:text-emerald-200",
     },
     {
       title: "Waste Collected",
@@ -36,8 +40,10 @@ export default function Reports() {
       showTrendIcon: false,
       overlay: "from-amber-50 via-white/40 to-amber-100 dark:from-slate-900/80 dark:via-transparent dark:to-slate-900",
       border: "border-amber-200/60 dark:border-amber-500/40",
-      shadow: "shadow-amber-100 dark:shadow-amber-900/30",
+      shadow: "",
       valueColor: "text-amber-600 dark:text-amber-100",
+      iconBg: "bg-white/70 border border-amber-100 dark:bg-slate-900/70 dark:border-slate-700",
+      iconColor: "text-amber-600 dark:text-amber-200",
     },
   ];
 
@@ -45,7 +51,7 @@ export default function Reports() {
    <div className="space-y-6 h-[calc(100vh-80px)] overflow-y-auto pr-2 pb-6 relative">
       <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white via-slate-50 to-sky-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900" />
       <div className="absolute inset-y-0 right-10 -z-10 w-72 blur-3xl opacity-50 bg-gradient-to-b from-sky-100 via-blue-50 to-emerald-100 dark:from-slate-800 dark:via-slate-900 dark:to-emerald-900/40 animate-pulse" />
-      <div className="flex items-center justify-between bg-white/80 dark:bg-slate-950/70 backdrop-blur rounded-3xl border border-border/40 dark:border-border/60 p-6 shadow-lg shadow-primary/5 dark:shadow-black/30">
+      <div className="flex items-center justify-between bg-white/80 dark:bg-slate-950/70 backdrop-blur rounded-3xl border border-border/40 dark:border-border/60 p-6">
         <div>
           <div className="flex items-center gap-2 text-sky-500 dark:text-sky-300">
             <Sparkles className="h-4 w-4 animate-pulse" />
@@ -76,21 +82,25 @@ export default function Reports() {
           return (
             <Card
               key={card.title}
-              className={`relative overflow-hidden border ${card.border} bg-white/90 dark:bg-slate-900/70 backdrop-blur shadow-lg ${card.shadow} transition-transform duration-500 hover:-translate-y-1`}
+              className={`relative overflow-hidden border ${card.border} bg-white/90 dark:bg-slate-900/70 backdrop-blur transition-transform duration-500 hover:-translate-y-1`}
             >
               <div
                 className={`absolute inset-0 bg-gradient-to-r ${card.overlay} opacity-70 pointer-events-none animate-[pulse_7s_ease-in-out_infinite]`}
               />
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+              <CardHeader className="space-y-2 relative z-10">
                 <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
-                <Icon className="h-4 w-4 text-muted-foreground" />
               </CardHeader>
-              <CardContent className="relative z-10">
-                <div className={`text-2xl font-bold ${card.valueColor}`}>{card.value}</div>
-                <p className={`text-xs flex items-center gap-1 ${card.subtextColor}`}>
-                  {card.showTrendIcon !== false && <TrendingUp className="h-3 w-3" />}
-                  {card.subtext}
-                </p>
+              <CardContent className="relative z-10 flex items-center justify-between">
+                <div>
+                  <div className={`text-2xl font-bold ${card.valueColor}`}>{card.value}</div>
+                  <p className={`text-xs flex items-center gap-1 ${card.subtextColor}`}>
+                    {card.showTrendIcon !== false && <TrendingUp className="h-3 w-3" />}
+                    {card.subtext}
+                  </p>
+                </div>
+                <div className={`p-3 rounded-xl ${card.iconBg ?? "bg-white/70 border border-border/40"}`}>
+                  <Icon className={`h-5 w-5 ${card.iconColor ?? "text-muted-foreground"}`} />
+                </div>
               </CardContent>
             </Card>
           );
@@ -98,7 +108,7 @@ export default function Reports() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card className="relative overflow-hidden border border-amber-200/60 dark:border-amber-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur shadow-lg shadow-amber-100 dark:shadow-amber-900/20">
+        <Card className="relative overflow-hidden border border-amber-200/60 dark:border-amber-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur">
           <div className="absolute inset-0 bg-gradient-to-r from-amber-50 via-transparent to-white/60 dark:from-slate-900/60 dark:via-transparent dark:to-slate-900 opacity-60 pointer-events-none animate-[pulse_8s_ease-in-out_infinite]" />
           <CardHeader className="relative">
             <CardTitle>Attendance Report</CardTitle>
@@ -141,7 +151,7 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        <Card className="relative overflow-hidden border border-rose-200/60 dark:border-rose-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur shadow-lg shadow-rose-100 dark:shadow-rose-900/20">
+        <Card className="relative overflow-hidden border border-rose-200/60 dark:border-rose-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur">
           <div className="absolute inset-0 bg-gradient-to-r from-rose-50 via-transparent to-white/60 dark:from-slate-900/60 dark:via-transparent dark:to-slate-900 opacity-50 pointer-events-none animate-[pulse_9s_ease-in-out_infinite]" />
           <CardHeader className="relative">
             <div className="flex items-center justify-between">
@@ -198,7 +208,7 @@ export default function Reports() {
         </Card>
       </div>
 
-      <Card className="relative overflow-hidden border border-sky-200/60 dark:border-sky-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur shadow-lg shadow-primary/5 dark:shadow-black/30">
+      <Card className="relative overflow-hidden border border-sky-200/60 dark:border-sky-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur">
         <div className="absolute inset-0 bg-gradient-to-r from-sky-50 via-transparent to-white/60 dark:from-slate-900/60 dark:via-transparent dark:to-slate-900 opacity-60 pointer-events-none animate-[pulse_10s_ease-in-out_infinite]" />
         <CardHeader className="relative">
           <CardTitle>Daily Waste Collection Summary</CardTitle>
@@ -212,29 +222,32 @@ export default function Reports() {
                 value: "142",
                 note: "+12% vs last week",
                 noteClass: "text-success",
-                accent: "from-sky-50 to-blue-50 dark:from-slate-900/80 dark:to-slate-900",
+                accent: "from-white via-sky-50 to-blue-100 dark:from-slate-900 dark:via-sky-950/20 dark:to-slate-900",
+                valueClass: "text-sky-600 dark:text-sky-200",
               },
               {
                 label: "Average Load per Trip",
                 value: "2.8 tons",
                 note: "Within optimal range",
                 noteClass: "text-muted-foreground",
-                accent: "from-emerald-50 to-emerald-100 dark:from-slate-900/80 dark:to-slate-900",
+                accent: "from-white via-emerald-50 to-emerald-100 dark:from-slate-900 dark:via-emerald-950/20 dark:to-slate-900",
+                valueClass: "text-emerald-600 dark:text-emerald-200",
               },
               {
                 label: "Collection Efficiency",
                 value: "94.2%",
                 note: "+3.1% improvement",
                 noteClass: "text-success",
-                accent: "from-amber-50 to-amber-100 dark:from-slate-900/80 dark:to-slate-900",
+                accent: "from-white via-amber-50 to-amber-100 dark:from-slate-900 dark:via-amber-950/20 dark:to-slate-900",
+                valueClass: "text-amber-600 dark:text-amber-200",
               },
             ].map((stat) => (
               <div
                 key={stat.label}
-                className={`space-y-2 rounded-2xl border border-border/40 dark:border-border/60 bg-gradient-to-br ${stat.accent} p-4 shadow-sm shadow-primary/5`}
+                className={`space-y-2 rounded-2xl border border-border/40 dark:border-border/60 bg-gradient-to-br ${stat.accent} p-4`}
               >
                 <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
-                <p className="text-3xl font-bold">{stat.value}</p>
+                <p className={`text-3xl font-bold ${stat.valueClass ?? ""}`}>{stat.value}</p>
                 <p className={`text-xs ${stat.noteClass}`}>{stat.note}</p>
               </div>
             ))}
