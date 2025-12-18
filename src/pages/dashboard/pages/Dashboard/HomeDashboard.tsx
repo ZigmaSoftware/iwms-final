@@ -111,7 +111,7 @@ export function HomeDashboard() {
                 
                 /> */}
 
-                <LeafletMapContainer vehicles={[]} height="100%" />
+                <LeafletMapContainer height="100%" />
               </DataCard>
             </div>
 
