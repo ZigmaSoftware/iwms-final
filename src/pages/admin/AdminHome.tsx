@@ -77,43 +77,42 @@ export default function AdminHome() {
   }, []);
 
   /* -----------------------------------------
-     CORE LOGIC (BACKEND-DRIVEN)
+     DATA FETCH
   ----------------------------------------- */
   const fetchDashboardData = async () => {
     setLoading(true);
 
     try {
       const requests = [
-        continentApi.list(),            // 0
-        countryApi.list(),              // 1
-        stateApi.list(),                // 2
-        districtApi.list(),             // 3
-        cityApi.list(),                 // 4
-        zoneApi.list(),                 // 5
-        wardApi.list(),                 // 6
-        propertiesApi.list(),           // 7
-        subPropertiesApi.list(),        // 8
-        userCreationApi.list(),         // 9
-        userTypeApi.list(),             // 10
-        staffUserTypeApi.list(),        // 11
-        staffCreationApi.list(),        // 12
-        customerCreationApi.list(),     // 13
-        vehicleCreationApi.list(),      // 14
-        vehicleTypeApi.list(),          // 15
-        fuelApi.list(),                 // 16
-        wasteCollectionApi.list(),      // 17
-        complaintApi.list(),            // 18
-        feedbackApi.list(),             // 19
-        mainScreenTypeApi.list(),       // 20
-        mainScreenApi.list(),           // 21
-        userScreenApi.list(),           // 22
-        userScreenActionApi.list(),     // 23
-        userScreenPermissionApi.list(), // 24
+        continentApi.list(),
+        countryApi.list(),
+        stateApi.list(),
+        districtApi.list(),
+        cityApi.list(),
+        zoneApi.list(),
+        wardApi.list(),
+        propertiesApi.list(),
+        subPropertiesApi.list(),
+        userCreationApi.list(),
+        userTypeApi.list(),
+        staffUserTypeApi.list(),
+        staffCreationApi.list(),
+        customerCreationApi.list(),
+        vehicleCreationApi.list(),
+        vehicleTypeApi.list(),
+        fuelApi.list(),
+        wasteCollectionApi.list(),
+        complaintApi.list(),
+        feedbackApi.list(),
+        mainScreenTypeApi.list(),
+        mainScreenApi.list(),
+        userScreenApi.list(),
+        userScreenActionApi.list(),
+        userScreenPermissionApi.list(),
       ];
 
       const results = await Promise.allSettled(requests);
 
-      // SAFE extractor: returns [] if API failed (401/403/etc)
       const pick = <T,>(i: number): T[] =>
         results[i]?.status === "fulfilled" ? results[i].value : [];
 
@@ -227,7 +226,9 @@ export default function AdminHome() {
                 <Tooltip />
               </PieChart>
             </ResponsiveContainer>
-          ) : <EmptyChart icon="pie_chart" title="No user data" subtitle="No permission or data" />}
+          ) : (
+            <EmptyChart icon="pie_chart" title="No user data" subtitle="No permission or data" />
+          )}
         </ChartCard>
 
         <ChartCard title="Master Data Overview" icon="bar_chart">
@@ -239,7 +240,9 @@ export default function AdminHome() {
                 <Bar dataKey="value" fill="#6366f1" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
-          ) : <EmptyChart icon="bar_chart" title="No master data" subtitle="Permission restricted" />}
+          ) : (
+            <EmptyChart icon="bar_chart" title="No master data" subtitle="Permission restricted" />
+          )}
         </ChartCard>
 
         <ChartCard title="Operations Snapshot" icon="show_chart">
@@ -253,9 +256,24 @@ export default function AdminHome() {
                 <Area type="monotone" dataKey="value" stroke="#6366F1" fill="rgba(99,102,241,0.18)" />
               </AreaChart>
             </ResponsiveContainer>
-          ) : <EmptyChart icon="show_chart" title="No operations data" subtitle="No permission or data" />}
+          ) : (
+            <EmptyChart icon="show_chart" title="No operations data" subtitle="No permission or data" />
+          )}
         </ChartCard>
       </div>
+
+      {/* DETAIL SECTIONS */}
+      <DashboardSection title="Master Data" icon="location_on">
+        {Object.entries(stats.masterData).map(([k, v]) => (
+          <MetricCard key={k} title={k} value={v} icon="database" loading={loading} />
+        ))}
+      </DashboardSection>
+
+      <DashboardSection title="User Management" icon="people">
+        {Object.entries(stats.users).map(([k, v]) => (
+          <MetricCard key={k} title={k} value={v} icon="person" loading={loading} />
+        ))}
+      </DashboardSection>
     </div>
   );
 }
@@ -263,10 +281,11 @@ export default function AdminHome() {
 /* -----------------------------------------
    UI HELPERS
 ----------------------------------------- */
+
 const ChartCard = ({ title, icon, children }: any) => (
-  <div className="rounded-2xl border bg-white p-5 shadow-sm">
+  <div className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md dark:bg-slate-900">
     <div className="mb-3 flex items-center gap-2">
-      <GIcon name={icon} />
+      <GIcon name={icon} className="text-primary" />
       <h3 className="text-sm font-semibold">{title}</h3>
     </div>
     {children}
