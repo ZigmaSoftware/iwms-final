@@ -7,8 +7,8 @@ import Dashboard from "@/pages/dashboard/pages/Dashboard";
 import NotFound from "@/pages/dashboard/pages/NotFound";
 import { HomeDashboard } from "@/pages/dashboard/pages/Dashboard/HomeDashboard";
 import AdminHome from "@/pages/admin/AdminHome";
-import AdminEncryptedRouter from "@/layouts/admin/routing/AdminEncryptedRouter";
-import DashboardEncryptedRouter from "@/layouts/dashboard/routing/DashboardEncryptedRouter";
+import AdminEncryptedRouter from "@/layouts/admin/encryptedRouting/AdminEncryptedRouter";
+import DashboardEncryptedRouter from "@/layouts/dashboard/encryptedRouting/DashboardEncryptedRouter";
 
 import { AdminLayout } from "@/layouts/admin/AdminLayout";
 import { RoleBasedLayout } from "@/layouts/shared/RoleBasedLayout";
