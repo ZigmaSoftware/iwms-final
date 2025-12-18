@@ -7,6 +7,8 @@ import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import { Input } from "@/components/ui/input";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { Eye, EyeOff } from "lucide-react";
+
 
 /* =======================
    SHADCN SELECT
@@ -130,6 +132,8 @@ export default function UserCreationForm() {
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
+  const [showPassword, setShowPassword] = useState(false);
+
 
   const [loading, setLoading] = useState(false);
 
@@ -294,9 +298,23 @@ export default function UserCreationForm() {
           </div>
 
           <div>
-            <Label>Password *</Label>
-            <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-          </div>
+  <Label>Password *</Label>
+  <div className="relative">
+    <Input
+      type={showPassword ? "text" : "password"}
+      value={password}
+      onChange={(e) => setPassword(e.target.value)}
+      className="pr-10"
+    />
+    <button
+      type="button"
+      onClick={() => setShowPassword((prev) => !prev)}
+      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+    >
+      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+    </button>
+  </div>
+</div>
 
           <div>
             <Label>Status *</Label>
