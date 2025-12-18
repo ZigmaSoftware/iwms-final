@@ -351,7 +351,6 @@ const AppSidebar: React.FC = () => {
             <div>{renderMenuItems(citizenGrievanceItems, "citizenGrievance")}</div>
             <div>{renderMenuItems(workforceManagements, "workforceManagement")}</div>
             <div>
-              <h2 className="mb-4 text-xs uppercase tracking-[0.35em] text-[var(--admin-mutedText)]">Report</h2>
               {renderMenuItems(reportItems, "report")}
             </div>
           </nav>

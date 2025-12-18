@@ -26,6 +26,8 @@ export interface Grievance {
   image_url?: string;
   close_image_url?: string;
   action_remarks?: string;
+  main_category?: string;
+  sub_category?: string;
 }
 
 export interface InfoFieldProps {

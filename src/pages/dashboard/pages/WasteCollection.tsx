@@ -51,7 +51,10 @@ import {
   BarChart3,
   MapPin,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 // ---------------------- API Types ----------------------
 type ApiWasteRow = {
@@ -68,6 +71,7 @@ type DailyRow = {
   zone: string;
   wet: number;
   dry: number;
+  mix: number;
   total: number;
   target: number;
   households: number;
@@ -77,6 +81,7 @@ type MonthlyStat = {
   month: string;
   wet: number;
   dry: number;
+  mix: number;
   total: number;
   avgDaily: number;
 };
@@ -88,6 +93,7 @@ const FALLBACK_DAILY_DATA: DailyRow[] = [
     zone: "Zone A",
     wet: 8.5,
     dry: 5.2,
+    mix: 2.1,
     total: 13.7,
     target: 15.0,
     households: 1200,
@@ -105,7 +111,7 @@ const ZONE_WASTE_SUMMARY: Record<
 };
 
 const FALLBACK_MONTHLY_STATS: MonthlyStat[] = [
-  { month: "October 2025", wet: 245, dry: 156, total: 401, avgDaily: 13.4 },
+  { month: "October 2025", wet: 245, dry: 156, total: 401, avgDaily: 13.4 , mix: 0},
 ];
 
 const WEIGHMENT_API_URL =
@@ -943,6 +949,12 @@ const PROPERTY_COLLECTION_DATA: Record<
     ],
   },
 };
+const getYesterdayISO = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10); // YYYY-MM-DD
+};
+
 
 // ------------------------- MAIN COMPONENT -------------------------
 export default function WasteCollection() {
@@ -965,6 +977,9 @@ export default function WasteCollection() {
   const [subProperty, setSubProperty] = useState("All");
   const [selectedWasteType, setSelectedWasteType] =
     useState<WasteCategoryKey>("household");
+  const [dailyPage, setDailyPage] = useState(1);
+  const [dailyPageSize, setDailyPageSize] = useState(10);
+  const [dailyDateFilter, setDailyDateFilter] = useState("");
 
   // ---------------------- Fetch block (same as your old code) ----------------------
   useEffect(() => {
@@ -995,8 +1010,10 @@ export default function WasteCollection() {
       });
 
       const r = await fetch(`${WEIGHMENT_API_URL}?${params}`);
+      console.log(r);
       if (!r.ok) throw new Error("Bad API Response");
       const data = await r.json();
+      console.log(data);
 
       const rows: ApiWasteRow[] = Array.isArray(data?.data) ? data.data : [];
       if (!rows.length) return false;
@@ -1017,6 +1034,7 @@ export default function WasteCollection() {
             wet,
             dry,
             total,
+            mix,
             target: Number((total * 1.05).toFixed(2)),
             households: Number(row.no_of_household ?? 0),
           };
@@ -1033,10 +1051,11 @@ export default function WasteCollection() {
         (a, r) => {
           a.wet += r.wet_weight ?? 0;
           a.dry += r.dry_weight ?? 0;
+          a.mix += r.mix_weight ?? 0;
           a.total += r.total_net_weight ?? 0;
           return a;
         },
-        { wet: 0, dry: 0, total: 0 }
+        { wet: 0, dry: 0, total: 0, mix: 0 }
       );
 
       const actDays =
@@ -1049,6 +1068,7 @@ export default function WasteCollection() {
           month: formatMonthLabel(fromDate),
           wet: toTons(totals.wet),
           dry: toTons(totals.dry),
+          mix: toTons(totals.mix),
           total: toTons(totals.total),
           avgDaily: toTons(totals.total / actDays),
         },
@@ -1073,14 +1093,14 @@ export default function WasteCollection() {
     const summary = zoneName
       ? ZONE_WASTE_SUMMARY[zoneName]
       : Object.values(ZONE_WASTE_SUMMARY).reduce(
-          (acc, zone) => {
-            acc.household += zone.household;
-            acc.ewaste += zone.ewaste;
-            acc.medical += zone.medical;
-            return acc;
-          },
-          { household: 0, ewaste: 0, medical: 0 }
-        );
+        (acc, zone) => {
+          acc.household += zone.household;
+          acc.ewaste += zone.ewaste;
+          acc.medical += zone.medical;
+          return acc;
+        },
+        { household: 0, ewaste: 0, medical: 0 }
+      );
 
     return {
       labels: ["Household Waste", "E-Waste", "Medical Waste"],
@@ -1103,10 +1123,10 @@ export default function WasteCollection() {
   ): ChartData<"pie", number[], string> => {
     const data = wardData
       ? [
-          wardData.household.total,
-          wardData.ewaste.total,
-          wardData.medical.total,
-        ]
+        wardData.household.total,
+        wardData.ewaste.total,
+        wardData.medical.total,
+      ]
       : [0, 0, 0];
 
     return {
@@ -1167,14 +1187,48 @@ export default function WasteCollection() {
   };
 
   // Latest KPI hooks
-  const latestEntry = useMemo(
-    () => (dailyData.length ? dailyData[0] : null),
-    [dailyData]
-  );
+  // const latestEntry = useMemo(
+  //   () => (dailyData.length ? dailyData[0] : null),
+  //   [dailyData]
+  // );
   const monthStat = useMemo(
     () => (monthlyStats.length ? monthlyStats[0] : null),
     [monthlyStats]
   );
+  const filteredDailyData = useMemo(() => {
+    if (!dailyDateFilter) return dailyData;
+    return dailyData.filter(
+      (row) => row.date.slice(0, 10) === dailyDateFilter
+    );
+  }, [dailyData, dailyDateFilter]);
+
+  const totalDailyPages = Math.max(
+    1,
+    Math.ceil(filteredDailyData.length / dailyPageSize)
+  );
+
+  const paginatedDailyData = useMemo(() => {
+    const start = (dailyPage - 1) * dailyPageSize;
+    return filteredDailyData.slice(start, start + dailyPageSize);
+  }, [filteredDailyData, dailyPage, dailyPageSize]);
+
+  useEffect(() => {
+    setDailyPage(1);
+  }, [dailyPageSize, dailyDateFilter]);
+  const latestEntry = useMemo(
+    () => (dailyData.length ? dailyData[0] : null),
+    [dailyData]
+  );
+  const yesterdayEntry = useMemo(() => {
+    const yesterday = getYesterdayISO();
+    return (
+      dailyData.find(
+        (row) => row.date.slice(0, 10) === yesterday
+      ) || null
+    );
+  }, [dailyData]);
+
+
 
   // -----------------------------------------------------------------------
   // ---------------------------- RENDER START ------------------------------
@@ -1212,8 +1266,9 @@ export default function WasteCollection() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {latestEntry ? formatTons(latestEntry.total) : "44.3 Tons"}
+                {yesterdayEntry ? formatTons(yesterdayEntry.total) : "--"}
               </div>
+
             </CardContent>
           </Card>
 
@@ -1227,8 +1282,9 @@ export default function WasteCollection() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {latestEntry ? formatTons(latestEntry.wet) : "27.2 Tons"}
+                {yesterdayEntry ? formatTons(yesterdayEntry.wet) : "--"}
               </div>
+
             </CardContent>
           </Card>
 
@@ -1242,8 +1298,23 @@ export default function WasteCollection() {
             </CardHeader>
             <CardContent>
               <div className="text-3xl font-bold">
-                {latestEntry ? formatTons(latestEntry.dry) : "17.1 Tons"}
+                {yesterdayEntry ? formatTons(yesterdayEntry.dry) : "--"}
               </div>
+
+            </CardContent>
+          </Card>
+          <Card className="border-0 bg-gradient-to-br from-[#DDD6FE] to-[#A78BFA] text-white shadow-md hover:-translate-y-1 transition-all">
+            <CardHeader className="flex justify-between">
+              <CardTitle className="text-sm text-white/90">Mixed Waste</CardTitle>
+              <div className="p-2 bg-white/20 rounded-lg">
+                <Recycle className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">
+                {yesterdayEntry ? formatTons(yesterdayEntry.mix) : "--"}
+              </div>
+
             </CardContent>
           </Card>
 
@@ -1265,7 +1336,7 @@ export default function WasteCollection() {
           </Card>
 
           {/* HOUSEHOLDS */}
-          <Card className="border-0 bg-gradient-to-br from-[#FBCFE8] to-[#F9A8D4] text-white shadow-md hover:-translate-y-1 transition-all">
+          {/* <Card className="border-0 bg-gradient-to-br from-[#FBCFE8] to-[#F9A8D4] text-white shadow-md hover:-translate-y-1 transition-all">
             <CardHeader className="flex justify-between">
               <CardTitle className="text-sm text-white/90">
                 Households
@@ -1279,7 +1350,7 @@ export default function WasteCollection() {
                 {latestEntry ? latestEntry.households.toLocaleString() : "0"}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         {/* TABS SECTION */}
@@ -1314,15 +1385,30 @@ export default function WasteCollection() {
             {/* ---------------- DAILY ---------------- */}
             <TabsContent value="daily" className="mt-6">
               <div className="space-y-4">
-                <div>
-                  <h3 className="text-xl font-bold">
-                    Daily Collection Records
-                  </h3>
-                  <p className="text-slate-600">
-                    Comprehensive waste collection performance metrics
-                  </p>
+                {/* Header + Date Filter */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold">
+                      Daily Collection Records
+                    </h3>
+                    <p className="text-slate-600">
+                      Comprehensive waste collection performance metrics
+                    </p>
+                  </div>
+
+                  {/* Date Filter */}
+                  <div className="flex items-center gap-2">
+                    {/* <Calendar className="h-4 w-4 text-slate-500" /> */}
+                    <Input
+                      type="date"
+                      value={dailyDateFilter}
+                      onChange={(e) => setDailyDateFilter(e.target.value)}
+                      className="w-44"
+                    />
+                  </div>
                 </div>
 
+                {/* Table */}
                 <div className="rounded-xl overflow-hidden border shadow bg-white">
                   <Table>
                     <TableHeader>
@@ -1331,12 +1417,13 @@ export default function WasteCollection() {
                         <TableHead>Zone</TableHead>
                         <TableHead>Wet (Tons)</TableHead>
                         <TableHead>Dry (Tons)</TableHead>
+                        <TableHead>Mix (Tons)</TableHead>
                         <TableHead>Total (Tons)</TableHead>
                       </TableRow>
                     </TableHeader>
 
                     <TableBody>
-                      {dailyData.map((row, index) => (
+                      {paginatedDailyData.map((row, index) => (
                         <TableRow key={index} className="hover:bg-indigo-50">
                           <TableCell>
                             {new Date(row.date).toLocaleDateString("en-US")}
@@ -1354,6 +1441,10 @@ export default function WasteCollection() {
                             {row.dry.toFixed(1)}
                           </TableCell>
 
+                          <TableCell className="font-bold text-sky-700">
+                            {row.mix.toFixed(1)}
+                          </TableCell>
+
                           <TableCell className="font-bold text-indigo-700">
                             {row.total.toFixed(1)}
                           </TableCell>
@@ -1361,9 +1452,60 @@ export default function WasteCollection() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {/* Pagination Footer */}
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border-t bg-slate-50">
+                    {/* Rows per page */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span>Rows per page</span>
+                      <Select
+                        value={String(dailyPageSize)}
+                        onValueChange={(v) => setDailyPageSize(Number(v))}
+                      >
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[5, 10, 20, 50].map((n) => (
+                            <SelectItem key={n} value={String(n)}>
+                              {n}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Pagination controls */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={dailyPage === 1}
+                        onClick={() => setDailyPage((p) => Math.max(1, p - 1))}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+
+                      <span className="text-sm text-slate-600">
+                        Page {dailyPage} of {totalDailyPages}
+                      </span>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={dailyPage >= totalDailyPages}
+                        onClick={() =>
+                          setDailyPage((p) => Math.min(totalDailyPages, p + 1))
+                        }
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </TabsContent>
+
 
             {/* ---------------- MONTHLY ---------------- */}
             <TabsContent value="monthly" className="mt-6">
@@ -1377,6 +1519,7 @@ export default function WasteCollection() {
                         <TableHead>Month</TableHead>
                         <TableHead>Wet (Tons)</TableHead>
                         <TableHead>Dry (Tons)</TableHead>
+                        <TableHead>Mix (Tons)</TableHead>
                         <TableHead>Total (Tons)</TableHead>
                         <TableHead>Avg Daily</TableHead>
                       </TableRow>
@@ -1388,6 +1531,7 @@ export default function WasteCollection() {
                           <TableCell>{row.month}</TableCell>
                           <TableCell>{row.wet.toFixed(1)}</TableCell>
                           <TableCell>{row.dry.toFixed(1)}</TableCell>
+                          <TableCell>{row.mix.toFixed(1)}</TableCell>
                           <TableCell>{row.total.toFixed(1)}</TableCell>
                           <TableCell>{row.avgDaily.toFixed(1)}</TableCell>
                         </TableRow>
@@ -1589,7 +1733,7 @@ export default function WasteCollection() {
                             );
                           })}
                         </div> */}
-{/* 
+                        {/* 
                         <Card className="border shadow-sm">
                           <CardHeader>
                             <CardTitle>
