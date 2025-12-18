@@ -1,14 +1,57 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Download, FileText, Calendar, TrendingUp } from "lucide-react";
+import { Download, FileText, Calendar, TrendingUp, Sparkles, BarChart2, Fuel, Recycle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function Reports() {
+  const kpiCards = [
+    {
+      title: "Total Attendance",
+      value: "96.8%",
+      subtext: "+2.4% from last week",
+      subtextColor: "text-success",
+      icon: FileText,
+      overlay: "from-sky-50 via-white/40 to-blue-100 dark:from-slate-900/80 dark:via-transparent dark:to-slate-900",
+      border: "border-sky-200/60 dark:border-sky-500/40",
+      shadow: "shadow-blue-100 dark:shadow-sky-900/30",
+      valueColor: "text-sky-600 dark:text-sky-100",
+    },
+    {
+      title: "Fuel Efficiency",
+      value: "8.2 km/L",
+      subtext: "+5.1% improvement",
+      subtextColor: "text-success",
+      icon: Fuel,
+      overlay: "from-emerald-50 via-white/40 to-emerald-100 dark:from-slate-900/80 dark:via-transparent dark:to-slate-900",
+      border: "border-emerald-200/60 dark:border-emerald-500/40",
+      shadow: "shadow-emerald-100 dark:shadow-emerald-900/30",
+      valueColor: "text-emerald-600 dark:text-emerald-100",
+    },
+    {
+      title: "Waste Collected",
+      value: "847 tons",
+      subtext: "This month",
+      subtextColor: "text-muted-foreground",
+      icon: Recycle,
+      showTrendIcon: false,
+      overlay: "from-amber-50 via-white/40 to-amber-100 dark:from-slate-900/80 dark:via-transparent dark:to-slate-900",
+      border: "border-amber-200/60 dark:border-amber-500/40",
+      shadow: "shadow-amber-100 dark:shadow-amber-900/30",
+      valueColor: "text-amber-600 dark:text-amber-100",
+    },
+  ];
+
   return (
-   <div className="space-y-6 h-[calc(100vh-80px)] overflow-y-auto pr-2 pb-6">
-      <div className="flex items-center justify-between">
+   <div className="space-y-6 h-[calc(100vh-80px)] overflow-y-auto pr-2 pb-6 relative">
+      <div className="absolute inset-0 -z-10 bg-gradient-to-br from-white via-slate-50 to-sky-50 dark:from-slate-900 dark:via-slate-950 dark:to-slate-900" />
+      <div className="absolute inset-y-0 right-10 -z-10 w-72 blur-3xl opacity-50 bg-gradient-to-b from-sky-100 via-blue-50 to-emerald-100 dark:from-slate-800 dark:via-slate-900 dark:to-emerald-900/40 animate-pulse" />
+      <div className="flex items-center justify-between bg-white/80 dark:bg-slate-950/70 backdrop-blur rounded-3xl border border-border/40 dark:border-border/60 p-6 shadow-lg shadow-primary/5 dark:shadow-black/30">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Reports & Analytics</h2>
+          <div className="flex items-center gap-2 text-sky-500 dark:text-sky-300">
+            <Sparkles className="h-4 w-4 animate-pulse" />
+            <span className="text-sm font-medium">Insights Hub</span>
+          </div>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground mt-1">Reports & Analytics</h2>
           <p className="text-muted-foreground">Comprehensive fleet performance and operational reports</p>
         </div>
         <div className="flex items-center gap-2">
@@ -28,59 +71,48 @@ export default function Reports() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Attendance</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">96.8%</div>
-            <p className="text-xs text-success flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              +2.4% from last week
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Fuel Efficiency</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">8.2 km/L</div>
-            <p className="text-xs text-success flex items-center gap-1">
-              <TrendingUp className="h-3 w-3" />
-              +5.1% improvement
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Waste Collected</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">847 tons</div>
-            <p className="text-xs text-muted-foreground">This month</p>
-          </CardContent>
-        </Card>
+        {kpiCards.map((card) => {
+          const Icon = card.icon;
+          return (
+            <Card
+              key={card.title}
+              className={`relative overflow-hidden border ${card.border} bg-white/90 dark:bg-slate-900/70 backdrop-blur shadow-lg ${card.shadow} transition-transform duration-500 hover:-translate-y-1`}
+            >
+              <div
+                className={`absolute inset-0 bg-gradient-to-r ${card.overlay} opacity-70 pointer-events-none animate-[pulse_7s_ease-in-out_infinite]`}
+              />
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 relative z-10">
+                <CardTitle className="text-sm font-medium">{card.title}</CardTitle>
+                <Icon className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent className="relative z-10">
+                <div className={`text-2xl font-bold ${card.valueColor}`}>{card.value}</div>
+                <p className={`text-xs flex items-center gap-1 ${card.subtextColor}`}>
+                  {card.showTrendIcon !== false && <TrendingUp className="h-3 w-3" />}
+                  {card.subtext}
+                </p>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
+        <Card className="relative overflow-hidden border border-amber-200/60 dark:border-amber-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur shadow-lg shadow-amber-100 dark:shadow-amber-900/20">
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-50 via-transparent to-white/60 dark:from-slate-900/60 dark:via-transparent dark:to-slate-900 opacity-60 pointer-events-none animate-[pulse_8s_ease-in-out_infinite]" />
+          <CardHeader className="relative">
             <CardTitle>Attendance Report</CardTitle>
             <CardDescription>Staff attendance and punctuality analysis</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">On-time arrivals</span>
                   <span className="font-medium">89%</span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                  <div className="h-full bg-gradient-success" style={{ width: "89%" }} />
+                <div className="h-2 w-full rounded-full bg-secondary overflow-hidden dark:bg-slate-800/80">
+                  <div className="h-full bg-gradient-success dark:from-emerald-500 dark:via-emerald-400 dark:to-emerald-600 transition-all" style={{ width: "89%" }} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -88,8 +120,8 @@ export default function Reports() {
                   <span className="text-muted-foreground">Late arrivals (within 30min)</span>
                   <span className="font-medium">8%</span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                  <div className="h-full bg-gradient-warning" style={{ width: "8%" }} />
+                <div className="h-2 w-full rounded-full bg-secondary overflow-hidden dark:bg-slate-800/80">
+                  <div className="h-full bg-gradient-warning dark:from-amber-500 dark:via-amber-400 dark:to-amber-600 transition-all" style={{ width: "8%" }} />
                 </div>
               </div>
               <div className="space-y-2">
@@ -97,11 +129,11 @@ export default function Reports() {
                   <span className="text-muted-foreground">Absent/No show</span>
                   <span className="font-medium">3%</span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
-                  <div className="h-full bg-destructive" style={{ width: "3%" }} />
+                <div className="h-2 w-full rounded-full bg-secondary overflow-hidden dark:bg-slate-800/80">
+                  <div className="h-full bg-destructive dark:bg-rose-500 transition-all" style={{ width: "3%" }} />
                 </div>
               </div>
-              <Button variant="outline" className="w-full mt-4">
+              <Button variant="outline" className="w-full mt-4 border-amber-200 hover:bg-amber-50 dark:hover:bg-slate-900/60">
                 <Download className="h-4 w-4 mr-2" />
                 Export Attendance Report
               </Button>
@@ -109,12 +141,18 @@ export default function Reports() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Fuel Efficiency Trends</CardTitle>
-            <CardDescription>Fuel consumption analysis by vehicle</CardDescription>
+        <Card className="relative overflow-hidden border border-rose-200/60 dark:border-rose-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur shadow-lg shadow-rose-100 dark:shadow-rose-900/20">
+          <div className="absolute inset-0 bg-gradient-to-r from-rose-50 via-transparent to-white/60 dark:from-slate-900/60 dark:via-transparent dark:to-slate-900 opacity-50 pointer-events-none animate-[pulse_9s_ease-in-out_infinite]" />
+          <CardHeader className="relative">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Fuel Efficiency Trends</CardTitle>
+                <CardDescription>Fuel consumption analysis by vehicle</CardDescription>
+              </div>
+              <BarChart2 className="h-5 w-5 text-rose-500" />
+            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="relative">
             <div className="space-y-3">
               {[
                 { vehicle: "TRK-001", efficiency: "9.2 km/L", status: "excellent" },
@@ -122,7 +160,7 @@ export default function Reports() {
                 { vehicle: "TRK-008", efficiency: "7.4 km/L", status: "average" },
                 { vehicle: "TRK-022", efficiency: "6.8 km/L", status: "poor" },
               ].map((data, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 rounded-lg border">
+                <div key={idx} className="flex items-center justify-between p-3 rounded-lg border border-rose-100 dark:border-rose-900/40 bg-white/80 dark:bg-slate-950/50 backdrop-blur-sm transition-transform duration-500 hover:-translate-y-0.5 hover:border-rose-300">
                   <div className="space-y-1">
                     <p className="font-medium text-sm">{data.vehicle}</p>
                     <p className="text-xs text-muted-foreground">
@@ -140,18 +178,18 @@ export default function Reports() {
                     <div
                       className={`h-1 w-20 rounded-full mt-1 ${
                         data.status === "excellent"
-                          ? "bg-success"
+                          ? "bg-rose-400"
                           : data.status === "good"
-                          ? "bg-primary"
+                          ? "bg-rose-500"
                           : data.status === "average"
-                          ? "bg-warning"
+                          ? "bg-amber-400"
                           : "bg-destructive"
                       }`}
                     />
                   </div>
                 </div>
               ))}
-              <Button variant="outline" className="w-full mt-4">
+              <Button variant="outline" className="w-full mt-4 border-rose-200 hover:bg-rose-50 dark:hover:bg-slate-900/60">
                 <Download className="h-4 w-4 mr-2" />
                 Export Fuel Report
               </Button>
@@ -160,28 +198,46 @@ export default function Reports() {
         </Card>
       </div>
 
-      <Card>
-        <CardHeader>
+      <Card className="relative overflow-hidden border border-sky-200/60 dark:border-sky-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur shadow-lg shadow-primary/5 dark:shadow-black/30">
+        <div className="absolute inset-0 bg-gradient-to-r from-sky-50 via-transparent to-white/60 dark:from-slate-900/60 dark:via-transparent dark:to-slate-900 opacity-60 pointer-events-none animate-[pulse_10s_ease-in-out_infinite]" />
+        <CardHeader className="relative">
           <CardTitle>Daily Waste Collection Summary</CardTitle>
           <CardDescription>Waste collection statistics and performance metrics</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="relative">
           <div className="grid gap-6 md:grid-cols-3">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Total Routes Completed</p>
-              <p className="text-3xl font-bold">142</p>
-              <p className="text-xs text-success">+12% vs last week</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Average Load per Trip</p>
-              <p className="text-3xl font-bold">2.8 tons</p>
-              <p className="text-xs text-muted-foreground">Within optimal range</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Collection Efficiency</p>
-              <p className="text-3xl font-bold">94.2%</p>
-              <p className="text-xs text-success">+3.1% improvement</p>
-            </div>
+            {[
+              {
+                label: "Total Routes Completed",
+                value: "142",
+                note: "+12% vs last week",
+                noteClass: "text-success",
+                accent: "from-sky-50 to-blue-50 dark:from-slate-900/80 dark:to-slate-900",
+              },
+              {
+                label: "Average Load per Trip",
+                value: "2.8 tons",
+                note: "Within optimal range",
+                noteClass: "text-muted-foreground",
+                accent: "from-emerald-50 to-emerald-100 dark:from-slate-900/80 dark:to-slate-900",
+              },
+              {
+                label: "Collection Efficiency",
+                value: "94.2%",
+                note: "+3.1% improvement",
+                noteClass: "text-success",
+                accent: "from-amber-50 to-amber-100 dark:from-slate-900/80 dark:to-slate-900",
+              },
+            ].map((stat) => (
+              <div
+                key={stat.label}
+                className={`space-y-2 rounded-2xl border border-border/40 dark:border-border/60 bg-gradient-to-br ${stat.accent} p-4 shadow-sm shadow-primary/5`}
+              >
+                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                <p className="text-3xl font-bold">{stat.value}</p>
+                <p className={`text-xs ${stat.noteClass}`}>{stat.note}</p>
+              </div>
+            ))}
           </div>
           <div className="mt-6 flex gap-2">
             <Button variant="outline" className="flex-1">
