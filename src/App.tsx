@@ -72,8 +72,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/auth" element={<Auth />} />
-      <Route path="/" element={withDashboard(<HomeDashboard />)} />
-      <Route path="/dashboard" element={withDashboard(<Dashboard />)} />
+      <Route path="/" element={<Navigate to="/dashboard" replace />} />
+      <Route path="/dashboard" element={withDashboard(<HomeDashboard />)} />
+      <Route path="/dashboard/overview" element={withDashboard(<Dashboard />)} />
       <Route path="/dashboard/:encModule" element={withDashboard(<DashboardEncryptedRouter />)} />
       <Route path="/admin" element={withAdmin(<AdminHome />)} />
       <Route path="/:encMaster/:encModule" element={withAdmin(<AdminEncryptedRouter />)} />
