@@ -14,8 +14,7 @@ const {
 } = getEncryptedRoute();
 
 const menuItems = [
-  { title: "Dashboard", url: "/", icon: LayoutDashboard },
-
+  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
   { title: "Live Map", url: `/dashboard/${encDashboardLiveMap}`, icon: MapPin },
   { title: "Vehicle", url: `/dashboard/${encDashboardVehicleManagement}`, icon: Truck },
   { title: "Waste Collection", url: `/dashboard/${encDashboardWasteCollection}`, icon: Trash2 },
@@ -34,7 +33,7 @@ export function HorizontalNav() {
         <NavLink
           key={item.title}
           to={item.url}
-          end={item.url === "/"}
+          end={item.url === "/dashboard"}
           className={({ isActive }) =>
             `group relative flex items-center gap-3 px-2 text-lg py-2 rounded-lg font-medium transition-all duration-300 ${
               isActive
