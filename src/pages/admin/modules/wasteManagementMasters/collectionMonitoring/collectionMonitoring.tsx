@@ -1,20 +1,15 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import flatpickr from "flatpickr";
 import type { Instance as FlatpickrInstance } from "flatpickr/dist/types/instance";
-import {desktopApi}from "@/api";
+import { desktopApi } from "@/api";
 import "./collectionMonitor.css";
 import "flatpickr/dist/flatpickr.min.css";
 import {
   filterActiveCustomers,
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
+import type { CustomerRecord as CustomerRecordBase } from "@/utils/customerUtils";
 
 interface Vehicle {
   id: string;
@@ -29,21 +24,19 @@ interface Vehicle {
   updatedAt: string;
 }
 
-interface CustomerRecord {
-  id: number;
-  customer_name: string;
-  zone_name: string;
-  ward_name: string;
-  latitude: string;
-  longitude: string;
+type CustomerRecord = CustomerRecordBase & {
+  customer_name?: string;
+  zone_name?: string;
+  ward_name?: string;
+  latitude?: string;
+  longitude?: string;
   building_no?: string;
   street?: string;
   area?: string;
-  is_active?: boolean;
-}
+};
 
 interface CustomerLocation {
-  id: number;
+  id: string;
   name: string;
   lat: number;
   lon: number;
@@ -66,7 +59,7 @@ const WasteCollectionMonitor: React.FC = () => {
   const [notCollectedCount, setNotCollectedCount] = useState<number>(0);
   const [totalHouseholdCount, setTotalHouseholdCount] = useState<number>(0);
   const [customerLocations, setCustomerLocations] = useState<CustomerLocation[]>([]);
-  const [collectedCustomerIds, setCollectedCustomerIds] = useState<number[]>([]);
+  const [collectedCustomerIds, setCollectedCustomerIds] = useState<string[]>([]);
   const [allCustomers, setAllCustomers] = useState<CustomerRecord[]>([]);
 
   const [selectedStatus, setSelectedStatus] = useState<string>("not_collected");
@@ -216,8 +209,8 @@ const WasteCollectionMonitor: React.FC = () => {
 
     try {
       const response = await desktopApi.get("customercreations/");
-      const normalized = normalizeCustomerArray(response.data);
-      const activeCustomers = filterActiveCustomers(normalized);
+      const normalized = normalizeCustomerArray(response.data) as CustomerRecord[];
+      const activeCustomers = filterActiveCustomers(normalized) as CustomerRecord[];
       households = activeCustomers.length;
       customerData = activeCustomers;
     } catch (error) {
@@ -226,11 +219,11 @@ const WasteCollectionMonitor: React.FC = () => {
 
     const locations = customerData
       .map((customer) => {
-        const lat = parseFloat(customer.latitude);
-        const lon = parseFloat(customer.longitude);
+        const lat = parseFloat(customer.latitude ?? "");
+        const lon = parseFloat(customer.longitude ?? "");
         return {
           id: resolveId(customer),
-          name: customer.customer_name,
+          name: customer.customer_name ?? "Unknown",
           lat,
           lon,
           address: `${customer.building_no || ""} ${customer.street || ""} ${customer.area || ""}`.trim(),

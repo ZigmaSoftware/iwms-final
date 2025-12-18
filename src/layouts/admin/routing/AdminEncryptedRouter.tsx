@@ -152,7 +152,7 @@ const resolveComponent = (config: RouteConfig | undefined, mode: "view" | "new" 
   return config.list;
 };
 
-export default function EncryptedRouter() {
+export default function AdminEncryptedRouter() {
   const { encMaster, encModule, id } = useParams();
   const location = useLocation();
 

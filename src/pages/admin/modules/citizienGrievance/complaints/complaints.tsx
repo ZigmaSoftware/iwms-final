@@ -41,7 +41,9 @@ export default function ComplaintsList() {
   const [modalImage, setModalImage] = useState<string | null>(null);
   const [expandedRows, setExpandedRows] = useState<any>(null);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
-  const [filters, setFilters] = useState({
+  const [filters, setFilters] = useState<{
+    global: { value: string | null; matchMode: FilterMatchMode };
+  }>({
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
@@ -250,7 +252,6 @@ export default function ComplaintsList() {
           expandedRows={expandedRows}
           onRowToggle={(e) => setExpandedRows(e.data)}
           rowExpansionTemplate={rowExpansionTemplate}
-          expandableRows
           showGridlines
           stripedRows
         >

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -14,7 +14,7 @@ const GEOFENCE_API_URL =
 /* ================= TYPES ================= */
 type VehicleStatus = "Running" | "Idle" | "Parked" | "No Data";
 
-interface VehicleData {
+export interface VehicleData {
   vehicle_no: string;
   lat: number;
   lng: number;
@@ -134,8 +134,16 @@ function getVehicleIcon(status: VehicleStatus) {
   });
 }
 
+interface LeafletMapContainerProps {
+  vehicles?: VehicleData[];
+  height?: string;
+}
+
 /* ================= COMPONENT ================= */
-export function LeafletMapContainer() {
+export function LeafletMapContainer({
+  vehicles: overrideVehicles,
+  height = "600px",
+}: LeafletMapContainerProps = {}) {
   const { theme } = useTheme();
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -143,7 +151,7 @@ export function LeafletMapContainer() {
   const vehicleLayerRef = useRef<L.LayerGroup | null>(null);
   const geofenceLayerRef = useRef<L.LayerGroup | null>(null);
 
-  const [vehicles, setVehicles] = useState<VehicleData[]>([]);
+  const [fetchedVehicles, setFetchedVehicles] = useState<VehicleData[]>([]);
   const [geofenceSites, setGeofenceSites] = useState<GeofenceSite[]>([]);
   const isDarkMode = theme === "dark";
 
@@ -268,7 +276,7 @@ export function LeafletMapContainer() {
           })
           .filter(Boolean) as VehicleData[];
 
-        setVehicles(normalized);
+        setFetchedVehicles(normalized);
       } catch (err) {
         console.error("Failed to fetch vehicles", err);
       }
@@ -279,12 +287,17 @@ export function LeafletMapContainer() {
     return () => clearInterval(t);
   }, []);
 
+  const displayedVehicles = useMemo(
+    () => overrideVehicles ?? fetchedVehicles,
+    [overrideVehicles, fetchedVehicles],
+  );
+
   /* ================= DRAW VEHICLES ================= */
   useEffect(() => {
     if (!vehicleLayerRef.current) return;
     vehicleLayerRef.current.clearLayers();
 
-    vehicles
+    displayedVehicles
       .filter((v) => statusFilter[v.status])
       .forEach((v) => {
         L.marker([v.lat, v.lng], {
@@ -298,7 +311,7 @@ export function LeafletMapContainer() {
           `)
           .addTo(vehicleLayerRef.current!);
       });
-  }, [vehicles, statusFilter]);
+  }, [displayedVehicles, statusFilter]);
 
   /* ================= DRAW GEOFENCES ================= */
   useEffect(() => {
@@ -323,12 +336,12 @@ export function LeafletMapContainer() {
         bounds.push(...coords);
       });
 
-    vehicles.forEach((v) => bounds.push([v.lat, v.lng]));
+    displayedVehicles.forEach((v) => bounds.push([v.lat, v.lng]));
 
     if (bounds.length) {
       mapRef.current.fitBounds(bounds, { padding: [40, 40] });
     }
-  }, [geofenceSites, vehicles]);
+  }, [geofenceSites, displayedVehicles]);
 
   /* ================= UI ================= */
   return (
@@ -336,7 +349,7 @@ export function LeafletMapContainer() {
       style={{
         position: "relative",
         width: "100%",
-        height: "600px",
+        height,
         backgroundColor: isDarkMode ? "#0f172a" : "#fff",
       }}
     >
