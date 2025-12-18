@@ -4,17 +4,78 @@ import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navigation, Search, ChevronDown } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type RawRecord = Record<string, unknown>;
 type StatusKey = "running" | "idle" | "stopped" | "no_data";
 type StatusFilterKey = StatusKey | "all";
 
-const STATUS_META: Record<StatusFilterKey, { label: string; color: string; accent: string; bg: string }> = {
-  all: { label: "All Vehicles", color: "#0f172a", accent: "#6366f1", bg: "#eef2ff" },
-  running: { label: "Running", color: "#1f8b34", accent: "#16a34a", bg: "#e6f5ec" },
-  idle: { label: "Idle", color: "#b27700", accent: "#f59e0b", bg: "#fff8e0" },
-  stopped: { label: "Stopped", color: "#c21c1c", accent: "#ef4444", bg: "#ffe5e5" },
-  no_data: { label: "No Data", color: "#6b7280", accent: "#9ca3af", bg: "#f3f4f6" },
+type StatusSurface = { bg: string; border: string };
+type StatusBadge = { bg: string; color: string };
+
+const STATUS_META: Record<
+  StatusFilterKey,
+  {
+    label: string;
+    accent: string;
+    textLight: string;
+    textDark: string;
+    surfaceLight: StatusSurface;
+    surfaceDark: StatusSurface;
+    badgeLight: StatusBadge;
+    badgeDark: StatusBadge;
+  }
+> = {
+  all: {
+    label: "All Vehicles",
+    accent: "#6366f1",
+    textLight: "#312e81",
+    textDark: "#c7d2fe",
+    surfaceLight: { bg: "#eef2ff", border: "#c7d2fe" },
+    surfaceDark: { bg: "rgba(99,102,241,0.16)", border: "rgba(129,140,248,0.45)" },
+    badgeLight: { bg: "#6366f1", color: "#ffffff" },
+    badgeDark: { bg: "rgba(79,70,229,0.75)", color: "#e0e7ff" },
+  },
+  running: {
+    label: "Running",
+    accent: "#16a34a",
+    textLight: "#14532d",
+    textDark: "#4ade80",
+    surfaceLight: { bg: "#e6f5ec", border: "#a3e0b9" },
+    surfaceDark: { bg: "rgba(34,197,94,0.28)", border: "rgba(74,222,128,0.7)" },
+    badgeLight: { bg: "#16a34a", color: "#ffffff" },
+    badgeDark: { bg: "#22c55e", color: "#052e16" },
+  },
+  idle: {
+    label: "Idle",
+    accent: "#f59e0b",
+    textLight: "#92400e",
+    textDark: "#fde68a",
+    surfaceLight: { bg: "#fff8e1", border: "#fcd34d" },
+    surfaceDark: { bg: "rgba(245,158,11,0.14)", border: "rgba(251,191,36,0.45)" },
+    badgeLight: { bg: "#facc15", color: "#1f2937" },
+    badgeDark: { bg: "#b45309", color: "#fff7ed" },
+  },
+  stopped: {
+    label: "Stopped",
+    accent: "#ef4444",
+    textLight: "#991b1b",
+    textDark: "#fecaca",
+    surfaceLight: { bg: "#ffe5e5", border: "#fca5a5" },
+    surfaceDark: { bg: "rgba(239,68,68,0.15)", border: "rgba(248,113,113,0.45)" },
+    badgeLight: { bg: "#ef4444", color: "#ffffff" },
+    badgeDark: { bg: "#b91c1c", color: "#fee2e2" },
+  },
+  no_data: {
+    label: "No Data",
+    accent: "#9ca3af",
+    textLight: "#374151",
+    textDark: "#d1d5db",
+    surfaceLight: { bg: "#f3f4f6", border: "#d1d5db" },
+    surfaceDark: { bg: "rgba(148,163,184,0.12)", border: "rgba(148,163,184,0.35)" },
+    badgeLight: { bg: "#9ca3af", color: "#1f2937" },
+    badgeDark: { bg: "#4b5563", color: "#e5e7eb" },
+  },
 };
 
 const STATUS_FILTERS: { key: StatusFilterKey; label: string }[] = [
@@ -23,6 +84,41 @@ const STATUS_FILTERS: { key: StatusFilterKey; label: string }[] = [
   { key: "idle", label: "Idle" },
   { key: "stopped", label: "Stopped" },
 ];
+
+const VEHICLE_ICON_EMOJI = "🚚";
+
+function createVehicleIcon(status: StatusKey, isFocused: boolean) {
+  const meta = STATUS_META[status];
+  const size = isFocused ? 40 : 32;
+  const border = isFocused ? 3 : 2;
+  const shadow = isFocused ? "0 8px 18px rgba(0,0,0,.35)" : "0 4px 12px rgba(0,0,0,.3)";
+
+  return L.divIcon({
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+    html: `
+      <div
+        style="
+          width:${size}px;
+          height:${size}px;
+          border-radius:50%;
+          background:${meta.accent};
+          display:flex;
+          align-items:center;
+          justify-content:center;
+          color:#fff;
+          font-size:${isFocused ? 20 : 16}px;
+          box-shadow:${shadow};
+          border:${border}px solid #fff;
+        "
+      >
+        <span style="line-height:1;">${VEHICLE_ICON_EMOJI}</span>
+      </div>
+    `,
+  });
+}
 
 const FALLBACK_VEHICLE_INFO = [
   { id: "TRK-001", lat: 40.7128, lng: -74.006, status: "Running", staff: "John Doe", route: "Zone A", weight: "2.4 tons" },
@@ -158,6 +254,8 @@ function normalizeVehicle(record: RawRecord): LiveVehicle | null {
 }
 
 export default function MapView() {
+  const { theme, palette } = useTheme();
+  const isDarkMode = theme === "dark";
   const [vehicleId, setVehicleId] = useState(FALLBACK_TRACKED_VEHICLES[0].id);
   const [liveVehicles, setLiveVehicles] = useState<LiveVehicle[]>(FALLBACK_TRACKED_VEHICLES);
   const [focusedVehicleId, setFocusedVehicleId] = useState<string>(FALLBACK_TRACKED_VEHICLES[0].id);
@@ -246,12 +344,10 @@ export default function MapView() {
       const position: LatLngTuple = [vehicle.lat, vehicle.lng];
       bounds.push(position);
       const statusMeta = STATUS_META[vehicle.status];
-      const marker = L.circleMarker(position, {
-        radius: vehicle.id === focusedVehicleId ? 9 : 6,
-        fillColor: statusMeta.color,
-        color: statusMeta.color,
-        weight: 2,
-        fillOpacity: 0.85,
+      const isFocused = vehicle.id === focusedVehicleId;
+      const marker = L.marker(position, {
+        icon: createVehicleIcon(vehicle.status, isFocused),
+        title: vehicle.label,
       });
       marker
         .bindPopup(
@@ -260,7 +356,7 @@ export default function MapView() {
           )} km/h`,
         )
         .addTo(layer);
-      if (vehicle.id === focusedVehicleId) {
+      if (isFocused) {
         marker.openPopup();
       }
     });
@@ -369,7 +465,14 @@ export default function MapView() {
 
       <div className="grid gap-5 lg:grid-cols-3 -mt-2">
         <div className="lg:col-span-2">
-          <Card className="h-[540px] overflow-visible">
+          <Card
+            className="h-[760px] overflow-visible"
+            style={{
+              background: isDarkMode ? "#0f172a" : undefined,
+              borderColor: isDarkMode ? "rgba(148,163,184,0.2)" : undefined,
+              boxShadow: isDarkMode ? "0 25px 45px rgba(2,6,23,0.85)" : undefined,
+            }}
+          >
             <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <CardTitle>Fleet Location Map</CardTitle>
@@ -390,7 +493,7 @@ export default function MapView() {
                 {isDropdownOpen && (
                   <div
                     ref={searchDropdownRef}
-                    className="absolute left-0 top-full z-[1000] mt-2 w-[240px] rounded-lg border border-border bg-white text-[13px] shadow-xl"
+                    className="absolute left-0 top-full z-[1000] mt-2 w-[240px] rounded-lg border border-border bg-card text-card-foreground text-[13px] shadow-xl dark:shadow-slate-900/50"
                   >
                     <div className="border-b border-border px-3 py-2 text-xs uppercase text-muted-foreground tracking-wide">
                       Search vehicle ID
@@ -432,7 +535,7 @@ export default function MapView() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="relative h-[440px] bg-gradient-to-br from-secondary to-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
+              <div className="relative h-[640px] bg-gradient-to-br from-secondary to-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
                 <div ref={mapDivRef} className="absolute inset-0" />
                 <div className="absolute left-3 bottom-3 rounded-md bg-background/80 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow">
                   <div>{`Live vehicles: ${liveVehicles.length}`}</div>
@@ -454,7 +557,13 @@ export default function MapView() {
         </div>
 
         <div className="space-y-4">
-          <Card>
+          <Card
+            style={{
+              background: isDarkMode ? "#0f172a" : undefined,
+              borderColor: isDarkMode ? "rgba(148,163,184,0.15)" : undefined,
+              boxShadow: isDarkMode ? "0 25px 45px rgba(2,6,23,0.75)" : undefined,
+            }}
+          >
             <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <CardTitle className="text-lg font-semibold">Vehicle Status</CardTitle>
             </CardHeader>
@@ -465,26 +574,29 @@ export default function MapView() {
                   {STATUS_FILTERS.map((filter) => {
                     const isActive = statusFilter === filter.key;
                     const count = filter.key === "all" ? liveVehicles.length : statusCounts[filter.key];
-                    const meta = filter.key === "all" ? STATUS_META.running : STATUS_META[filter.key];
-                    const baseBg =
-                      filter.key === "running"
-                        ? "bg-green-50 border-green-200"
-                        : filter.key === "idle"
-                        ? "bg-amber-50 border-amber-200"
-                        : filter.key === "stopped"
-                        ? "bg-rose-50 border-rose-200"
-                        : "bg-slate-50 border-slate-200";
+                    const meta = filter.key === "all" ? STATUS_META.all : STATUS_META[filter.key];
+                    const surface = isDarkMode ? meta.surfaceDark : meta.surfaceLight;
+                    const labelColor = isDarkMode ? meta.textDark : meta.textLight;
                     return (
                       <button
                         key={filter.key}
                         type="button"
                         onClick={() => setStatusFilter(filter.key)}
-                        className={`flex flex-col items-center justify-center rounded-xl px-3 py-3 text-center text-[11px] font-semibold tracking-wide transition shadow-sm hover:shadow ${
+                        className={`flex flex-col items-center justify-center rounded-xl border px-3 py-3 text-center text-[11px] font-semibold tracking-wide transition shadow-sm hover:shadow ${
                           isActive ? "ring-1 ring-primary" : ""
-                        } ${baseBg}`}
+                        }`}
+                        style={{
+                          background: surface.bg,
+                          borderColor: surface.border,
+                        }}
                       >
-                        <span className="text-[16px] text-slate-900">{count}</span>
-                        <span className="text-[11px]" style={{ color: meta.color }}>
+                        <span
+                          className="text-[16px]"
+                          style={{ color: isDarkMode ? "#f8fafc" : "#0f172a" }}
+                        >
+                          {count}
+                        </span>
+                        <span className="text-[11px]" style={{ color: labelColor }}>
                           {filter.label}
                         </span>
                       </button>
@@ -494,43 +606,44 @@ export default function MapView() {
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            style={{
+              background: isDarkMode ? "#0f172a" : undefined,
+              borderColor: isDarkMode ? "rgba(148,163,184,0.15)" : undefined,
+              boxShadow: isDarkMode ? "0 25px 45px rgba(2,6,23,0.75)" : undefined,
+            }}
+          >
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Navigation className="h-5 w-5" />
                   Active Vehicles
                 </CardTitle>
               </CardHeader>
-            <CardContent className="space-y-3 max-h-[270px] overflow-y-auto pr-1">
+            <CardContent className="space-y-3 max-h-[475px] overflow-y-auto pr-1">
               {displayVehicles.map((vehicle) => {
                 const statusMeta = STATUS_META[vehicle.status];
                 const isSelected = vehicle.id === vehicleId;
-                const statusBg =
-                  vehicle.status === "running"
-                    ? "bg-green-50 border-green-200"
-                    : vehicle.status === "idle"
-                    ? "bg-amber-50 border-amber-200"
-                    : vehicle.status === "stopped"
-                    ? "bg-[#fff1f1] border-[#f4b8b8]"
-                    : "bg-slate-50 border-slate-200";
+                const surface = isDarkMode ? statusMeta.surfaceDark : statusMeta.surfaceLight;
+                const badge = isDarkMode ? statusMeta.badgeDark : statusMeta.badgeLight;
                 return (
                   <div
                     key={vehicle.id}
-                    className={`p-3 rounded-xl border ${statusBg} hover:shadow-md transition-all cursor-pointer ${
-                      isSelected ? "border-primary/80 shadow-lg" : "border-border"
-                    }`}
+                    className="p-3 rounded-xl border hover:shadow-md transition-all cursor-pointer"
+                    style={{
+                      background: surface.bg,
+                      borderColor: isSelected ? palette.primary : surface.border,
+                      boxShadow: isSelected ? palette.cardShadow : undefined,
+                    }}
                     onClick={() => handleVehicleClick(vehicle.id)}
                   >
-                    <div className="flex items-center justify-between mb-2">
+                    <div className="mb-2 flex items-center justify-between">
                       <span className="font-semibold text-sm">{vehicle.label}</span>
                       <span
-                        className={`rounded-full px-3 py-1 text-[11px] font-medium ${
-                          vehicle.status === "stopped"
-                            ? "bg-rose-600 text-white"
-                            : vehicle.status === "running"
-                            ? "bg-success text-white"
-                            : "bg-warning text-black"
-                        }`}
+                        className="rounded-full px-3 py-1 text-[11px] font-medium"
+                        style={{
+                          background: badge.bg,
+                          color: badge.color,
+                        }}
                       >
                         {statusMeta?.label ?? "Unknown"}
                       </span>

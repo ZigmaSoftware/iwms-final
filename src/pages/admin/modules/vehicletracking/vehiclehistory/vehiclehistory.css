@@ -152,7 +152,8 @@
   /* border: 1px solid #e2e8f0; */
   padding: 14px 18px;
   border-radius: 18px;
-  background: color-mix(in srgb, var(--admin-surfaceAlt) 85%, transparent);
+  /* background: color-mix(in srgb, var(--admin-surfaceAlt) 85%, transparent); */
+  background-color: transparent;
   border: 1px solid var(--admin-border);
   box-shadow: var(--admin-cardShadow);
   display: flex;

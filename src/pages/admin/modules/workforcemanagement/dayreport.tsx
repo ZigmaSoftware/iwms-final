@@ -51,7 +51,6 @@ export default function DayReport() {
   const [toDate, setToDate] = useState(initialToDate);
 
   const [rows, setRows] = useState<ApiRow[]>([]);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   /* ================= Filters ================= */
@@ -77,7 +76,7 @@ export default function DayReport() {
             type="date"
             value={fromDate}
             onChange={(e) => setFromDate(e.target.value)}
-            className="ml-2"
+            className="ml-2 wf-date-input"
           />
         </label>
 
@@ -87,20 +86,19 @@ export default function DayReport() {
             type="date"
             value={toDate}
             onChange={(e) => setToDate(e.target.value)}
-            className="ml-2"
+            className="ml-2 wf-date-input"
           />
         </label>
 
         <Button
           label="Go"
-          icon="pi pi-search"
+          // icon="pi pi-search"
           onClick={fetchData}
-          loading={loading}
         />
       </div>
 
       <span className="p-input-icon-left">
-        <i className="pi pi-search" />
+        {/* <span className="pi pi-search" /> */}
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
@@ -117,7 +115,6 @@ export default function DayReport() {
       return;
     }
 
-    setLoading(true);
     setError(null);
 
     try {
@@ -156,8 +153,6 @@ export default function DayReport() {
     } catch (e) {
       setError("API error occurred");
       setRows([]);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -170,7 +165,7 @@ export default function DayReport() {
   /* ================= UI ================= */
   return (
     <div className="p-4">
-      <div className="bg-white p-6 rounded-lg shadow-lg">
+      <div className="bg-white p-6 rounded-lg shadow-lg wf-table-card">
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-2xl font-bold">Day-wise Waste Report</h1>
@@ -182,7 +177,7 @@ export default function DayReport() {
           <Button
             icon="pi pi-arrow-left"
             label="Back"
-            severity="secondary"
+            severity="success"
             onClick={() => navigate(-1)}
           />
         </div>
@@ -194,7 +189,6 @@ export default function DayReport() {
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          loading={loading}
           filters={filters}
           header={renderHeader()}
           globalFilterFields={["Ticket_No", "Vehicle_No", "date"]}

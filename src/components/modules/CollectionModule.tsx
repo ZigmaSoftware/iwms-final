@@ -6,6 +6,8 @@ import { LeafletMapContainer } from '../map/LeafletMapContainer';
 import { CompactTable } from '../ui/CompactTable';
 import { StatusChip } from '../ui/StatusChip';
 import { useModule } from '../../contexts/ModuleContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { cn } from '@/lib/utils';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
 
 const mockVehicles = [
@@ -83,10 +85,23 @@ const tableData = [
 
 export function CollectionModule() {
   const { activeView } = useModule();
+  const { theme } = useTheme();
+  const isDarkMode = theme === 'dark';
+
+  const containerClass = cn(
+    'h-full overflow-hidden rounded-3xl border p-4 space-y-4 transition-colors duration-300',
+    isDarkMode
+      ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-slate-100 border-slate-800 shadow-[0_35px_80px_rgba(2,6,23,0.85)]'
+      : 'bg-white text-slate-900 border-gray-100'
+  );
+
+  const cardTone = isDarkMode
+    ? 'bg-slate-900/70 border-slate-800 text-slate-100 shadow-[0_25px_65px_rgba(2,6,23,0.55)]'
+    : '';
 
   if (activeView === 'analytics') {
     return (
-      <div className="h-full overflow-hidden">
+      <div className={containerClass}>
         <ModuleHeader title="Collection & Verification Analytics" icon={<Trash2 className="w-5 h-5" />} color="#43A047" />
 
         <div className="grid grid-cols-4 gap-2 mb-3">
@@ -97,7 +112,7 @@ export function CollectionModule() {
         </div>
 
         <div className="grid grid-cols-2 gap-3" style={{ height: 'calc(100vh - 240px)' }}>
-          <DataCard title="Pickup Trends" compact>
+          <DataCard title="Pickup Trends" compact className={cardTone}>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={trendData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.1} />
@@ -110,7 +125,7 @@ export function CollectionModule() {
             </ResponsiveContainer>
           </DataCard>
 
-          <DataCard title="Performance Distribution" compact>
+          <DataCard title="Performance Distribution" compact className={cardTone}>
             <ResponsiveContainer width="100%" height={200}>
               <PieChart>
                 <Pie
@@ -130,7 +145,7 @@ export function CollectionModule() {
             </ResponsiveContainer>
           </DataCard>
 
-          <DataCard title="Weekly Comparison" compact>
+          <DataCard title="Weekly Comparison" compact className={cardTone}>
             <ResponsiveContainer width="100%" height={180}>
               <BarChart data={trendData.slice(-4)}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#333" opacity={0.1} />
@@ -142,7 +157,7 @@ export function CollectionModule() {
             </ResponsiveContainer>
           </DataCard>
 
-          <DataCard title="Top Performers" compact>
+          <DataCard title="Top Performers" compact className={cardTone}>
             <div className="space-y-2">
               {[
                 { name: 'Team Alpha', score: 98, trend: 5 },
@@ -150,7 +165,10 @@ export function CollectionModule() {
                 { name: 'Team Gamma', score: 92, trend: -2 },
                 { name: 'Team Delta', score: 89, trend: 1 },
               ].map((team, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 rounded-lg bg-gray-50 dark:bg-gray-800/50">
+                <div key={idx} className={cn(
+                  'flex items-center justify-between p-2 rounded-lg',
+                  isDarkMode ? 'bg-slate-900/70 border border-slate-800/70' : 'bg-gray-50'
+                )}>
                   <div>
                     <p className="text-sm font-medium">{team.name}</p>
                     <p className="text-xs text-gray-500">Score: {team.score}%</p>
@@ -169,9 +187,9 @@ export function CollectionModule() {
 
   if (activeView === 'map') {
     return (
-      <div className="h-full overflow-hidden">
+      <div className={containerClass}>
         <ModuleHeader title="Collection Route Map" icon={<Trash2 className="w-5 h-5" />} color="#43A047" />
-        <DataCard className="h-[calc(100vh-200px)]">
+        <DataCard className={cn("h-[calc(100vh-200px)]", cardTone)}>
           <LeafletMapContainer vehicles={mockVehicles} height="100%" />
         </DataCard>
       </div>
@@ -180,9 +198,9 @@ export function CollectionModule() {
 
   if (activeView === 'table') {
     return (
-      <div className="h-full overflow-hidden">
+      <div className={containerClass}>
         <ModuleHeader title="Collection Data" icon={<Trash2 className="w-5 h-5" />} color="#43A047" />
-        <DataCard className="h-[calc(100vh-200px)]">
+        <DataCard className={cn("h-[calc(100vh-200px)]", cardTone)}>
           <CompactTable
             columns={[
               { key: 'route', label: 'Route' },
@@ -200,7 +218,7 @@ export function CollectionModule() {
   }
 
   return (
-    <div className="h-full overflow-hidden">
+    <div className={containerClass}>
       <ModuleHeader title="Collection & Verification" icon={<Trash2 className="w-5 h-5" />} color="#43A047" />
 
       <div className="grid grid-cols-4 gap-2 mb-3">
@@ -212,13 +230,13 @@ export function CollectionModule() {
 
       <div className="grid grid-cols-3 gap-3" style={{ height: 'calc(100vh - 240px)' }}>
         <div className="col-span-2">
-          <DataCard title="Route Heatmap" className="h-full">
+          <DataCard title="Route Heatmap" className={cn("h-full", cardTone)}>
             <LeafletMapContainer vehicles={mockVehicles} height="calc(100vh - 300px)" />
           </DataCard>
         </div>
 
         <div className="space-y-3 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 240px)' }}>
-          <DataCard title="Today's Summary" compact>
+          <DataCard title="Today's Summary" compact className={cardTone}>
             <div className="space-y-2">
               <div className="flex justify-between">
                 <span className="text-xs text-gray-600 dark:text-gray-400">Completed</span>
@@ -235,12 +253,18 @@ export function CollectionModule() {
             </div>
           </DataCard>
 
-          <DataCard title="Recent Routes" compact>
+          <DataCard title="Recent Routes" compact className={cardTone}>
             <div className="space-y-2 max-h-48 overflow-y-auto">
               {tableData.slice(0, 4).map((item, idx) => (
-                <div key={idx} className="p-2 rounded bg-gray-50 dark:bg-gray-800/50 text-xs">
+                <div
+                  key={idx}
+                  className={cn(
+                    'p-2 rounded text-xs',
+                    isDarkMode ? 'bg-slate-900/70 border border-slate-800/70 text-slate-200' : 'bg-gray-50'
+                  )}
+                >
                   <div className="font-medium">{item.route}</div>
-                  <div className="text-gray-500 flex justify-between mt-1">
+                  <div className={cn("flex justify-between mt-1", isDarkMode ? "text-slate-400" : "text-gray-500")}>
                     <span>{item.operator}</span>
                     <StatusChip status={item.status} size="sm" />
                   </div>

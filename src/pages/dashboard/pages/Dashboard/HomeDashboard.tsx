@@ -101,7 +101,7 @@ export function HomeDashboard() {
             <div style={{ height: "70%" }}>
               <DataCard className="h-full overflow-y-auto pt-1" title="Vehicle Map">
 
-                <MapFilters
+                {/* <MapFilters
                   filters={filters}
                   onChange={setFilters}
                   zones={zones}
@@ -109,7 +109,7 @@ export function HomeDashboard() {
                   vehicles={vehicleNos}
                   onSearch={applyFilters}
                 
-                />
+                /> */}
 
                 <LeafletMapContainer vehicles={[]} height="100%" />
               </DataCard>
