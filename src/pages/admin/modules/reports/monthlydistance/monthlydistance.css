@@ -123,8 +123,8 @@
 }
 
 .md-month-input {
-  border: 2px solid rgba(37, 99, 235, 0.5);
-  background: linear-gradient(145deg, rgba(37, 99, 235, 0.1), rgba(255, 255, 255, 0.04));
+  border: 2px solid rgba(137, 139, 143, 0.5);
+  /* background: linear-gradient(145deg, rgba(37, 99, 235, 0.1), rgba(255, 255, 255, 0.04)); */
   border-radius: 12px;
   padding: 8px 14px;
   color: var(--admin-text);
