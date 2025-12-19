@@ -18,6 +18,7 @@ import {
   ADMIN_VIEW_MODE_ADMIN,
   type UserRole,
 } from "@/types/roles";
+import { Eye, EyeOff } from "lucide-react";
 import ZigmaLogo from "../images/logo.png";
 import BgImg from "../images/bgSignin.png";
 
@@ -52,7 +53,9 @@ const RND_PROFILES: Record<
 export default function Auth() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false); // ✅ added
   const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
   const { toast } = useToast();
   const { t } = useTranslation();
@@ -77,78 +80,74 @@ export default function Auth() {
       clearAdminViewPreference();
     }
 
-    navigate(normalizedRole === ADMIN_ROLE ? "/admin" : "/dashboard", { replace: true });
+    navigate(
+      normalizedRole === ADMIN_ROLE ? "/admin" : "/dashboard",
+      { replace: true }
+    );
   };
 
-const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
-  e.preventDefault();
-  setLoading(true);
+  const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
 
-  try {
-    const res = await desktopApi.post<LoginResponse>(
-      "/login/login-user/",
-      { username, password }
-    );
+    try {
+      const res = await desktopApi.post<LoginResponse>(
+        "/login/login-user/",
+        { username, password }
+      );
 
-    const {
-      access_token,
-      role,
-      unique_id,
-      name,
-      username: apiUsername,
-      email,
-    } = res.data;
+      const {
+        access_token,
+        role,
+        unique_id,
+        name,
+        username: apiUsername,
+        email,
+      } = res.data;
 
-    const normalizedRole = normalizeRole(role) ?? DEFAULT_ROLE;
+      const normalizedRole = normalizeRole(role) ?? DEFAULT_ROLE;
 
-    // ✅ 1. STORE TOKEN FIRST
-    localStorage.setItem("access_token", access_token);
-    localStorage.setItem(USER_ROLE_STORAGE_KEY, normalizedRole);
-    localStorage.setItem("unique_id", unique_id);
+      localStorage.setItem("access_token", access_token);
+      localStorage.setItem(USER_ROLE_STORAGE_KEY, normalizedRole);
+      localStorage.setItem("unique_id", unique_id);
 
-    // ✅ 2. FORCE STORAGE SYNC (CRITICAL)
-    await Promise.resolve();
+      await Promise.resolve();
 
-    // ✅ 3. UPDATE CONTEXT
-    setUser({
-      name: name ?? apiUsername ?? username,
-      email: email ?? "",
-    });
+      setUser({
+        name: name ?? apiUsername ?? username,
+        email: email ?? "",
+      });
 
-    // ✅ 4. NAVIGATE AFTER TOKEN IS READY
-    if (normalizedRole === ADMIN_ROLE) {
-      setAdminViewPreference(ADMIN_VIEW_MODE_ADMIN);
-      navigate("/admin", { replace: true });
-    } else {
-      clearAdminViewPreference();
-      navigate("/", { replace: true });
+      if (normalizedRole === ADMIN_ROLE) {
+        setAdminViewPreference(ADMIN_VIEW_MODE_ADMIN);
+        navigate("/admin", { replace: true });
+      } else {
+        clearAdminViewPreference();
+        navigate("/", { replace: true });
+      }
+
+    } catch (error: any) {
+      toast({
+        title: t("login.title"),
+        description:
+          error?.response?.data?.detail || "Invalid credentials",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
     }
-
-  } catch (error: any) {
-    toast({
-      title: t("login.title"),
-      description: error?.response?.data?.detail || "Invalid credentials",
-      variant: "destructive",
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   console.log(username + " " + password);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#f3f6f4] p-4 font-sans">
-      {/* Background Image */}
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${BgImg})` }}
       />
-
-      {/* Shade Effect */}
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-      {/* Content Container */}
       <div className="relative w-full max-w-5xl grid md:grid-cols-2 rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
         {/* LEFT */}
         <div className="flex flex-col items-center justify-center p-10 bg-[#e8f5e9] text-center border-r border-gray-200">
@@ -199,19 +198,30 @@ const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
               <Label htmlFor="password" className="text-gray-700">
                 {t("login.password")}
               </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder={t("login.password_placeholder")}
-                value={password}
-                onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                  setPassword(e.target.value)
-                }
-                className="h-12 rounded-lg bg-white border border-gray-300 
-                  text-gray-800 placeholder-gray-500 
-                  focus:ring-2 focus:ring-[#43A047] focus:border-[#43A047]"
-                required
-              />
+
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  placeholder={t("login.password_placeholder")}
+                  value={password}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) =>
+                    setPassword(e.target.value)
+                  }
+                  className="h-12 rounded-lg bg-white border border-gray-300 
+                    text-gray-800 placeholder-gray-500 
+                    focus:ring-2 focus:ring-[#43A047] focus:border-[#43A047] pr-12"
+                  required
+                />
+
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
             </div>
 
             <div className="text-right">
@@ -221,7 +231,8 @@ const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
                 onClick={() =>
                   toast({
                     title: t("login.forgot_password"),
-                    description: "Password recovery is being implemented.",
+                    description:
+                      "Password recovery is being implemented.",
                   })
                 }
               >
@@ -235,7 +246,9 @@ const handleSignIn = async (e: FormEvent<HTMLFormElement>) => {
               className="w-full h-12 rounded-lg bg-[#43A047] hover:bg-[#2e7d32]
                 text-white text-base font-semibold shadow-md transition-all"
             >
-              {loading ? t("login.authenticating") : t("login.sign_in")}
+              {loading
+                ? t("login.authenticating")
+                : t("login.sign_in")}
             </Button>
 
             <div className="pt-6 border-t border-dashed border-gray-200">
