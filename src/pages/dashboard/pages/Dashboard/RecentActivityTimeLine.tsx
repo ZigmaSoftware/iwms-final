@@ -23,7 +23,7 @@ export function RecentActivityTimeline() {
   };
 
   return (
-    <DataCard title="Recent Activity" compact className="h-[190px]">
+    <DataCard title="Alerts" compact className="h-[190px]">
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {activities.map((activity, idx) => (
           <div key={activity.id} className="flex gap-2">

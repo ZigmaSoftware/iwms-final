@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom";
 import { DataCard } from "./DataCard";
+import { getEncryptedRoute } from "@/utils/routeCache";
 
 export function AttendanceMonitor() {
   const stats = {
@@ -7,9 +9,22 @@ export function AttendanceMonitor() {
     absent: 24,
     onLeave: 12,
   };
+  const { encDashboardResources } = getEncryptedRoute();
+  const resourcesPath = `/dashboard/${encDashboardResources}`;
 
   return (
-    <DataCard title="Attendance Monitor" compact>
+    <DataCard
+      title="Attendance Monitor"
+      compact
+      action={
+        <Link
+          to={resourcesPath}
+          className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+        >
+          View all
+        </Link>
+      }
+    >
 
       <div className="grid grid-cols-4 gap-3 text-center text-xs">
 

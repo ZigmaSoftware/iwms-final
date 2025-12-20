@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ChangeEvent, JSX } from "react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -158,6 +158,19 @@ const formatInput = (date: Date) =>
     date.getMinutes(),
   )}`;
 
+const isSameDate = (left: Date, right: Date) =>
+  left.getFullYear() === right.getFullYear() &&
+  left.getMonth() === right.getMonth() &&
+  left.getDate() === right.getDate();
+
+const shiftRangeByDays = (fromValue: string, toValue: string, offsetDays: number) => {
+  const from = new Date(fromValue);
+  const to = new Date(toValue);
+  from.setDate(from.getDate() + offsetDays);
+  to.setDate(to.getDate() + offsetDays);
+  return { from: formatInput(from), to: formatInput(to) };
+};
+
 const computeInitialRange = () => {
   const to = new Date();
   const from = new Date(to.getTime() - 6 * 60 * 60 * 1000);
@@ -188,6 +201,9 @@ export default function TripSummary() {
   const [loading, setLoading] = useState(false);
   const [rosterError, setRosterError] = useState("");
   const [summaryError, setSummaryError] = useState("");
+  const [rosterReady, setRosterReady] = useState(false);
+  const initialFetchRef = useRef(false);
+  const fallbackAppliedRef = useRef(false);
   const [filters, setFilters] = useState<{
     [key: string]: { value: string | null; matchMode: FilterMatchMode };
   }>({
@@ -226,6 +242,10 @@ export default function TripSummary() {
           setVehicleId(FALLBACK_VEHICLES[0].id);
           setRosterError("Live vehicle list unavailable. Using fallback list.");
         }
+      } finally {
+        if (!aborted) {
+          setRosterReady(true);
+        }
       }
     };
 
@@ -235,13 +255,17 @@ export default function TripSummary() {
     };
   }, []);
 
-  const fetchSummary = async () => {
+  const fetchSummary = async (options?: {
+    range?: { from: string; to: string };
+    allowFallback?: boolean;
+  }) => {
     if (!vehicleId) {
       setSummaryError("Please choose a vehicle.");
       return;
     }
-    const fromMs = new Date(fromDate).getTime();
-    const toMs = new Date(toDate).getTime();
+    const range = options?.range ?? { from: fromDate, to: toDate };
+    const fromMs = new Date(range.from).getTime();
+    const toMs = new Date(range.to).getTime();
     if (Number.isNaN(fromMs) || Number.isNaN(toMs)) {
       setSummaryError("Invalid date range.");
       return;
@@ -263,10 +287,26 @@ export default function TripSummary() {
       const res = await fetch(apiUrl);
       if (!res.ok) throw new Error(`Trip summary error (${res.status})`);
       const data = await res.json();
+      const historyRows = data?.data?.historyConsilated ?? [];
 
       if (data && data.data) {
         setSummary(data.data);
-        if (!data.data?.historyConsilated?.length) {
+        if (!historyRows.length) {
+          const allowFallback = options?.allowFallback;
+          const today = new Date();
+          if (
+            allowFallback &&
+            !fallbackAppliedRef.current &&
+            isSameDate(new Date(range.from), today) &&
+            isSameDate(new Date(range.to), today)
+          ) {
+            const fallbackRange = shiftRangeByDays(range.from, range.to, -1);
+            fallbackAppliedRef.current = true;
+            setFromDate(fallbackRange.from);
+            setToDate(fallbackRange.to);
+            await fetchSummary({ range: fallbackRange, allowFallback: false });
+            return;
+          }
           setSummaryError("No trip records for selected range.");
         }
       } else {
@@ -281,6 +321,12 @@ export default function TripSummary() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!rosterReady || initialFetchRef.current) return;
+    initialFetchRef.current = true;
+    fetchSummary({ allowFallback: true });
+  }, [rosterReady]);
 
   const handleExport = () => {
     const dataSource = summary?.historyConsilated ?? [];

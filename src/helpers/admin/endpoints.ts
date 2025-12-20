@@ -7,6 +7,7 @@ export const adminEndpoints = {
   ========================= */
   continents: "masters/continents",
   countries: "masters/countries",
+  bins: "masters/bins",
   states: "masters/states",
   districts: "masters/districts",
   cities: "masters/cities",
