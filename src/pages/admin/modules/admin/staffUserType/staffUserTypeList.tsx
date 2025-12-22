@@ -18,6 +18,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
 
 import type { StaffUserType } from "../types/admin.types"; 
+import { staffUserTypeApi } from "@/helpers/admin";
 
 
 export default function StaffUserTypeList() {
@@ -43,8 +44,8 @@ export default function StaffUserTypeList() {
   ----------------------------------------------------------- */
   const fetchRecords = async () => {
     try {
-      const res = await desktopApi.get("staffusertypes/");
-      const list = Array.isArray(res.data) ? res.data : res.data.results ?? [];
+      const res: any[] | { results: any[] } = await staffUserTypeApi.list();
+const list = Array.isArray(res) ? res : (res as any)?.results ?? [];
 
       const normalized = list.map((item: any) => ({
   ...item,
@@ -86,7 +87,7 @@ export default function StaffUserTypeList() {
 
     if (!confirmDelete.isConfirmed) return;
 
-    await desktopApi.delete(`staffusertypes/${unique_id}/`);
+    await staffUserTypeApi.remove(unique_id);
 
     Swal.fire({
       icon: "success",
@@ -116,10 +117,13 @@ export default function StaffUserTypeList() {
     console.log("Payload Sent to API:", payload);
 
     try {
-      const response = await desktopApi.put(
-        `staffusertypes/${row.unique_id}/`,
-        payload
-      );
+      // const response = await desktopApi.put(
+      //   `staffusertypes/${row.unique_id}/`,
+      //   payload
+      // );
+      const response = await staffUserTypeApi.update(row.unique_id
+        , payload);
+
 
       console.log("API Response:", response.data);
 
