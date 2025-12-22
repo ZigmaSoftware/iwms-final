@@ -1,13 +1,23 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import { desktopApi } from "@/api";
 
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import { Input } from "@/components/ui/input";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Eye, EyeOff } from "lucide-react";
+import {
+  customerCreationApi,
+  cityApi,
+  districtApi,
+  staffCreationApi,
+  staffUserTypeApi,
+  userCreationApi,
+  userTypeApi,
+  wardApi,
+  zoneApi,
+} from "@/helpers/admin";
 
 
 /* =======================
@@ -80,6 +90,13 @@ const mapToOptions = (
       return { value, label };
     })
     .filter(Boolean) as SelectOption[];
+
+const normalizeList = (payload: any) =>
+  Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : payload?.data?.results ?? [];
 
 /* =======================
    ROLE CONFIG
@@ -167,9 +184,15 @@ export default function UserCreationForm() {
 
   /* ---------- USER TYPES ---------- */
   useEffect(() => {
-    desktopApi.get("user-type/").then((res) => {
-      setUserTypes(mapToOptions(res.data ?? [], (u) => u.name));
-    });
+    userTypeApi
+      .list()
+      .then((res) => {
+        setUserTypes(mapToOptions(normalizeList(res), (u) => u.name));
+      })
+      .catch((err) => {
+        Swal.fire("Error", "Unable to load user types", "error");
+        console.error("User type load failed:", err);
+      });
   }, []);
 
   /* ---------- ROLE ---------- */
@@ -183,70 +206,110 @@ export default function UserCreationForm() {
   useEffect(() => {
     if (!roleConfig) return;
 
-    roleConfig.apis.forEach((api: string) => {
-      desktopApi.get(api).then((res) => {
-        const list = res.data ?? [];
-
-        if (api === "customercreations/") {
+    if (selectedRoleKey === "customer") {
+      customerCreationApi
+        .list()
+        .then((res) => {
+          const list = normalizeList(res);
           setCustomerList(
             mapToOptions(list, (c) =>
               [c.customer_name].filter(Boolean).join(" - ")
             )
           );
-        }
-        if (api === "staffusertypes/") {
-          setStaffUserTypes(mapToOptions(list, (s) => s.name));
-        }
-        if (api === "staffcreation/") {
-          setStaffList(mapToOptions(list, (s) => s.employee_name));
-        }
-        if (api === "districts/") {
-          setDistrictList(mapToOptions(list, (d) => d.name));
-        }
-      });
-    });
+        })
+        .catch((err) => {
+          Swal.fire("Error", "Unable to load customers", "error");
+          console.error("Customer load failed:", err);
+        });
+    }
+
+    if (selectedRoleKey === "staff") {
+      Promise.all([
+        staffUserTypeApi.list(),
+        staffCreationApi.list(),
+        districtApi.list(),
+      ])
+        .then(([staffTypesRes, staffRes, districtsRes]) => {
+          setStaffUserTypes(
+            mapToOptions(normalizeList(staffTypesRes), (s) => s.name)
+          );
+          setStaffList(
+            mapToOptions(normalizeList(staffRes), (s) => s.employee_name)
+          );
+          setDistrictList(
+            mapToOptions(normalizeList(districtsRes), (d) => d.name)
+          );
+        })
+        .catch((err) => {
+          Swal.fire("Error", "Unable to load staff data", "error");
+          console.error("Staff data load failed:", err);
+        });
+    }
   }, [selectedRoleKey]);
 
   /* ---------- CHAINED LOCATION ---------- */
   useEffect(() => {
     if (!district) return;
-    desktopApi
-      .get(`cities/?district=${parseIdentifierForPayload(district)}`)
-      .then((res) => setCityList(mapToOptions(res.data ?? [], (c) => c.name)));
+    cityApi
+      .list({ params: { district: parseIdentifierForPayload(district) } })
+      .then((res) =>
+        setCityList(mapToOptions(normalizeList(res), (c) => c.name))
+      )
+      .catch((err) => {
+        Swal.fire("Error", "Unable to load cities", "error");
+        console.error("City load failed:", err);
+      });
   }, [district]);
 
   useEffect(() => {
     if (!city) return;
-    desktopApi
-      .get(`zones/?city=${parseIdentifierForPayload(city)}`)
-      .then((res) => setZoneList(mapToOptions(res.data ?? [], (z) => z.name)));
+    zoneApi
+      .list({ params: { city: parseIdentifierForPayload(city) } })
+      .then((res) =>
+        setZoneList(mapToOptions(normalizeList(res), (z) => z.name))
+      )
+      .catch((err) => {
+        Swal.fire("Error", "Unable to load zones", "error");
+        console.error("Zone load failed:", err);
+      });
   }, [city]);
 
   useEffect(() => {
     if (!zone) return;
-    desktopApi
-      .get(`wards/?zone=${parseIdentifierForPayload(zone)}`)
-      .then((res) => setWardList(mapToOptions(res.data ?? [], (w) => w.name)));
+    wardApi
+      .list({ params: { zone: parseIdentifierForPayload(zone) } })
+      .then((res) =>
+        setWardList(mapToOptions(normalizeList(res), (w) => w.name))
+      )
+      .catch((err) => {
+        Swal.fire("Error", "Unable to load wards", "error");
+        console.error("Ward load failed:", err);
+      });
   }, [zone]);
 
   /* ---------- EDIT ---------- */
   useEffect(() => {
-    if (!isEdit) return;
+    if (!isEdit || !id) return;
 
-    desktopApi.get(`users-creation/${id}/`).then((res) => {
-      const u = res.data;
-      setUserType(pickIdentifier(u.user_type_id));
-      setPassword(u.password ?? "");
-      setIsActive(Boolean(u.is_active));
-      setCustomerId(pickIdentifier(u.customer_id));
-      setStaffUserType(pickIdentifier(u.staffusertype_id));
-      setStaffId(pickIdentifier(u.staff_id));
-      setDistrict(pickIdentifier(u.district_id));
-      setCity(pickIdentifier(u.city_id));
-      setZone(pickIdentifier(u.zone_id));
-      setWard(pickIdentifier(u.ward_id));
-    });
-  }, [id]);
+    userCreationApi
+      .get(id)
+      .then((u) => {
+        setUserType(pickIdentifier(u.user_type_id));
+        setPassword(u.password ?? "");
+        setIsActive(Boolean(u.is_active));
+        setCustomerId(pickIdentifier(u.customer_id));
+        setStaffUserType(pickIdentifier(u.staffusertype_id));
+        setStaffId(pickIdentifier(u.staff_id));
+        setDistrict(pickIdentifier(u.district_id));
+        setCity(pickIdentifier(u.city_id));
+        setZone(pickIdentifier(u.zone_id));
+        setWard(pickIdentifier(u.ward_id));
+      })
+      .catch((err) => {
+        Swal.fire("Error", "Unable to load user", "error");
+        console.error("User load failed:", err);
+      });
+  }, [id, isEdit]);
 
   /* ---------- SUBMIT ---------- */
   const handleSubmit = async (e: any) => {
@@ -273,9 +336,14 @@ export default function UserCreationForm() {
 
     try {
       setLoading(true);
-      isEdit
-        ? await desktopApi.put(`users-creation/${id}/`, payload)
-        : await desktopApi.post("users-creation/", payload);
+      if (isEdit) {
+        if (!id) {
+          throw new Error("Missing user id");
+        }
+        await userCreationApi.update(id, payload);
+      } else {
+        await userCreationApi.create(payload);
+      }
 
       Swal.fire({ icon: "success", title: "Saved Successfully" });
       navigate(ENC_LIST_PATH);
