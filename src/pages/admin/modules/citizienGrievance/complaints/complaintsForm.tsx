@@ -21,6 +21,7 @@ import {
   filterActiveRecords,
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
+import { customerCreationApi } from "@/helpers/admin";
 
 /* ================= CONSTANTS ================= */
 
@@ -79,8 +80,8 @@ export default function ComplaintAddForm() {
 
   /* ---------------- INIT LOAD ---------------- */
   useEffect(() => {
-    desktopApi.get("/customercreations/").then((res) => {
-      const normalized = normalizeCustomerArray(res.data);
+    customerCreationApi.list().then((res) => {
+      const normalized = normalizeCustomerArray(res);
       setCustomers(filterActiveCustomers(normalized));
     });
 
