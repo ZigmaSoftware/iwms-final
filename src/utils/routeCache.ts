@@ -8,6 +8,7 @@ export type EncryptedRoutes = {
   encComplaint: string;
   encContinents: string;
   encCountries: string;
+  encBins: string;
   encCustomerCreation: string;
   encCustomerMaster: string;
   encDistricts: string;
@@ -56,6 +57,7 @@ export type EncryptedRoutes = {
   encDashboardAlerts: string;
   encDashboardReports: string;
   encDashboardWeighBridge: string;
+  encDashboardBins: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -66,6 +68,7 @@ const plainRoutes: EncryptedRoutes = {
   encComplaint: "complaint",
   encContinents: "continents",
   encCountries: "countries",
+  encBins: "bins",
   encCustomerCreation: "customer-creation",
   encCustomerMaster: "customer-master",
   encDistricts: "districts",
@@ -114,7 +117,8 @@ const plainRoutes: EncryptedRoutes = {
   encDashboardGrievances: "dashboard-grievances",
   encDashboardAlerts: "dashboard-alerts",
   encDashboardReports: "dashboard-reports",
-  encDashboardWeighBridge: "dashboard-weighbridge"
+  encDashboardWeighBridge: "dashboard-weighbridge",
+  encDashboardBins: "dashboard-bins"
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {

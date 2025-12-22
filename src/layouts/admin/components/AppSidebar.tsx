@@ -9,6 +9,8 @@ import {
   File,
   PieChart,
   UserCircle,
+  Users,
+  Archive,
   Trash2,
   Truck,
 } from "lucide-react";
@@ -20,6 +22,7 @@ const {
   encMasters,
   encContinents,
   encCountries,
+  encBins,
   encStates,
   encDistricts,
   encCities,
@@ -100,7 +103,6 @@ const masterItems: NavItem[] = [
     icon: <List size={18} />,
     name: "Masters",
     subItems: [
-      { name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` },
       { name: "Continent", path: `/${encMasters}/${encContinents}` },
       { name: "Country", path: `/${encMasters}/${encCountries}` },
       { name: "State", path: `/${encMasters}/${encStates}` },
@@ -111,6 +113,24 @@ const masterItems: NavItem[] = [
       { name: "Property", path: `/${encMasters}/${encProperties}` },
       { name: "SubProperty", path: `/${encMasters}/${encSubProperties}` },
     ],
+  },
+];
+
+const binItems: NavItem[] = [
+  {
+    icon: <Archive size={18} />,
+    name: "Bin Master",
+    subItems: [ 
+      { name: "Bin Creation", path: `/${encMasters}/${encBins}` },
+    ],
+  },
+];
+
+const staffCreationItems: NavItem[] = [
+  {
+    icon: <Users size={18} />,
+    name: "Staff Master",
+    subItems: [{ name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` }],
   },
 ];
 
@@ -227,7 +247,7 @@ const reportItems: NavItem[] = [
 ];
 
 const menuButtonBase =
-  " flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left text-sm font-semibold";
+  "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold";
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen } = useSidebar();
@@ -245,6 +265,7 @@ const AppSidebar: React.FC = () => {
       | "transportMaster"
       | "customerMaster"
       | "vehicleTracking"
+      | "binMaster"
       | "wasteManagementMaster"
       | "citizenGrievance"
       | "workforceManagement";
@@ -273,6 +294,7 @@ const AppSidebar: React.FC = () => {
       transportMaster: transportMasters,
       customerMaster: customerMasters,
       vehicleTracking: vehicleTrackingItems,
+      binMaster: binItems,
       wasteManagementMaster: wasteManagementMasters,
       report: reportItems,
       workforceManagement: workforceManagements,
@@ -314,7 +336,7 @@ const AppSidebar: React.FC = () => {
   };
 
   const renderMenuItems = (items: NavItem[], type: any) => (
-    <ul className="flex flex-col gap-4">
+    <ul className="flex flex-col gap-2">
       {items.map((nav, index) => (
         <li key={nav.name}>
           {nav.subItems ? (
@@ -334,7 +356,7 @@ const AppSidebar: React.FC = () => {
 
               {showFullSidebar && (
                 <>
-                  <span className="text-base font-semibold">{nav.name}</span>
+                  <span className="text-sm font-semibold">{nav.name}</span>
                   <ChevronDown
                     className={`ml-auto h-5 w-5 transition-transform ${
                       openSubmenu?.type === type && openSubmenu?.index === index
@@ -380,12 +402,12 @@ const AppSidebar: React.FC = () => {
                     : "0px",
               }}
             >
-              <ul className="mt-3 ml-6 space-y-1 rounded-2xl border-l-2 border-[var(--admin-border)]/70 pl-4">
+              <ul className="mt-2 ml-5 space-y-1 rounded-xl border-l-2 border-[var(--admin-border)]/70 pl-3">
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
-                      className={`block rounded-2xl px-3 py-2 text-sm font-medium transition ${
+                      className={`block rounded-xl px-3 py-1.5 text-sm font-medium transition ${
                         isActive(subItem.path)
                           ? "bg-[var(--admin-accentSoft)] text-[var(--admin-accent)]"
                           : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
@@ -415,17 +437,19 @@ const AppSidebar: React.FC = () => {
       }}
     >
       <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--admin-primarySoft)] to-transparent opacity-70" />
-      <div className="flex h-full flex-col px-5 pb-8 pt-8">
+      <div className="flex h-full flex-col px-4 pb-6 pt-6">
         <div className="mt-[70px] flex-1 overflow-y-auto pr-2 no-scrollbar">
-          <nav className="flex flex-col gap-7">
+          <nav className="flex flex-col gap-4">
             <div>{renderMenuItems(navItems, "main")}</div>
             <div>{renderMenuItems(adminItems, "admin")}</div>
             <div>{renderMenuItems(masterItems, "master")}</div>
-            <div>{renderMenuItems(transportMasters, "transportMaster")}</div>
+            <div>{renderMenuItems(staffCreationItems, "staffCreation")}</div>
             <div>{renderMenuItems(customerMasters, "customerMaster")}</div>
+            <div>{renderMenuItems(transportMasters, "transportMaster")}</div>
             <div>
               {renderMenuItems(vehicleTrackingItems, "vehicleTracking")}
             </div>
+            <div>{renderMenuItems(binItems, "binMaster")}</div>
             <div>
               {renderMenuItems(wasteManagementMasters, "wasteManagementMaster")}
             </div>
@@ -436,7 +460,7 @@ const AppSidebar: React.FC = () => {
               {renderMenuItems(workforceManagements, "workforceManagement")}
             </div>
             <div>
-              <h2 className="mb-4 text-xs uppercase tracking-[0.35em] text-[var(--admin-mutedText)]">
+              <h2 className="mb-2 text-xs uppercase tracking-[0.35em] text-[var(--admin-mutedText)]">
                 Report
               </h2>
               {renderMenuItems(reportItems, "report")}

@@ -1,6 +1,14 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { DataCard } from "@/components/ui/DataCard";
-import { Truck, Gauge, PauseCircle, Square } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ChevronDown, MapPin, Truck, Gauge, PauseCircle, Square } from "lucide-react";
+import { getEncryptedRoute } from "@/utils/routeCache";
 
 interface VehicleStats {
   all: number;
@@ -12,6 +20,9 @@ interface VehicleStats {
 }
 
 export function VehicleStatusPanel() {
+  const { encDashboardLiveMap, encDashboardVehicleManagement } = getEncryptedRoute();
+  const liveMapPath = `/dashboard/${encDashboardLiveMap}`;
+  const vehiclePath = `/dashboard/${encDashboardVehicleManagement}`;
   const [stats, setStats] = useState<VehicleStats>({
     all: 0,
     running: 0,
@@ -123,7 +134,38 @@ export function VehicleStatusPanel() {
   ];
 
   return (
-    <DataCard title="Vehicle Status" compact className="h-[240px]">
+    <DataCard
+      title="Vehicle Status"
+      compact
+      className="h-[240px]"
+      action={
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            >
+              View all
+              <ChevronDown className="h-3 w-3" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem asChild>
+              <Link to={liveMapPath} className="flex items-center gap-2">
+                <MapPin className="h-3.5 w-3.5" />
+                Live Map
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link to={vehiclePath} className="flex items-center gap-2">
+                <Truck className="h-3.5 w-3.5" />
+                Vehicle
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      }
+    >
       <div className="grid grid-cols-2 gap-2">
         {items.map((item, i) => (
           <div

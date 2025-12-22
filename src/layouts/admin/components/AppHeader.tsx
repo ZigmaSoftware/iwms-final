@@ -226,7 +226,7 @@ const AppHeader: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               onClick={handleDashboardView}
               className={cn(
-                "rounded-xl px-4 py-2 text-sm font-semibold shadow transition-all",
+                "rainbow-border rounded-xl px-4 py-2 text-sm font-semibold shadow transition-all",
                 isDark
                   ? "border border-white/20 bg-white/5 text-white hover:bg-white/10"
                   : "border border-gray-200 bg-white text-blue-700 hover:bg-gray-50"

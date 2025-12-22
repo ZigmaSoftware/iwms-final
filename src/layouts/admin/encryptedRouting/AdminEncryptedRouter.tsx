@@ -22,6 +22,8 @@ import PropertyList from "@/pages/admin/modules/masters/property/PropertyListPag
 import PropertyForm from "@/pages/admin/modules/masters/property/PropertyForm";
 import SubPropertyList from "@/pages/admin/modules/masters/subproperty/SubPropertyListPage";
 import SubPropertyForm from "@/pages/admin/modules/masters/subproperty/SubPropertyForm";
+import BinListPage from "@/pages/admin/modules/masters/bin/BinListPage";
+import BinForm from "@/pages/admin/modules/masters/bin/BinForm";
 import StaffCreationList from "@/pages/admin/modules/masters/staffCreation/staffcreationlist";
 import StaffCreationForm from "@/pages/admin/modules/masters/staffCreation/staffcreationForm";
 // Admin
@@ -100,6 +102,7 @@ const ROUTES: RouteMap = {
   masters: {
     continents: { list: ContinentList, form: ContinentForm },
     countries: { list: CountryList, form: CountryForm },
+    bins: { list: BinListPage, form: BinForm },
     states: { list: StateList, form: StateForm },
     districts: { list: DistrictList, form: DistrictForm },
     cities: { list: CityList, form: CityForm },

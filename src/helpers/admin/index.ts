@@ -8,6 +8,7 @@ import { adminApi } from "./registry";
 // Master Data
 export const continentApi = adminApi.continents;
 export const countryApi = adminApi.countries;
+export const binApi = adminApi.bins;
 export const stateApi = adminApi.states;
 export const districtApi = adminApi.districts;
 export const cityApi = adminApi.cities;

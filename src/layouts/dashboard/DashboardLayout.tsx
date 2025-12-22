@@ -97,7 +97,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <HorizontalNav />
 
             {isAdmin && (
-              <Button variant="outline" size="sm" onClick={handleSwitchToAdmin}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSwitchToAdmin}
+                className="rainbow-border"
+              >
                 Admin View
               </Button>
             )}

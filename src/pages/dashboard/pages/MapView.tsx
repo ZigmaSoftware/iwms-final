@@ -486,7 +486,7 @@ export default function MapView() {
                 >
                   <span className="flex items-center gap-2 text-[13px]">
                     <Search className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>{searchTerm || "Select Vehicle ID"}</span>
+                    <span>{searchTerm || "All Vehicles"}</span>
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
@@ -500,14 +500,38 @@ export default function MapView() {
                     </div>
                     <div className="px-3 py-2">
                       <input
-                        type="search"
+                        ref={searchInputRef}
+                        type="text"
                         value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
                         placeholder="Type to filter..."
                         className="w-full rounded border border-border/70 px-2 py-1 text-xs outline-none focus:border-primary"
                       />
+                      {searchTerm && (
+                        <button
+                          type="button"
+                          className="mt-2 w-full rounded border border-border/70 px-2 py-1 text-[10px] font-semibold text-muted-foreground transition hover:text-foreground"
+                          onClick={() => setSearchTerm("")}
+                        >
+                          Clear search
+                        </button>
+                      )}
                     </div>
                     <div className="max-h-60 overflow-y-auto">
+                      <button
+                        type="button"
+                        className="flex w-full items-center justify-between rounded-none border-t border-border px-3 py-2 text-left text-foreground transition hover:bg-primary/10"
+                        onMouseDown={(event) => {
+                          event.preventDefault();
+                          setSearchTerm("");
+                          setIsDropdownOpen(false);
+                        }}
+                      >
+                        <span>All Vehicles</span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {`Showing ${liveVehicles.length}`}
+                        </span>
+                      </button>
                       {searchDropdownVehicles.length ? (
                         searchDropdownVehicles.map((vehicle) => (
                           <button

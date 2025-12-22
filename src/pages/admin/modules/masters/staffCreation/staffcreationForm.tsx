@@ -9,6 +9,12 @@ import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { staffCreationApi } from "@/helpers/admin";
+import {
+    countryApi,
+    stateApi,
+    districtApi,
+    cityApi,
+} from "@/helpers/admin/index";
 
 type Section = "official" | "personal";
 
@@ -60,6 +66,11 @@ const bloodGroupOptions = [
   { value: "O+", label: "O+" },
   { value: "O-", label: "O-" },
 ];
+
+const mapLocationOptions = (items: any[]) =>
+  (items ?? [])
+    .filter((item) => item?.name && item.is_active !== false)
+    .map((item) => ({ value: item.name, label: item.name }));
 
 const initialFormData = {
   employee_name: "",
@@ -114,6 +125,10 @@ export default function StaffCreationForm() {
   const [fetching, setFetching] = useState(false);
   const [sameAddress, setSameAddress] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [countryOptions, setCountryOptions] = useState<{ value: string; label: string }[]>([]);
+  const [stateOptions, setStateOptions] = useState<{ value: string; label: string }[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<{ value: string; label: string }[]>([]);
+  const [cityOptions, setCityOptions] = useState<{ value: string; label: string }[]>([]);
 
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
@@ -123,6 +138,28 @@ export default function StaffCreationForm() {
   const ENC_LIST_PATH = `/${encMasters}/${encStaffCreation}`;
   const backendOrigin =
     desktopApi.defaults.baseURL?.replace(/\/api\/desktop\/?$/, "") || "";
+
+  useEffect(() => {
+    const loadLocationOptions = async () => {
+      try {
+        const [countries, states, districts, cities] = await Promise.all([
+          countryApi.list(),
+          stateApi.list(),
+          districtApi.list(),
+          cityApi.list(),
+        ]);
+
+        setCountryOptions(mapLocationOptions(countries));
+        setStateOptions(mapLocationOptions(states));
+        setDistrictOptions(mapLocationOptions(districts));
+        setCityOptions(mapLocationOptions(cities));
+      } catch (error) {
+        console.error("Failed to load location masters", error);
+      }
+    };
+
+    void loadLocationOptions();
+  }, []);
 
   useEffect(() => {
     if (!isEdit || !id) return;
@@ -635,34 +672,42 @@ console.log("Fetched staff data:", staff);
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="present_country">Country</Label>
-              <Input
+              <Select
                 id="present_country"
                 value={formData.present_country}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("present_country", value)}
+                options={countryOptions}
+                placeholder="Select country"
               />
             </div>
             <div>
               <Label htmlFor="present_state">State</Label>
-              <Input
+              <Select
                 id="present_state"
                 value={formData.present_state}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("present_state", value)}
+                options={stateOptions}
+                placeholder="Select state"
               />
             </div>
             <div>
               <Label htmlFor="present_district">District</Label>
-              <Input
+              <Select
                 id="present_district"
                 value={formData.present_district}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("present_district", value)}
+                options={districtOptions}
+                placeholder="Select district"
               />
             </div>
             <div>
               <Label htmlFor="present_city">City</Label>
-              <Input
+              <Select
                 id="present_city"
                 value={formData.present_city}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("present_city", value)}
+                options={cityOptions}
+                placeholder="Select city"
               />
             </div>
             <div className="sm:col-span-2">
@@ -720,34 +765,42 @@ console.log("Fetched staff data:", staff);
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="permanent_country">Country</Label>
-              <Input
+              <Select
                 id="permanent_country"
                 value={formData.permanent_country}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("permanent_country", value)}
+                options={countryOptions}
+                placeholder="Select country"
               />
             </div>
             <div>
               <Label htmlFor="permanent_state">State</Label>
-              <Input
+              <Select
                 id="permanent_state"
                 value={formData.permanent_state}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("permanent_state", value)}
+                options={stateOptions}
+                placeholder="Select state"
               />
             </div>
             <div>
               <Label htmlFor="permanent_district">District</Label>
-              <Input
+              <Select
                 id="permanent_district"
                 value={formData.permanent_district}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("permanent_district", value)}
+                options={districtOptions}
+                placeholder="Select district"
               />
             </div>
             <div>
               <Label htmlFor="permanent_city">City</Label>
-              <Input
+              <Select
                 id="permanent_city"
                 value={formData.permanent_city}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("permanent_city", value)}
+                options={cityOptions}
+                placeholder="Select city"
               />
             </div>
             <div className="sm:col-span-2">

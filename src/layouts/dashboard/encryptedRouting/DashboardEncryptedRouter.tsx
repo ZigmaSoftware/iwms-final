@@ -11,6 +11,7 @@ import Grievances from "@/pages/dashboard/pages/Grievances";
 import Alerts from "@/pages/dashboard/pages/Alerts";
 import Reports from "@/pages/dashboard/pages/Reports";
 import Weighbridge from "@/pages/dashboard/pages/Weighbridge";
+import BinMonitoring from "@/pages/dashboard/pages/BinMonitoring";
 
 type DashboardComponent = ComponentType | undefined;
 
@@ -23,6 +24,7 @@ const ROUTES: Record<string, DashboardComponent> = {
   "dashboard-alerts": Alerts,
   "dashboard-reports": Reports,
   "dashboard-weighbridge": Weighbridge,
+  "dashboard-bins": BinMonitoring,
 };
 
 export default function DashboardEncryptedRouter() {
