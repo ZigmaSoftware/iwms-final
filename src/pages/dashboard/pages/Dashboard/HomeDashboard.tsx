@@ -8,47 +8,14 @@ import { ComplaintsPanel } from "./ComplaintsPanel";
 import { RecentActivityTimeline } from "./RecentActivityTimeLine";
 import { WeighmentSummary } from "@/components/ui/WeighmentSummary";
 import { CameraStatus } from "./cameraStatus";
-import { MapFilters } from "@/components/map/MapFilters";
-
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getEncryptedRoute } from "@/utils/routeCache";
-
-const mockVehicles = [
-  {
-    vehicle_no: "TN38AB1234",
-    driver: "Ravi",
-    lat: 11.0185,
-    lng: 76.9552,
-    speed: 32,
-    status: "Active",
-    geo: {
-      continent: "Asia",
-      country: "India",
-      state: "Tamil Nadu",
-      district: "Coimbatore",
-      zone: "East Zone",
-      ward: "Ward 23",
-    },
-  },
-  {
-    vehicle_no: "TN37CD5678",
-    driver: "Suresh",
-    lat: 11.0054,
-    lng: 76.9481,
-    speed: 0,
-    status: "Idle",
-    geo: {
-      continent: "Asia",
-      country: "India",
-      state: "Tamil Nadu",
-      district: "Coimbatore",
-      zone: "West Zone",
-      ward: "Ward 45",
-    },
-  },
-];
+import { BinMapPanel } from "./map/BinMapPanel";
+import { HouseholdMapPanel } from "./map/HouseholdMapPanel";
+import { MapTabs } from "./map/MapTabs";
+import { MAP_TABS, type MapTabKey } from "./map/mapUtils";
 
 export function HomeDashboard() {
   const binStats = { active: 84, inactive: 16 };
@@ -56,31 +23,7 @@ export function HomeDashboard() {
   const householdStats = { total: 1200, collected: 980, notCollected: 220 };
   const { encDashboardBins } = getEncryptedRoute();
   const binsPath = `/dashboard/${encDashboardBins}`;
-
-  // ------------------------
-  // FILTER STATES
-  // ------------------------
-  const [filters, setFilters] = useState({
-    country: "India",
-    state: "Tamil Nadu",
-    district: "Coimbatore",
-    zone: "All Zones",
-    ward: "All Wards",
-    vehicle_no: "All Vehicles",
-  });
-
-  const [zones] = useState(["All Zones", "East Zone", "West Zone"]);
-  const [wards] = useState(["All Wards", "Ward 23", "Ward 45"]);
-  const [vehicleNos, setVehicleNos] = useState<string[]>([]);
-
-  // Extract vehicle numbers from mockVehicles
-  useEffect(() => {
-    setVehicleNos(["All Vehicles", ...mockVehicles.map((v) => v.vehicle_no)]);
-  }, []);
-
-  function applyFilters() {
-    console.log("Filters applied:", filters);
-  }
+  const [activeMapTab, setActiveMapTab] = useState<MapTabKey>("all");
 
 
   return (
@@ -128,19 +71,28 @@ export function HomeDashboard() {
           <div className="col-span-6 flex flex-col gap-3 h-full">
 
             <div style={{ height: "80%" }}>
-              <DataCard className="h-full overflow-y-auto pt-1" title="Vehicle Map">
+              <DataCard className="h-full overflow-hidden flex flex-col">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                      Operations Map
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {MAP_TABS.find((tab) => tab.key === activeMapTab)?.summary}
+                    </p>
+                  </div>
+                  <MapTabs activeKey={activeMapTab} onChange={setActiveMapTab} />
+                </div>
 
-                {/* <MapFilters
-                  filters={filters}
-                  onChange={setFilters}
-                  zones={zones}
-                  wards={wards}
-                  vehicles={vehicleNos}
-                  onSearch={applyFilters}
-                
-                /> */}
-
-                <LeafletMapContainer height="100%" />
+                <div className="flex-1 min-h-0">
+                  {activeMapTab === "all" && (
+                    <div className="h-full w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                      <LeafletMapContainer height="100%" />
+                    </div>
+                  )}
+                  {activeMapTab === "bins" && <BinMapPanel />}
+                  {activeMapTab === "households" && <HouseholdMapPanel />}
+                </div>
               </DataCard>
             </div>
 
