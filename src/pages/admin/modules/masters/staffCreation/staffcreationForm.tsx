@@ -2,12 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
+import { desktopApi } from "@/api";
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { staffCreationApi } from "@/helpers/admin";
 
 type Section = "official" | "personal";
 
@@ -127,10 +128,9 @@ export default function StaffCreationForm() {
     if (!isEdit || !id) return;
     setFetching(true);
 
-    desktopApi
-      .get(`staffcreation/${id}/`)
-      .then((response) => {
-        const staff = response.data;
+    staffCreationApi
+      .get(id)
+      .then((staff) => {
         setFormData((prev) => ({
   ...prev,
 
@@ -183,7 +183,7 @@ export default function StaffCreationForm() {
   contact_email: staff.contact_email ?? "",
 }));
 
-console.log("Fetched staff data:", response.data);
+console.log("Fetched staff data:", staff);
         if (staff.photo) {
           setPhotoPreview(
             staff.photo.startsWith("http")
@@ -352,16 +352,20 @@ console.log("Fetched staff data:", response.data);
         },
       };
 
-      const request = isEdit
-        ? desktopApi.put(`staffcreation/${id}/`, formBody, multipartConfig)
-        : desktopApi.post("staffcreation/", formBody, multipartConfig);
-
-      const response = await request;
+      let response: any;
+      if (isEdit) {
+        if (!id) {
+          throw new Error("Missing staff id");
+        }
+        response = await staffCreationApi.update(id, formBody, multipartConfig);
+      } else {
+        response = await staffCreationApi.create(formBody, multipartConfig);
+      }
 
       Swal.fire({
         icon: "success",
         title: isEdit ? "Staff updated" : "Staff created",
-        text: response.data.message || "Details saved successfully.",
+        text: response?.message || response?.data?.message || "Details saved successfully.",
       });
 
       navigate(ENC_LIST_PATH);

@@ -1,6 +1,6 @@
 import { type ChangeEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {desktopApi} from "@/api";
+import { staffCreationApi } from "@/helpers/admin";
 import Swal from "sweetalert2";
 import ReactDOM from "react-dom/client";
 
@@ -68,9 +68,14 @@ export default function StaffCreationList() {
   const fetchStaffs = async (params = filterParams) => {
     setLoading(true);
     try {
-      const response = await desktopApi.get("staffcreation/", { params });
-      setStaffs(response.data);
-      console.log("Fetched staffs:", response.data);
+      const payload: any = await staffCreationApi.list({ params });
+      const data = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.data)
+          ? payload.data
+          : payload?.data?.results ?? [];
+      setStaffs(data);
+      console.log("Fetched staffs:", data);
     } catch (err) {
       Swal.fire("Error", "Unable to load staff list", "error");
     } finally {
@@ -109,10 +114,13 @@ export default function StaffCreationList() {
 
     if (!confirm.isConfirmed) return;
 
-    await desktopApi.delete(`staffcreation/${id}/`);
-    Swal.fire("Deleted!", "Record removed successfully", "success");
-
-    fetchStaffs(filterParams);
+    try {
+      await staffCreationApi.remove(id);
+      Swal.fire("Deleted!", "Record removed successfully", "success");
+      fetchStaffs(filterParams);
+    } catch (err) {
+      Swal.fire("Error", "Failed to delete staff record", "error");
+    }
   };
 
  
@@ -122,7 +130,7 @@ export default function StaffCreationList() {
         const formData = new FormData();
         formData.append("active_status", String(value));
 
-        await desktopApi.patch(`staffcreation/${row.unique_id}/`, formData, {
+        await staffCreationApi.update(row.unique_id, formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
