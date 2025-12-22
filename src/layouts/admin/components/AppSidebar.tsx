@@ -4,15 +4,17 @@ import { Link, useLocation } from "react-router-dom";
 import {
   ChevronDown,
   LayoutGrid,
-  MoreHorizontal,
-  List,
-  File,
-  PieChart,
-  UserCircle,
-  Users,
+  Settings,
+  Layers3,
   Archive,
-  Trash2,
+  Users,
+  UserCircle,
   Truck,
+  Navigation,
+  Recycle,
+  AlertTriangle,
+  Building2,
+  BarChart3,
 } from "lucide-react";
 
 import { useSidebar } from "@/contexts/SideBarContext";
@@ -68,23 +70,24 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  subItems?: { name: string; path: string }[];
 };
 
+/* =====================
+   MENU DEFINITIONS
+===================== */
+
 const navItems: NavItem[] = [
-  { icon: <LayoutGrid size={18} />, name: "Dashboard", path: "/admin" },
+  { name: "Dashboard", icon: <LayoutGrid size={18} />, path: "/admin" },
 ];
 
 const adminItems: NavItem[] = [
   {
     name: "Admin",
-    icon: <File size={18} />,
+    icon: <Settings size={18} />,
     subItems: [
       { name: "MainScreen Type", path: `/${encAdmins}/${encMainScreenType}` },
-      {
-        name: "UserScreen Action",
-        path: `/${encAdmins}/${encUserScreenAction}`,
-      },
+      { name: "UserScreen Action", path: `/${encAdmins}/${encUserScreenAction}` },
       { name: "MainScreen", path: `/${encAdmins}/${encMainScreen}` },
       { name: "User Screen", path: `/${encAdmins}/${encUserScreen}` },
       {
@@ -100,8 +103,8 @@ const adminItems: NavItem[] = [
 
 const masterItems: NavItem[] = [
   {
-    icon: <List size={18} />,
     name: "Masters",
+    icon: <Layers3 size={18} />,
     subItems: [
       { name: "Continent", path: `/${encMasters}/${encContinents}` },
       { name: "Country", path: `/${encMasters}/${encCountries}` },
@@ -116,28 +119,33 @@ const masterItems: NavItem[] = [
   },
 ];
 
-const binItems: NavItem[] = [
+const staffCreationItems: NavItem[] = [
   {
-    icon: <Archive size={18} />,
-    name: "Bin Master",
-    subItems: [ 
-      { name: "Bin Creation", path: `/${encMasters}/${encBins}` },
+    name: "Staff Master",
+    icon: <Users size={18} />,
+    subItems: [
+      { name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` },
     ],
   },
 ];
 
-const staffCreationItems: NavItem[] = [
+const customerMasters: NavItem[] = [
   {
-    icon: <Users size={18} />,
-    name: "Staff Master",
-    subItems: [{ name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` }],
+    name: "Customer Masters",
+    icon: <UserCircle size={18} />,
+    subItems: [
+      {
+        name: "Customer Creation",
+        path: `/${encCustomerMaster}/${encCustomerCreation}`,
+      },
+    ],
   },
 ];
 
 const transportMasters: NavItem[] = [
   {
-    icon: <Truck size={18} />,
     name: "Transport Masters",
+    icon: <Truck size={18} />,
     subItems: [
       { name: "Fuel", path: `/${encTransportMaster}/${encFuel}` },
       {
@@ -155,7 +163,7 @@ const transportMasters: NavItem[] = [
 const vehicleTrackingItems: NavItem[] = [
   {
     name: "Vehicle Tracking",
-    icon: <File size={18} />,
+    icon: <Navigation size={18} />,
     subItems: [
       {
         name: "Vehicle Tracking",
@@ -169,23 +177,18 @@ const vehicleTrackingItems: NavItem[] = [
   },
 ];
 
-const customerMasters: NavItem[] = [
+const binItems: NavItem[] = [
   {
-    icon: <UserCircle size={18} />,
-    name: "Customer Masters",
-    subItems: [
-      {
-        name: "Customer Creation",
-        path: `/${encCustomerMaster}/${encCustomerCreation}`,
-      },
-    ],
+    name: "Bin Master",
+    icon: <Archive size={18} />,
+    subItems: [{ name: "Bin Creation", path: `/${encMasters}/${encBins}` }],
   },
 ];
 
 const wasteManagementMasters: NavItem[] = [
   {
-    icon: <Trash2 size={18} />,
     name: "Waste Management",
+    icon: <Recycle size={18} />,
     subItems: [
       {
         name: "WasteCollectedData",
@@ -201,8 +204,8 @@ const wasteManagementMasters: NavItem[] = [
 
 const citizenGrievanceItems: NavItem[] = [
   {
-    icon: <MoreHorizontal size={18} />,
     name: "Citizen Grievance",
+    icon: <AlertTriangle size={18} />,
     subItems: [
       { name: "Complaints", path: `/${encCitizenGrivence}/${encComplaint}` },
       {
@@ -220,8 +223,8 @@ const citizenGrievanceItems: NavItem[] = [
 
 const workforceManagements: NavItem[] = [
   {
-    icon: <PieChart size={18} />,
     name: "Workforce Management",
+    icon: <Building2 size={18} />,
     subItems: [
       {
         name: "WorkForce Management",
@@ -233,13 +236,13 @@ const workforceManagements: NavItem[] = [
 
 const reportItems: NavItem[] = [
   {
-    icon: <PieChart size={18} />,
     name: "Reports",
+    icon: <BarChart3 size={18} />,
     subItems: [
       { name: "Trip Summary", path: `/${encReport}/${encTripSummary}` },
       { name: "Monthly Distance", path: `/${encReport}/${encMonthlyDistance}` },
       {
-        name: "Waste Collected summary",
+        name: "Waste Collected Summary",
         path: `/${encReport}/${encWasteCollectedSummary}`,
       },
     ],
@@ -427,7 +430,7 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed top-0 left-0 z-50 h-screen border-r border-[var(--admin-border)]/80 bg-[var(--admin-surfaceAlt)]/95 text-[var(--admin-text)] transition-all duration-300 ease-out backdrop-blur-2xl ${
+      className={`mt -10 fixed top-0 left-0 z-50 h-screen border-r border-[var(--admin-border)]/80 bg-[var(--admin-surfaceAlt)]/95 text-[var(--admin-text)] transition-all duration-300 ease-out backdrop-blur-2xl ${
         showFullSidebar ? "w-[300px]" : "w-[140px]"
       } ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       style={{
@@ -460,9 +463,6 @@ const AppSidebar: React.FC = () => {
               {renderMenuItems(workforceManagements, "workforceManagement")}
             </div>
             <div>
-              <h2 className="mb-2 text-xs uppercase tracking-[0.35em] text-[var(--admin-mutedText)]">
-                Report
-              </h2>
               {renderMenuItems(reportItems, "report")}
             </div>
           </nav>
