@@ -137,7 +137,7 @@ export function VehicleStatusPanel() {
     <DataCard
       title="Vehicle Status"
       compact
-      className="h-[240px]"
+      className="h-[275px]"
       action={
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -166,11 +166,11 @@ export function VehicleStatusPanel() {
         </DropdownMenu>
       }
     >
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-2 gap-3">
         {items.map((item, i) => (
           <div
             key={i}
-            className={`flex flex-col items-center justify-between p-3 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer ${item.bg}`}
+            className={`flex flex-col items-center justify-between p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer ${item.bg}`}
           >
             <div className="flex items-center gap-3">
               <item.icon className={`w-5 h-5 ${item.color}`} />
