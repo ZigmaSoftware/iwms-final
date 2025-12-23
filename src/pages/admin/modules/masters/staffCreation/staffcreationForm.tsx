@@ -72,6 +72,34 @@ const mapLocationOptions = (items: any[]) =>
     .filter((item) => item?.name && item.is_active !== false)
     .map((item) => ({ value: item.name, label: item.name }));
 
+type ErrorWithResponse = {
+  response?: {
+    data?: unknown;
+  };
+};
+
+const formatErrorMessage = (error: unknown) => {
+  if (!error) return "Please review the highlighted fields.";
+  if (typeof error === "string") return error;
+
+  const data = (error as ErrorWithResponse)?.response?.data;
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return data.join(", ");
+
+  const payload =
+    data && typeof data === "object" && "errors" in data ? (data as any).errors : data;
+
+  if (payload && typeof payload === "object") {
+    return Object.entries(payload as Record<string, unknown>)
+      .map(([key, value]) =>
+        Array.isArray(value) ? `${key}: ${value.join(", ")}` : `${key}: ${String(value)}`
+      )
+      .join("\n");
+  }
+
+  return "Please review the highlighted fields.";
+};
+
 const initialFormData = {
   employee_name: "",
   // employee_id: "",
@@ -313,6 +341,14 @@ console.log("Fetched staff data:", staff);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (photoFile && !photoFile.type.startsWith("image/")) {
+      Swal.fire({
+        icon: "warning",
+        title: "Invalid Photo",
+        text: "Please upload a valid image file.",
+      });
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -383,13 +419,10 @@ console.log("Fetched staff data:", staff);
         formBody.append("photo", photoFile);
       }
 
-      const multipartConfig = {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      };
-
       let response: any;
+      const multipartConfig = {
+        headers: { "Content-Type": "multipart/form-data" },
+      };
       if (isEdit) {
         if (!id) {
           throw new Error("Missing staff id");
@@ -411,10 +444,7 @@ console.log("Fetched staff data:", staff);
       Swal.fire({
         icon: "error",
         title: "Save failed",
-        text:
-          error.response?.data?.errors ||
-          error.response?.data?.detail ||
-          "Please review the highlighted fields.",
+        text: formatErrorMessage(error),
       });
     } finally {
       setSubmitting(false);
@@ -579,9 +609,25 @@ console.log("Fetched staff data:", staff);
             id="photo"
             accept="image/*"
             className="sr-only"
-            onChange={(event) =>
-              setPhotoFile(event.target.files ? event.target.files[0] : null)
-            }
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              if (!file) {
+                setPhotoFile(null);
+                return;
+              }
+              if (!file.type.startsWith("image/")) {
+                Swal.fire({
+                  icon: "warning",
+                  title: "Invalid Photo",
+                  text: "Please upload a valid image file.",
+                });
+                event.target.value = "";
+                setPhotoFile(null);
+                setPhotoPreview("");
+                return;
+              }
+              setPhotoFile(file);
+            }}
           />
           {photoPreview ? (
             <img

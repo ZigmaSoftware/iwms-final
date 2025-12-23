@@ -2,8 +2,17 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
-import { desktopApi } from "@/api";
-import { adminApi } from "@/helpers/admin/registry";
+import {
+  cityApi,
+  countryApi,
+  customerCreationApi,
+  districtApi,
+  propertiesApi,
+  stateApi,
+  subPropertiesApi,
+  wardApi,
+  zoneApi,
+} from "@/helpers/admin";
 
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
@@ -96,25 +105,25 @@ export default function CustomerCreationForm() {
         properties,
         subProperties,
       ] = await Promise.all([
-        desktopApi.get("wards/"),
-        desktopApi.get("zones/"),
-        desktopApi.get("cities/"),
-        desktopApi.get("districts/"),
-        desktopApi.get("states/"),
-        desktopApi.get("countries/"),
-        desktopApi.get("properties/"),
-        desktopApi.get("subproperties/"),
+        wardApi.list(),
+        zoneApi.list(),
+        cityApi.list(),
+        districtApi.list(),
+        stateApi.list(),
+        countryApi.list(),
+        propertiesApi.list(),
+        subPropertiesApi.list(),
       ]);
 
       setDropdowns({
-        wards: wards.data,
-        zones: zones.data,
-        cities: cities.data,
-        districts: districts.data,
-        states: states.data,
-        countries: countries.data,
-        properties: properties.data,
-        subProperties: subProperties.data,
+        wards,
+        zones,
+        cities,
+        districts,
+        states,
+        countries,
+        properties,
+        subProperties,
       });
     } catch (err) {
       console.error("Dropdown load failed", err);
@@ -128,7 +137,7 @@ export default function CustomerCreationForm() {
     fetchDropdowns();
 
     if (isEdit && id) {
-      adminApi.customerCreations
+      customerCreationApi
         .get(id)
         .then((res) => setFormData(res as any))
         .catch(() =>
@@ -191,8 +200,8 @@ export default function CustomerCreationForm() {
     try {
       setLoading(true);
       isEdit
-        ? await adminApi.customerCreations.update(id as string, formData)
-        : await adminApi.customerCreations.create(formData);
+        ? await customerCreationApi.update(id as string, formData)
+        : await customerCreationApi.create(formData);
 
       Swal.fire("Success", "Customer saved successfully", "success");
       navigate(ENC_LIST_PATH);

@@ -22,6 +22,7 @@ export interface VehicleData {
   status: VehicleStatus;
   driver: string;
   updated_at: string;
+  location?: string;
 }
 
 interface GeofenceSite {
@@ -153,6 +154,9 @@ export function LeafletMapContainer({
 
   const [fetchedVehicles, setFetchedVehicles] = useState<VehicleData[]>([]);
   const [geofenceSites, setGeofenceSites] = useState<GeofenceSite[]>([]);
+  const [selectedVehicle, setSelectedVehicle] = useState<VehicleData | null>(null);
+  const [infoOpen, setInfoOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(true);
   const isDarkMode = theme === "dark";
 
   const [statusFilter, setStatusFilter] = useState<Record<VehicleStatus, boolean>>({
@@ -257,6 +261,7 @@ export function LeafletMapContainer({
               status,
               driver:
                 pickString(entry, ["driverName", "driver_name", "driver"], "-") || "-",
+              location: pickString(entry, ["location", "address", "lastLocation"], ""),
               updated_at:
                 pickString(
                   entry,
@@ -300,16 +305,25 @@ export function LeafletMapContainer({
     displayedVehicles
       .filter((v) => statusFilter[v.status])
       .forEach((v) => {
-        L.marker([v.lat, v.lng], {
+        const marker = L.marker([v.lat, v.lng], {
           icon: getVehicleIcon(v.status),
-        })
-          .bindPopup(`
-            <strong>${v.vehicle_no}</strong><br/>
-            Driver: ${v.driver}<br/>
-            Status: ${v.status}<br/>
-            Speed: ${v.speed} km/h
-          `)
-          .addTo(vehicleLayerRef.current!);
+        });
+        marker.on("click", () => {
+          setSelectedVehicle(v);
+          setInfoOpen(true);
+          setPanelOpen(true);
+        });
+        marker.bindTooltip(
+            `
+              <div style="min-width:140px;">
+                <div style="font-weight:600;">${v.vehicle_no}</div>
+                <div>Driver: ${v.driver}</div>
+                <div>Status: ${v.status}</div>
+                <div>Speed: ${v.speed} km/h</div>
+              </div>
+            `,
+            { direction: "top", offset: [0, -12], opacity: 0.95 }
+          ).addTo(vehicleLayerRef.current!);
       });
   }, [displayedVehicles, statusFilter]);
 
@@ -353,6 +367,193 @@ export function LeafletMapContainer({
         backgroundColor: isDarkMode ? "#0f172a" : "#fff",
       }}
     >
+      {selectedVehicle && (
+        <>
+          <div
+            style={{
+              position: "absolute",
+              left: 0,
+              top: 0,
+              bottom: 0,
+              zIndex: 1100,
+              width: "30%",
+              minWidth: 260,
+              maxWidth: "90vw",
+              height: "100%",
+              overflow: "visible",
+              transform: panelOpen ? "translateX(0)" : "translateX(-100%)",
+              transition: "transform 0.8s ease",
+              pointerEvents: panelOpen ? "auto" : "none",
+            }}
+          >
+            <div
+              style={{
+                height: "100%",
+                overflow: "auto",
+                borderRadius: 0,
+                padding: 20,
+                background: isDarkMode ? "rgba(15,23,42,.96)" : "#fff",
+                color: isDarkMode ? "#f8fafc" : "#0f172a",
+                border: isDarkMode ? "1px solid rgba(148,163,184,.35)" : "1px solid #e5e7eb",
+                boxShadow: isDarkMode
+                  ? "0 16px 30px rgba(0,0,0,.45)"
+                  : "0 12px 24px rgba(15,23,42,.15)",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <div>
+                  <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: ".08em", opacity: 0.7 }}>
+                    Vehicle
+                  </div>
+                  <div style={{ fontSize: 18, fontWeight: 600 }}>
+                    {selectedVehicle.vehicle_no}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedVehicle(null)}
+                  style={{
+                    border: "none",
+                    background: "transparent",
+                    fontSize: 18,
+                    cursor: "pointer",
+                    color: isDarkMode ? "#f8fafc" : "#0f172a",
+                  }}
+                  aria-label="Close vehicle details"
+                >
+                  ×
+                </button>
+              </div>
+
+          <div style={{ marginTop: 12, display: "flex", gap: 12, alignItems: "center" }}>
+            <div
+              style={{
+                width: 72,
+                height: 72,
+                borderRadius: 12,
+                background: "transparent",
+                border: "none",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: 34,
+              }}
+            >
+              🚚
+            </div>
+            <div style={{ fontSize: 12, lineHeight: 1.5 }}>
+              <div style={{ fontWeight: 600 }}>Live Vehicle</div>
+              <div style={{ opacity: 0.8 }}>{selectedVehicle.location || "Location unavailable"}</div>
+            </div>
+          </div>
+
+          <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.5 }}>
+            <div>
+              <strong>Status:</strong> {selectedVehicle.status}
+            </div>
+            <div>
+              <strong>Driver:</strong> {selectedVehicle.driver || "-"}
+            </div>
+            <div>
+              <strong>Speed:</strong> {selectedVehicle.speed} km/h
+            </div>
+            <div>
+              <strong>Coordinates:</strong> {selectedVehicle.lat.toFixed(5)}, {selectedVehicle.lng.toFixed(5)}
+            </div>
+            {selectedVehicle.location ? (
+              <div>
+                <strong>Location:</strong> {selectedVehicle.location}
+              </div>
+            ) : null}
+            {selectedVehicle.updated_at ? (
+              <div>
+                <strong>Last Updated:</strong> {selectedVehicle.updated_at}
+              </div>
+            ) : null}
+          </div>
+
+            <div
+              style={{
+                marginTop: 16,
+                borderTop: isDarkMode ? "1px solid rgba(148,163,184,.25)" : "1px solid #e5e7eb",
+                paddingTop: 12,
+              }}
+            >
+              <button
+                type="button"
+                onClick={() => setInfoOpen((prev) => !prev)}
+                style={{
+                  width: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  fontWeight: 600,
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  color: isDarkMode ? "#f8fafc" : "#0f172a",
+                  padding: 0,
+                }}
+                aria-expanded={infoOpen}
+              >
+                <span>Vehicle Information</span>
+                <span style={{ fontSize: 16 }}>{infoOpen ? "−" : "+"}</span>
+              </button>
+
+              {infoOpen && (
+                <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.5 }}>
+                  <div>
+                    <strong>Vehicle No:</strong> {selectedVehicle.vehicle_no}
+                  </div>
+                  <div>
+                    <strong>Status:</strong> {selectedVehicle.status}
+                  </div>
+                  <div>
+                    <strong>Driver:</strong> {selectedVehicle.driver || "-"}
+                  </div>
+                  <div>
+                    <strong>Speed:</strong> {selectedVehicle.speed} km/h
+                  </div>
+                  {selectedVehicle.updated_at ? (
+                    <div>
+                      <strong>Last Updated:</strong> {selectedVehicle.updated_at}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setPanelOpen((prev) => !prev)}
+            style={{
+              position: "absolute",
+              left: panelOpen ? "30%" : 12,
+              top: "50%",
+              transform: panelOpen ? "translate(-18px, -50%)" : "translate(0, -50%)",
+              width: 42,
+              height: 64,
+              borderRadius: 999,
+              border: "none",
+              background: "transparent",
+              color: isDarkMode ? "#f8fafc" : "#0f172a",
+              boxShadow: isDarkMode
+                ? "0 12px 24px rgba(0,0,0,.35)"
+                : "0 10px 20px rgba(15,23,42,.15)",
+              cursor: "pointer",
+              fontSize: 22,
+              lineHeight: 1,
+              zIndex: 1200,
+            }}
+            aria-label={panelOpen ? "Collapse vehicle details" : "Expand vehicle details"}
+          >
+            {panelOpen ? "‹" : "›"}
+          </button>
+        </>
+      )}
+
       {/* STATUS FILTER */}
       <div
         style={{
