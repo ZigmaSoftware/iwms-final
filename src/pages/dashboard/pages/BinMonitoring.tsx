@@ -41,24 +41,60 @@ const createBinIcon = (priority: BinPriority) => {
   const meta = priorityConfig[priority];
   return L.divIcon({
     className: "",
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -18],
+    iconSize: [42, 52],
+    iconAnchor: [21, 50],
+    popupAnchor: [0, -44],
     html: `
-      <div
-        style="
-          width:34px;
-          height:34px;
-          border-radius:50%;
-          background:${meta.color};
-          display:flex;
-          align-items:center;
-          justify-content:center;
-          box-shadow:0 6px 14px rgba(0,0,0,.25);
-          border:2px solid #fff;
-        "
-      >
-        <span style="font-size:18px; line-height:1;">🗑️</span>
+      <div style="position:relative; width:42px; height:52px;">
+        <div
+          style="
+            position:absolute;
+            top:0;
+            left:50%;
+            transform:translateX(-50%);
+            width:36px;
+            height:36px;
+            border-radius:12px;
+            background:${meta.color};
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            box-shadow:0 8px 16px rgba(0,0,0,.28);
+            border:2px solid #fff;
+          "
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M3 6h18" />
+            <path d="M8 6V4h8v2" />
+            <rect x="6" y="6" width="12" height="14" rx="2" />
+            <path d="M10 10v6" />
+            <path d="M14 10v6" />
+          </svg>
+        </div>
+        <div
+          style="
+            position:absolute;
+            top:32px;
+            left:50%;
+            transform:translateX(-50%);
+            width:0;
+            height:0;
+            border-left:8px solid transparent;
+            border-right:8px solid transparent;
+            border-top:12px solid ${meta.color};
+            filter:drop-shadow(0 4px 6px rgba(0,0,0,.25));
+          "
+        ></div>
       </div>
     `,
   });
