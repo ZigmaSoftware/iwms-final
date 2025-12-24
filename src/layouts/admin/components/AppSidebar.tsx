@@ -1,15 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-import { ChevronDown, LayoutGrid, MoreHorizontal, List, File, PieChart, UserCircle, Trash2, Truck } from "lucide-react";
+import {
+  ChevronDown,
+  LayoutGrid,
+  Settings,
+  Layers3,
+  Archive,
+  Users,
+  UserCircle,
+  Truck,
+  Navigation,
+  Recycle,
+  AlertTriangle,
+  Building2,
+  BarChart3,
+} from "lucide-react";
 
-import { useSidebar } from "../../../contexts/SideBarContext";
+import { useSidebar } from "@/contexts/SideBarContext";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 const {
   encMasters,
   encContinents,
   encCountries,
+  encBins,
   encStates,
   encDistricts,
   encCities,
@@ -55,21 +70,30 @@ type NavItem = {
   name: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string; pro?: boolean; new?: boolean }[];
+  subItems?: { name: string; path: string }[];
 };
 
-const navItems: NavItem[] = [{ icon: <LayoutGrid size={18} />, name: "Dashboard", path: "/admin" }];
+/* =====================
+   MENU DEFINITIONS
+===================== */
+
+const navItems: NavItem[] = [
+  { name: "Dashboard", icon: <LayoutGrid size={18} />, path: "/admin" },
+];
 
 const adminItems: NavItem[] = [
   {
     name: "Admin",
-    icon: <File size={18} />,
+    icon: <Settings size={18} />,
     subItems: [
       { name: "MainScreen Type", path: `/${encAdmins}/${encMainScreenType}` },
       { name: "UserScreen Action", path: `/${encAdmins}/${encUserScreenAction}` },
       { name: "MainScreen", path: `/${encAdmins}/${encMainScreen}` },
       { name: "User Screen", path: `/${encAdmins}/${encUserScreen}` },
-      { name: "User Screen Permission", path: `/${encAdmins}/${encUserScreenPermission}` },
+      {
+        name: "User Screen Permission",
+        path: `/${encAdmins}/${encUserScreenPermission}`,
+      },
       { name: "User Type", path: `/${encAdmins}/${encUserType}` },
       { name: "User Creation", path: `/${encAdmins}/${encUserCreation}` },
       { name: "Staff User Type", path: `/${encAdmins}/${encStaffUserType}` },
@@ -79,10 +103,9 @@ const adminItems: NavItem[] = [
 
 const masterItems: NavItem[] = [
   {
-    icon: <List size={18} />,
     name: "Masters",
+    icon: <Layers3 size={18} />,
     subItems: [
-      { name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` },
       { name: "Continent", path: `/${encMasters}/${encContinents}` },
       { name: "Country", path: `/${encMasters}/${encCountries}` },
       { name: "State", path: `/${encMasters}/${encStates}` },
@@ -96,14 +119,43 @@ const masterItems: NavItem[] = [
   },
 ];
 
+const staffCreationItems: NavItem[] = [
+  {
+    name: "Staff Master",
+    icon: <Users size={18} />,
+    subItems: [
+      { name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` },
+    ],
+  },
+];
+
+const customerMasters: NavItem[] = [
+  {
+    name: "Customer Masters",
+    icon: <UserCircle size={18} />,
+    subItems: [
+      {
+        name: "Customer Creation",
+        path: `/${encCustomerMaster}/${encCustomerCreation}`,
+      },
+    ],
+  },
+];
+
 const transportMasters: NavItem[] = [
   {
-    icon: <Truck size={18} />,
     name: "Transport Masters",
+    icon: <Truck size={18} />,
     subItems: [
       { name: "Fuel", path: `/${encTransportMaster}/${encFuel}` },
-      { name: "Vehicle Type", path: `/${encTransportMaster}/${encVehicleType}` },
-      { name: "Vehicle Creation", path: `/${encTransportMaster}/${encVehicleCreation}` },
+      {
+        name: "Vehicle Type",
+        path: `/${encTransportMaster}/${encVehicleType}`,
+      },
+      {
+        name: "Vehicle Creation",
+        path: `/${encTransportMaster}/${encVehicleCreation}`,
+      },
     ],
   },
 ];
@@ -111,41 +163,59 @@ const transportMasters: NavItem[] = [
 const vehicleTrackingItems: NavItem[] = [
   {
     name: "Vehicle Tracking",
-    icon: <File size={18} />,
+    icon: <Navigation size={18} />,
     subItems: [
-      { name: "Vehicle Tracking", path: `/${encVehicleTracking}/${encVehicleTrack}` },
-      { name: "Vehicle History", path: `/${encVehicleTracking}/${encVehicleHistory}` },
+      {
+        name: "Vehicle Tracking",
+        path: `/${encVehicleTracking}/${encVehicleTrack}`,
+      },
+      {
+        name: "Vehicle History",
+        path: `/${encVehicleTracking}/${encVehicleHistory}`,
+      },
     ],
   },
 ];
 
-const customerMasters: NavItem[] = [
+const binItems: NavItem[] = [
   {
-    icon: <UserCircle size={18} />,
-    name: "Customer Masters",
-    subItems: [{ name: "Customer Creation", path: `/${encCustomerMaster}/${encCustomerCreation}` }],
+    name: "Bin Master",
+    icon: <Archive size={18} />,
+    subItems: [{ name: "Bin Creation", path: `/${encMasters}/${encBins}` }],
   },
 ];
 
 const wasteManagementMasters: NavItem[] = [
   {
-    icon: <Trash2 size={18} />,
     name: "Waste Management",
+    icon: <Recycle size={18} />,
     subItems: [
-      { name: "WasteCollectedData", path: `/${encWasteManagementMaster}/${encWasteCollectedData}` },
-      { name: "CollectionMonitoring", path: `/${encWasteManagementMaster}/${encCollectionMonitoring}` },
+      {
+        name: "WasteCollectedData",
+        path: `/${encWasteManagementMaster}/${encWasteCollectedData}`,
+      },
+      {
+        name: "CollectionMonitoring",
+        path: `/${encWasteManagementMaster}/${encCollectionMonitoring}`,
+      },
     ],
   },
 ];
 
 const citizenGrievanceItems: NavItem[] = [
   {
-    icon: <MoreHorizontal size={18} />,
     name: "Citizen Grievance",
+    icon: <AlertTriangle size={18} />,
     subItems: [
       { name: "Complaints", path: `/${encCitizenGrivence}/${encComplaint}` },
-      { name: "Main Category", path: `/${encCitizenGrivence}/${encMainComplaintCategory}` },
-      { name: "Sub Category", path: `/${encCitizenGrivence}/${encSubComplaintCategory}` },
+      {
+        name: "Main Category",
+        path: `/${encCitizenGrivence}/${encMainComplaintCategory}`,
+      },
+      {
+        name: "Sub Category",
+        path: `/${encCitizenGrivence}/${encSubComplaintCategory}`,
+      },
       { name: "Feedback", path: `/${encCitizenGrivence}/${encFeedback}` },
     ],
   },
@@ -153,26 +223,34 @@ const citizenGrievanceItems: NavItem[] = [
 
 const workforceManagements: NavItem[] = [
   {
-    icon: <PieChart size={18} />,
     name: "Workforce Management",
-    subItems: [{ name: "WorkForce Management", path: `/${encWorkforceManagement}/${encWorkforceManagement}` }],
+    icon: <Building2 size={18} />,
+    subItems: [
+      {
+        name: "WorkForce Management",
+        path: `/${encWorkforceManagement}/${encWorkforceManagement}`,
+      },
+    ],
   },
 ];
 
 const reportItems: NavItem[] = [
   {
-    icon: <PieChart size={18} />,
     name: "Reports",
+    icon: <BarChart3 size={18} />,
     subItems: [
       { name: "Trip Summary", path: `/${encReport}/${encTripSummary}` },
       { name: "Monthly Distance", path: `/${encReport}/${encMonthlyDistance}` },
-      { name: "Waste Collected summary", path: `/${encReport}/${encWasteCollectedSummary}` },
+      {
+        name: "Waste Collected Summary",
+        path: `/${encReport}/${encWasteCollectedSummary}`,
+      },
     ],
   },
 ];
 
 const menuButtonBase =
-  " flex w-full items-center gap-3 rounded-2xl px-3.5 py-2.5 text-left text-sm font-semibold";
+  "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold";
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen } = useSidebar();
@@ -181,25 +259,31 @@ const AppSidebar: React.FC = () => {
 
   const [openSubmenu, setOpenSubmenu] = useState<{
     type:
-    | "main"
-    | "admin"
-    | "master"
-    | "entry"
-    | "report"
-    | "others"
-    | "transportMaster"
-    | "customerMaster"
-    | "vehicleTracking"
-    | "wasteManagementMaster"
-    | "citizenGrievance"
-    | "workforceManagement";
+      | "main"
+      | "admin"
+      | "master"
+      | "entry"
+      | "report"
+      | "others"
+      | "transportMaster"
+      | "customerMaster"
+      | "vehicleTracking"
+      | "binMaster"
+      | "wasteManagementMaster"
+      | "citizenGrievance"
+      | "workforceManagement";
     index: number;
   } | null>(null);
 
-  const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>({});
+  const [subMenuHeight, setSubMenuHeight] = useState<Record<string, number>>(
+    {}
+  );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const isActive = useCallback((path: string) => location.pathname === path, [location.pathname]);
+  const isActive = useCallback(
+    (path: string) => location.pathname === path,
+    [location.pathname]
+  );
 
   useEffect(() => {
     let matched = false;
@@ -213,6 +297,7 @@ const AppSidebar: React.FC = () => {
       transportMaster: transportMasters,
       customerMaster: customerMasters,
       vehicleTracking: vehicleTrackingItems,
+      binMaster: binItems,
       wasteManagementMaster: wasteManagementMasters,
       report: reportItems,
       workforceManagement: workforceManagements,
@@ -246,31 +331,41 @@ const AppSidebar: React.FC = () => {
   }, [openSubmenu]);
 
   const handleSubmenuToggle = (index: number, type: any) => {
-    setOpenSubmenu((prev) => (prev && prev.type === type && prev.index === index ? null : { type, index }));
+    setOpenSubmenu((prev) =>
+      prev && prev.type === type && prev.index === index
+        ? null
+        : { type, index }
+    );
   };
 
   const renderMenuItems = (items: NavItem[], type: any) => (
-    <ul className="flex flex-col gap-4">
+    <ul className="flex flex-col gap-2">
       {items.map((nav, index) => (
         <li key={nav.name}>
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, type)}
-              className={`${menuButtonBase} ${openSubmenu?.type === type && openSubmenu?.index === index
-                ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
-                : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] "
-                }`}
+              className={`${menuButtonBase} ${
+                openSubmenu?.type === type && openSubmenu?.index === index
+                  ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
+                  : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] "
+              }`}
             >
-              <span className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}>{nav.icon}</span>
+              <span
+                className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}
+              >
+                {nav.icon}
+              </span>
 
               {showFullSidebar && (
                 <>
-                  <span className="text-base font-semibold">{nav.name}</span>
+                  <span className="text-sm font-semibold">{nav.name}</span>
                   <ChevronDown
-                    className={`ml-auto h-5 w-5 transition-transform ${openSubmenu?.type === type && openSubmenu?.index === index
-                      ? "rotate-180 text-[var(--admin-primary)]"
-                      : "text-[var(--admin-mutedText)]"
-                      }`}
+                    className={`ml-auto h-5 w-5 transition-transform ${
+                      openSubmenu?.type === type && openSubmenu?.index === index
+                        ? "rotate-180 text-[var(--admin-primary)]"
+                        : "text-[var(--admin-mutedText)]"
+                    }`}
                   />
                 </>
               )}
@@ -279,13 +374,20 @@ const AppSidebar: React.FC = () => {
             nav.path && (
               <Link
                 to={nav.path}
-                className={`${menuButtonBase} ${isActive(nav.path)
-                  ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
-                  : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
-                  }`}
+                className={`${menuButtonBase} ${
+                  isActive(nav.path)
+                    ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
+                    : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
+                }`}
               >
-                <span className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}>{nav.icon}</span>
-                {showFullSidebar && <span className="text-sm font-semibold">{nav.name}</span>}
+                <span
+                  className={`menu-item-icon-size ${!showFullSidebar ? "mx-auto" : ""}`}
+                >
+                  {nav.icon}
+                </span>
+                {showFullSidebar && (
+                  <span className="text-sm font-semibold">{nav.name}</span>
+                )}
               </Link>
             )
           )}
@@ -303,17 +405,16 @@ const AppSidebar: React.FC = () => {
                     : "0px",
               }}
             >
-              <ul
-                className="mt-3 ml-6 space-y-1 rounded-2xl border-l-2 border-[var(--admin-border)]/70 pl-4"
-              >
+              <ul className="mt-2 ml-5 space-y-1 rounded-xl border-l-2 border-[var(--admin-border)]/70 pl-3">
                 {nav.subItems.map((subItem) => (
                   <li key={subItem.name}>
                     <Link
                       to={subItem.path}
-                      className={`block rounded-2xl px-3 py-2 text-sm font-medium transition ${isActive(subItem.path)
-                        ? "bg-[var(--admin-accentSoft)] text-[var(--admin-accent)]"
-                        : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
-                        }`}
+                      className={`block rounded-xl px-3 py-1.5 text-sm font-medium transition ${
+                        isActive(subItem.path)
+                          ? "bg-[var(--admin-accentSoft)] text-[var(--admin-accent)]"
+                          : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
+                      }`}
                     >
                       {subItem.name}
                     </Link>
@@ -329,35 +430,43 @@ const AppSidebar: React.FC = () => {
 
   return (
     <aside
-      className={`fixed top-0 left-0 z-50 h-screen border-r border-[var(--admin-border)]/80 bg-[var(--admin-surfaceAlt)]/95 text-[var(--admin-text)] transition-all duration-300 ease-out backdrop-blur-2xl ${showFullSidebar ? "w-[300px]" : "w-[140px]"
-        } ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+      className={`mt -10 fixed top-0 left-0 z-50 h-screen border-r border-[var(--admin-border)]/80 bg-[var(--admin-surfaceAlt)]/95 text-[var(--admin-text)] transition-all duration-300 ease-out backdrop-blur-2xl ${
+        showFullSidebar ? "w-[300px]" : "w-[140px]"
+      } ${isMobileOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       style={{
-        boxShadow: showFullSidebar ? "var(--admin-cardShadow)" : "0 10px 35px rgba(1,62,126,0.18)",
+        boxShadow: showFullSidebar
+          ? "var(--admin-cardShadow)"
+          : "0 10px 35px rgba(1,62,126,0.18)",
       }}
     >
       <div className="absolute inset-x-6 top-0 h-px bg-gradient-to-r from-transparent via-[var(--admin-primarySoft)] to-transparent opacity-70" />
-      <div className="flex h-full flex-col px-5 pb-8 pt-8">
-
-
+      <div className="flex h-full flex-col px-4 pb-6 pt-6">
         <div className="mt-[70px] flex-1 overflow-y-auto pr-2 no-scrollbar">
-          <nav className="flex flex-col gap-7">
+          <nav className="flex flex-col gap-4">
             <div>{renderMenuItems(navItems, "main")}</div>
             <div>{renderMenuItems(adminItems, "admin")}</div>
             <div>{renderMenuItems(masterItems, "master")}</div>
-            <div>{renderMenuItems(transportMasters, "transportMaster")}</div>
+            <div>{renderMenuItems(staffCreationItems, "staffCreation")}</div>
             <div>{renderMenuItems(customerMasters, "customerMaster")}</div>
-            <div>{renderMenuItems(vehicleTrackingItems, "vehicleTracking")}</div>
-            <div>{renderMenuItems(wasteManagementMasters, "wasteManagementMaster")}</div>
-            <div>{renderMenuItems(citizenGrievanceItems, "citizenGrievance")}</div>
-            <div>{renderMenuItems(workforceManagements, "workforceManagement")}</div>
+            <div>{renderMenuItems(transportMasters, "transportMaster")}</div>
             <div>
-              <h2 className="mb-4 text-xs uppercase tracking-[0.35em] text-[var(--admin-mutedText)]">Report</h2>
+              {renderMenuItems(vehicleTrackingItems, "vehicleTracking")}
+            </div>
+            <div>{renderMenuItems(binItems, "binMaster")}</div>
+            <div>
+              {renderMenuItems(wasteManagementMasters, "wasteManagementMaster")}
+            </div>
+            <div>
+              {renderMenuItems(citizenGrievanceItems, "citizenGrievance")}
+            </div>
+            <div>
+              {renderMenuItems(workforceManagements, "workforceManagement")}
+            </div>
+            <div>
               {renderMenuItems(reportItems, "report")}
             </div>
           </nav>
         </div>
-
-
       </div>
     </aside>
   );

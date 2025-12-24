@@ -162,6 +162,64 @@
   -webkit-font-smoothing: antialiased;
 }
 
+@keyframes shimmer-slide {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(150%);
+  }
+}
+
+.card-shimmer {
+  animation: shimmer-slide 6s ease-in-out infinite;
+}
+
+@keyframes rainbow-border-flow {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.rainbow-border {
+  position: relative;
+  z-index: 0;
+  border-color: transparent !important;
+  isolation: isolate;
+}
+
+.rainbow-border::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 2px;
+  background: linear-gradient(
+    90deg,
+    #ff4b4b,
+    #ff9f1c,
+    #fff35a,
+    #4cd964,
+    #38d9ff,
+    #4c6ef5,
+    #b36bff,
+    #ff4b4b
+  );
+  background-size: 300% 300%;
+  animation: rainbow-border-flow 14s linear infinite;
+  -webkit-mask: linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

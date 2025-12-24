@@ -2,12 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import type { ChangeEvent, FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-import {desktopApi} from "@/api";
+import { desktopApi } from "@/api";
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { staffCreationApi } from "@/helpers/admin";
+import {
+    countryApi,
+    stateApi,
+    districtApi,
+    cityApi,
+} from "@/helpers/admin/index";
 
 type Section = "official" | "personal";
 
@@ -59,6 +66,39 @@ const bloodGroupOptions = [
   { value: "O+", label: "O+" },
   { value: "O-", label: "O-" },
 ];
+
+const mapLocationOptions = (items: any[]) =>
+  (items ?? [])
+    .filter((item) => item?.name && item.is_active !== false)
+    .map((item) => ({ value: item.name, label: item.name }));
+
+type ErrorWithResponse = {
+  response?: {
+    data?: unknown;
+  };
+};
+
+const formatErrorMessage = (error: unknown) => {
+  if (!error) return "Please review the highlighted fields.";
+  if (typeof error === "string") return error;
+
+  const data = (error as ErrorWithResponse)?.response?.data;
+  if (typeof data === "string") return data;
+  if (Array.isArray(data)) return data.join(", ");
+
+  const payload =
+    data && typeof data === "object" && "errors" in data ? (data as any).errors : data;
+
+  if (payload && typeof payload === "object") {
+    return Object.entries(payload as Record<string, unknown>)
+      .map(([key, value]) =>
+        Array.isArray(value) ? `${key}: ${value.join(", ")}` : `${key}: ${String(value)}`
+      )
+      .join("\n");
+  }
+
+  return "Please review the highlighted fields.";
+};
 
 const initialFormData = {
   employee_name: "",
@@ -113,6 +153,10 @@ export default function StaffCreationForm() {
   const [fetching, setFetching] = useState(false);
   const [sameAddress, setSameAddress] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [countryOptions, setCountryOptions] = useState<{ value: string; label: string }[]>([]);
+  const [stateOptions, setStateOptions] = useState<{ value: string; label: string }[]>([]);
+  const [districtOptions, setDistrictOptions] = useState<{ value: string; label: string }[]>([]);
+  const [cityOptions, setCityOptions] = useState<{ value: string; label: string }[]>([]);
 
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
@@ -124,13 +168,34 @@ export default function StaffCreationForm() {
     desktopApi.defaults.baseURL?.replace(/\/api\/desktop\/?$/, "") || "";
 
   useEffect(() => {
+    const loadLocationOptions = async () => {
+      try {
+        const [countries, states, districts, cities] = await Promise.all([
+          countryApi.list(),
+          stateApi.list(),
+          districtApi.list(),
+          cityApi.list(),
+        ]);
+
+        setCountryOptions(mapLocationOptions(countries));
+        setStateOptions(mapLocationOptions(states));
+        setDistrictOptions(mapLocationOptions(districts));
+        setCityOptions(mapLocationOptions(cities));
+      } catch (error) {
+        console.error("Failed to load location masters", error);
+      }
+    };
+
+    void loadLocationOptions();
+  }, []);
+
+  useEffect(() => {
     if (!isEdit || !id) return;
     setFetching(true);
 
-    desktopApi
-      .get(`staffcreation/${id}/`)
-      .then((response) => {
-        const staff = response.data;
+    staffCreationApi
+      .get(id)
+      .then((staff) => {
         setFormData((prev) => ({
   ...prev,
 
@@ -183,7 +248,7 @@ export default function StaffCreationForm() {
   contact_email: staff.contact_email ?? "",
 }));
 
-console.log("Fetched staff data:", response.data);
+console.log("Fetched staff data:", staff);
         if (staff.photo) {
           setPhotoPreview(
             staff.photo.startsWith("http")
@@ -276,6 +341,14 @@ console.log("Fetched staff data:", response.data);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
+    if (photoFile && !photoFile.type.startsWith("image/")) {
+      Swal.fire({
+        icon: "warning",
+        title: "Invalid Photo",
+        text: "Please upload a valid image file.",
+      });
+      return;
+    }
     setSubmitting(true);
 
     try {
@@ -346,22 +419,23 @@ console.log("Fetched staff data:", response.data);
         formBody.append("photo", photoFile);
       }
 
+      let response: any;
       const multipartConfig = {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+        headers: { "Content-Type": "multipart/form-data" },
       };
-
-      const request = isEdit
-        ? desktopApi.put(`staffcreation/${id}/`, formBody, multipartConfig)
-        : desktopApi.post("staffcreation/", formBody, multipartConfig);
-
-      const response = await request;
+      if (isEdit) {
+        if (!id) {
+          throw new Error("Missing staff id");
+        }
+        response = await staffCreationApi.update(id, formBody, multipartConfig);
+      } else {
+        response = await staffCreationApi.create(formBody, multipartConfig);
+      }
 
       Swal.fire({
         icon: "success",
         title: isEdit ? "Staff updated" : "Staff created",
-        text: response.data.message || "Details saved successfully.",
+        text: response?.message || response?.data?.message || "Details saved successfully.",
       });
 
       navigate(ENC_LIST_PATH);
@@ -370,10 +444,7 @@ console.log("Fetched staff data:", response.data);
       Swal.fire({
         icon: "error",
         title: "Save failed",
-        text:
-          error.response?.data?.errors ||
-          error.response?.data?.detail ||
-          "Please review the highlighted fields.",
+        text: formatErrorMessage(error),
       });
     } finally {
       setSubmitting(false);
@@ -538,9 +609,25 @@ console.log("Fetched staff data:", response.data);
             id="photo"
             accept="image/*"
             className="sr-only"
-            onChange={(event) =>
-              setPhotoFile(event.target.files ? event.target.files[0] : null)
-            }
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              if (!file) {
+                setPhotoFile(null);
+                return;
+              }
+              if (!file.type.startsWith("image/")) {
+                Swal.fire({
+                  icon: "warning",
+                  title: "Invalid Photo",
+                  text: "Please upload a valid image file.",
+                });
+                event.target.value = "";
+                setPhotoFile(null);
+                setPhotoPreview("");
+                return;
+              }
+              setPhotoFile(file);
+            }}
           />
           {photoPreview ? (
             <img
@@ -631,34 +718,42 @@ console.log("Fetched staff data:", response.data);
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="present_country">Country</Label>
-              <Input
+              <Select
                 id="present_country"
                 value={formData.present_country}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("present_country", value)}
+                options={countryOptions}
+                placeholder="Select country"
               />
             </div>
             <div>
               <Label htmlFor="present_state">State</Label>
-              <Input
+              <Select
                 id="present_state"
                 value={formData.present_state}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("present_state", value)}
+                options={stateOptions}
+                placeholder="Select state"
               />
             </div>
             <div>
               <Label htmlFor="present_district">District</Label>
-              <Input
+              <Select
                 id="present_district"
                 value={formData.present_district}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("present_district", value)}
+                options={districtOptions}
+                placeholder="Select district"
               />
             </div>
             <div>
               <Label htmlFor="present_city">City</Label>
-              <Input
+              <Select
                 id="present_city"
                 value={formData.present_city}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("present_city", value)}
+                options={cityOptions}
+                placeholder="Select city"
               />
             </div>
             <div className="sm:col-span-2">
@@ -716,34 +811,42 @@ console.log("Fetched staff data:", response.data);
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <Label htmlFor="permanent_country">Country</Label>
-              <Input
+              <Select
                 id="permanent_country"
                 value={formData.permanent_country}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("permanent_country", value)}
+                options={countryOptions}
+                placeholder="Select country"
               />
             </div>
             <div>
               <Label htmlFor="permanent_state">State</Label>
-              <Input
+              <Select
                 id="permanent_state"
                 value={formData.permanent_state}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("permanent_state", value)}
+                options={stateOptions}
+                placeholder="Select state"
               />
             </div>
             <div>
               <Label htmlFor="permanent_district">District</Label>
-              <Input
+              <Select
                 id="permanent_district"
                 value={formData.permanent_district}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("permanent_district", value)}
+                options={districtOptions}
+                placeholder="Select district"
               />
             </div>
             <div>
               <Label htmlFor="permanent_city">City</Label>
-              <Input
+              <Select
                 id="permanent_city"
                 value={formData.permanent_city}
-                onChange={handleInputChange}
+                onChange={(value) => handleSelectChange("permanent_city", value)}
+                options={cityOptions}
+                placeholder="Select city"
               />
             </div>
             <div className="sm:col-span-2">

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Pie } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import type { ChartData } from "chart.js";
+import { useTheme } from "@/contexts/ThemeContext";
+import { cn } from "@/lib/utils";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -51,7 +53,10 @@ import {
   BarChart3,
   MapPin,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
 
 // ---------------------- API Types ----------------------
 type ApiWasteRow = {
@@ -68,6 +73,7 @@ type DailyRow = {
   zone: string;
   wet: number;
   dry: number;
+  mix: number;
   total: number;
   target: number;
   households: number;
@@ -77,6 +83,7 @@ type MonthlyStat = {
   month: string;
   wet: number;
   dry: number;
+  mix: number;
   total: number;
   avgDaily: number;
 };
@@ -88,6 +95,7 @@ const FALLBACK_DAILY_DATA: DailyRow[] = [
     zone: "Zone A",
     wet: 8.5,
     dry: 5.2,
+    mix: 2.1,
     total: 13.7,
     target: 15.0,
     households: 1200,
@@ -105,7 +113,7 @@ const ZONE_WASTE_SUMMARY: Record<
 };
 
 const FALLBACK_MONTHLY_STATS: MonthlyStat[] = [
-  { month: "October 2025", wet: 245, dry: 156, total: 401, avgDaily: 13.4 },
+  { month: "October 2025", wet: 245, dry: 156, total: 401, avgDaily: 13.4 , mix: 0},
 ];
 
 const WEIGHMENT_API_URL =
@@ -943,6 +951,12 @@ const PROPERTY_COLLECTION_DATA: Record<
     ],
   },
 };
+const getYesterdayISO = () => {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10); // YYYY-MM-DD
+};
+
 
 // ------------------------- MAIN COMPONENT -------------------------
 export default function WasteCollection() {
@@ -950,6 +964,50 @@ export default function WasteCollection() {
   const [dailyData, setDailyData] = useState<DailyRow[]>(FALLBACK_DAILY_DATA);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStat[]>(
     FALLBACK_MONTHLY_STATS
+  );
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
+
+  const pageBgClass = cn(
+    "min-h-screen p-6 transition-colors duration-300",
+    isDarkMode
+      ? "bg-gradient-to-br from-slate-950 via-slate-900 to-slate-900 text-slate-100"
+      : "bg-white text-slate-900"
+  );
+
+  const heroPanelClass = cn(
+    "flex items-center justify-between rounded-2xl p-6 border",
+    isDarkMode
+      ? "bg-slate-900/80 backdrop-blur border-slate-800"
+      : "bg-gradient-to-r from-white via-sky-50 to-slate-100 backdrop-blur border-slate-200"
+  );
+
+  const tabsCardClass = cn(
+    "border-0",
+    isDarkMode
+      ? "bg-slate-900/70 border border-slate-800 text-slate-100"
+      : "bg-white/85 backdrop-blur-sm text-slate-900 border border-slate-100"
+  );
+
+  const tableContainerClass = isDarkMode
+    ? "rounded-xl overflow-hidden border border-slate-800 bg-slate-900/70"
+    : "rounded-xl overflow-hidden border bg-white";
+
+  const tableHeadClass = isDarkMode ? "bg-slate-900/60 text-slate-200" : "bg-slate-50";
+  const tableRowHoverClass = isDarkMode ? "hover:bg-slate-800/60" : "hover:bg-slate-50";
+  const paginationFooterClass = cn(
+    "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between p-4 border-t",
+    isDarkMode ? "bg-slate-900/60 border-slate-800 text-slate-200" : "bg-slate-50"
+  );
+  const paginationButtonClass = cn(
+    "transition-colors",
+    isDarkMode
+      ? "bg-slate-900/40 border-slate-700 text-slate-200 hover:bg-slate-800/80"
+      : ""
+  );
+  const paginationLabelClass = cn(
+    "text-sm",
+    isDarkMode ? "text-slate-300" : "text-slate-600"
   );
 
   // Zone → Ward → Property drilldown states
@@ -965,6 +1023,9 @@ export default function WasteCollection() {
   const [subProperty, setSubProperty] = useState("All");
   const [selectedWasteType, setSelectedWasteType] =
     useState<WasteCategoryKey>("household");
+  const [dailyPage, setDailyPage] = useState(1);
+  const [dailyPageSize, setDailyPageSize] = useState(10);
+  const [dailyDateFilter, setDailyDateFilter] = useState("");
 
   // ---------------------- Fetch block (same as your old code) ----------------------
   useEffect(() => {
@@ -995,8 +1056,10 @@ export default function WasteCollection() {
       });
 
       const r = await fetch(`${WEIGHMENT_API_URL}?${params}`);
+      console.log(r);
       if (!r.ok) throw new Error("Bad API Response");
       const data = await r.json();
+      console.log(data);
 
       const rows: ApiWasteRow[] = Array.isArray(data?.data) ? data.data : [];
       if (!rows.length) return false;
@@ -1017,6 +1080,7 @@ export default function WasteCollection() {
             wet,
             dry,
             total,
+            mix,
             target: Number((total * 1.05).toFixed(2)),
             households: Number(row.no_of_household ?? 0),
           };
@@ -1033,10 +1097,11 @@ export default function WasteCollection() {
         (a, r) => {
           a.wet += r.wet_weight ?? 0;
           a.dry += r.dry_weight ?? 0;
+          a.mix += r.mix_weight ?? 0;
           a.total += r.total_net_weight ?? 0;
           return a;
         },
-        { wet: 0, dry: 0, total: 0 }
+        { wet: 0, dry: 0, total: 0, mix: 0 }
       );
 
       const actDays =
@@ -1049,6 +1114,7 @@ export default function WasteCollection() {
           month: formatMonthLabel(fromDate),
           wet: toTons(totals.wet),
           dry: toTons(totals.dry),
+          mix: toTons(totals.mix),
           total: toTons(totals.total),
           avgDaily: toTons(totals.total / actDays),
         },
@@ -1073,14 +1139,14 @@ export default function WasteCollection() {
     const summary = zoneName
       ? ZONE_WASTE_SUMMARY[zoneName]
       : Object.values(ZONE_WASTE_SUMMARY).reduce(
-          (acc, zone) => {
-            acc.household += zone.household;
-            acc.ewaste += zone.ewaste;
-            acc.medical += zone.medical;
-            return acc;
-          },
-          { household: 0, ewaste: 0, medical: 0 }
-        );
+        (acc, zone) => {
+          acc.household += zone.household;
+          acc.ewaste += zone.ewaste;
+          acc.medical += zone.medical;
+          return acc;
+        },
+        { household: 0, ewaste: 0, medical: 0 }
+      );
 
     return {
       labels: ["Household Waste", "E-Waste", "Medical Waste"],
@@ -1103,10 +1169,10 @@ export default function WasteCollection() {
   ): ChartData<"pie", number[], string> => {
     const data = wardData
       ? [
-          wardData.household.total,
-          wardData.ewaste.total,
-          wardData.medical.total,
-        ]
+        wardData.household.total,
+        wardData.ewaste.total,
+        wardData.medical.total,
+      ]
       : [0, 0, 0];
 
     return {
@@ -1167,32 +1233,66 @@ export default function WasteCollection() {
   };
 
   // Latest KPI hooks
-  const latestEntry = useMemo(
-    () => (dailyData.length ? dailyData[0] : null),
-    [dailyData]
-  );
+  // const latestEntry = useMemo(
+  //   () => (dailyData.length ? dailyData[0] : null),
+  //   [dailyData]
+  // );
   const monthStat = useMemo(
     () => (monthlyStats.length ? monthlyStats[0] : null),
     [monthlyStats]
   );
+  const filteredDailyData = useMemo(() => {
+    if (!dailyDateFilter) return dailyData;
+    return dailyData.filter(
+      (row) => row.date.slice(0, 10) === dailyDateFilter
+    );
+  }, [dailyData, dailyDateFilter]);
+
+  const totalDailyPages = Math.max(
+    1,
+    Math.ceil(filteredDailyData.length / dailyPageSize)
+  );
+
+  const paginatedDailyData = useMemo(() => {
+    const start = (dailyPage - 1) * dailyPageSize;
+    return filteredDailyData.slice(start, start + dailyPageSize);
+  }, [filteredDailyData, dailyPage, dailyPageSize]);
+
+  useEffect(() => {
+    setDailyPage(1);
+  }, [dailyPageSize, dailyDateFilter]);
+  const latestEntry = useMemo(
+    () => (dailyData.length ? dailyData[0] : null),
+    [dailyData]
+  );
+  const yesterdayEntry = useMemo(() => {
+    const yesterday = getYesterdayISO();
+    return (
+      dailyData.find(
+        (row) => row.date.slice(0, 10) === yesterday
+      ) || null
+    );
+  }, [dailyData]);
+
+
 
   // -----------------------------------------------------------------------
   // ---------------------------- RENDER START ------------------------------
   // -----------------------------------------------------------------------
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50 p-6">
+    <div className={pageBgClass}>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between bg-white/70 backdrop-blur-sm rounded-2xl p-6 shadow-lg border border-white/50">
+        <div className={heroPanelClass}>
           <div>
-            <h2 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 bg-clip-text text-transparent">
+            <h2 className="text-4xl font-bold bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
               Waste Collection Dashboard
             </h2>
-            <p className="text-slate-600 mt-2 text-lg">
+            <p className={cn("mt-2 text-lg", isDarkMode ? "text-slate-300" : "text-slate-600")}>
               Real-time tracking and analytics for waste management
             </p>
           </div>
-          <Button className="gap-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg">
+          <Button className="gap-2 bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white">
             <Download className="h-4 w-4" />
             Export Report
           </Button>
@@ -1201,71 +1301,84 @@ export default function WasteCollection() {
         {/* KPI GRID */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
           {/* TODAY TOTAL */}
-          <Card className="border-0 bg-gradient-to-br from-[#D8B4FE] to-[#C084FC] text-white shadow-md hover:-translate-y-1 transition-all">
-            <CardHeader className="flex justify-between">
-              <CardTitle className="text-sm text-white/90">
+          <Card className="border border-sky-200 bg-gradient-to-br from-white via-sky-50 to-indigo-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-sky-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-sky-600 dark:text-sky-200">
                 Today's Collection
               </CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Trash2 className="h-5 w-5" />
-              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {latestEntry ? formatTons(latestEntry.total) : "44.3 Tons"}
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {yesterdayEntry ? formatTons(yesterdayEntry.total) : "--"}
+              </div>
+              <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
+                <Trash2 className="h-6 w-6 text-sky-600 dark:text-sky-200" />
               </div>
             </CardContent>
           </Card>
 
           {/* WET */}
-          <Card className="border-0 bg-gradient-to-br from-[#A7F3D0] to-[#6EE7B7] text-white shadow-md hover:-translate-y-1 transition-all">
-            <CardHeader className="flex justify-between">
-              <CardTitle className="text-sm text-white/90">Wet Waste</CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Droplets className="h-5 w-5" />
-              </div>
+          <Card className="border border-emerald-200 bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-emerald-600 dark:text-emerald-200">Wet Waste</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {latestEntry ? formatTons(latestEntry.wet) : "27.2 Tons"}
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {yesterdayEntry ? formatTons(yesterdayEntry.wet) : "--"}
+              </div>
+              <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
+                <Droplets className="h-6 w-6 text-emerald-600 dark:text-emerald-200" />
               </div>
             </CardContent>
           </Card>
 
           {/* DRY */}
-          <Card className="border-0 bg-gradient-to-br from-[#BAE6FD] to-[#7DD3FC] text-white shadow-md hover:-translate-y-1 transition-all">
-            <CardHeader className="flex justify-between">
-              <CardTitle className="text-sm text-white/90">Dry Waste</CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Recycle className="h-5 w-5" />
-              </div>
+          <Card className="border border-rose-200 bg-gradient-to-br from-white via-rose-50 to-rose-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-rose-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-rose-600 dark:text-rose-200">Dry Waste</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
-                {latestEntry ? formatTons(latestEntry.dry) : "17.1 Tons"}
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {yesterdayEntry ? formatTons(yesterdayEntry.dry) : "--"}
+              </div>
+              <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
+                <Recycle className="h-6 w-6 text-rose-600 dark:text-rose-200" />
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="border border-purple-200 bg-gradient-to-br from-white via-purple-50 to-purple-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-purple-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-purple-600 dark:text-purple-200">Mixed Waste</CardTitle>
+            </CardHeader>
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
+                {yesterdayEntry ? formatTons(yesterdayEntry.mix) : "--"}
+              </div>
+              <div className="p-2 bg-white/70 dark:bg-slate-900/60 rounded-lg">
+                <Recycle className="h-6 w-6 text-purple-600 dark:text-purple-200" />
               </div>
             </CardContent>
           </Card>
 
           {/* MONTHLY */}
-          <Card className="border-0 bg-gradient-to-br from-[#FDE68A] to-[#FCD34D] text-white shadow-md hover:-translate-y-1 transition-all">
-            <CardHeader className="flex justify-between">
-              <CardTitle className="text-sm text-white/90">
+          <Card className="border border-amber-200 bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-amber-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold text-amber-600 dark:text-amber-200">
                 Monthly Total
               </CardTitle>
-              <div className="p-2 bg-white/20 rounded-lg">
-                <Calendar className="h-5 w-5" />
-              </div>
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold">
+            <CardContent className="flex items-center justify-between">
+              <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
                 {monthStat ? formatTons(monthStat.total) : "401 Tons"}
+              </div>
+              <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
+                <Calendar className="h-6 w-6 text-amber-600 dark:text-amber-200" />
               </div>
             </CardContent>
           </Card>
 
           {/* HOUSEHOLDS */}
-          <Card className="border-0 bg-gradient-to-br from-[#FBCFE8] to-[#F9A8D4] text-white shadow-md hover:-translate-y-1 transition-all">
+          {/* <Card className="border-0 bg-gradient-to-br from-[#FBCFE8] to-[#F9A8D4] text-white shadow-md hover:-translate-y-1 transition-all">
             <CardHeader className="flex justify-between">
               <CardTitle className="text-sm text-white/90">
                 Households
@@ -1279,16 +1392,26 @@ export default function WasteCollection() {
                 {latestEntry ? latestEntry.households.toLocaleString() : "0"}
               </div>
             </CardContent>
-          </Card>
+          </Card> */}
         </div>
 
         {/* TABS SECTION */}
-        <Card className="border-0 shadow-xl bg-white/80 backdrop-blur-sm">
+        <Card className={tabsCardClass}>
           <Tabs defaultValue="daily" className="p-6">
-            <TabsList className="grid w-full grid-cols-3 bg-slate-100 p-1 rounded-xl">
+            <TabsList
+              className={cn(
+                "grid w-full grid-cols-3 p-1 rounded-xl",
+                isDarkMode ? "bg-slate-900/60" : "bg-slate-100"
+              )}
+            >
               <TabsTrigger
                 value="daily"
-                className="rounded-lg data-[state=active]:bg-white"
+                className={cn(
+                  "rounded-lg transition-colors",
+                  isDarkMode
+                    ? "text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white"
+                    : "text-slate-600 data-[state=active]:bg-white"
+                )}
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
                 Daily Data
@@ -1296,7 +1419,12 @@ export default function WasteCollection() {
 
               <TabsTrigger
                 value="monthly"
-                className="rounded-lg data-[state=active]:bg-white"
+                className={cn(
+                  "rounded-lg transition-colors",
+                  isDarkMode
+                    ? "text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white"
+                    : "text-slate-600 data-[state=active]:bg-white"
+                )}
               >
                 <Calendar className="h-4 w-4 mr-2" />
                 Monthly Summary
@@ -1304,7 +1432,12 @@ export default function WasteCollection() {
 
               <TabsTrigger
                 value="zone"
-                className="rounded-lg data-[state=active]:bg-white"
+                className={cn(
+                  "rounded-lg transition-colors",
+                  isDarkMode
+                    ? "text-slate-400 data-[state=active]:bg-slate-800 data-[state=active]:text-white"
+                    : "text-slate-600 data-[state=active]:bg-white"
+                )}
               >
                 <MapPin className="h-4 w-4 mr-2" />
                 Zone Analysis
@@ -1314,36 +1447,57 @@ export default function WasteCollection() {
             {/* ---------------- DAILY ---------------- */}
             <TabsContent value="daily" className="mt-6">
               <div className="space-y-4">
-                <div>
-                  <h3 className="text-xl font-bold">
-                    Daily Collection Records
-                  </h3>
-                  <p className="text-slate-600">
-                    Comprehensive waste collection performance metrics
-                  </p>
+                {/* Header + Date Filter */}
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <h3 className="text-xl font-bold">
+                      Daily Collection Records
+                    </h3>
+                    <p className="text-slate-600">
+                      Comprehensive waste collection performance metrics
+                    </p>
+                  </div>
+
+                  {/* Date Filter */}
+                  <div className="flex items-center gap-2">
+                    {/* <Calendar className="h-4 w-4 text-slate-500" /> */}
+                    <Input
+                      type="date"
+                      value={dailyDateFilter}
+                      onChange={(e) => setDailyDateFilter(e.target.value)}
+                      className="w-44"
+                    />
+                  </div>
                 </div>
 
-                <div className="rounded-xl overflow-hidden border shadow bg-white">
+                {/* Table */}
+                <div className={tableContainerClass}>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50">
+                      <TableRow className={tableHeadClass}>
                         <TableHead>Date</TableHead>
                         <TableHead>Zone</TableHead>
                         <TableHead>Wet (Tons)</TableHead>
                         <TableHead>Dry (Tons)</TableHead>
+                        <TableHead>Mix (Tons)</TableHead>
                         <TableHead>Total (Tons)</TableHead>
                       </TableRow>
                     </TableHeader>
 
                     <TableBody>
-                      {dailyData.map((row, index) => (
-                        <TableRow key={index} className="hover:bg-indigo-50">
+                      {paginatedDailyData.map((row, index) => (
+                        <TableRow key={index} className={tableRowHoverClass}>
                           <TableCell>
                             {new Date(row.date).toLocaleDateString("en-US")}
                           </TableCell>
 
                           <TableCell>
-                            <Badge variant="outline">{row.zone}</Badge>
+                            <Badge
+                              variant="outline"
+                              className={isDarkMode ? "border-slate-600 text-slate-200" : undefined}
+                            >
+                              {row.zone}
+                            </Badge>
                           </TableCell>
 
                           <TableCell className="font-bold text-emerald-700">
@@ -1354,6 +1508,10 @@ export default function WasteCollection() {
                             {row.dry.toFixed(1)}
                           </TableCell>
 
+                          <TableCell className="font-bold text-sky-700">
+                            {row.mix.toFixed(1)}
+                          </TableCell>
+
                           <TableCell className="font-bold text-indigo-700">
                             {row.total.toFixed(1)}
                           </TableCell>
@@ -1361,22 +1519,76 @@ export default function WasteCollection() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {/* Pagination Footer */}
+                  <div className={paginationFooterClass}>
+                    {/* Rows per page */}
+                    <div className="flex items-center gap-2 text-sm">
+                      <span>Rows per page</span>
+                      <Select
+                        value={String(dailyPageSize)}
+                        onValueChange={(v) => setDailyPageSize(Number(v))}
+                      >
+                        <SelectTrigger className="w-20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[5, 10, 20, 50].map((n) => (
+                            <SelectItem key={n} value={String(n)}>
+                              {n}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Pagination controls */}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={dailyPage === 1}
+                        onClick={() => setDailyPage((p) => Math.max(1, p - 1))}
+                        className={paginationButtonClass}
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+
+                      <span className={paginationLabelClass}>
+                        Page {dailyPage} of {totalDailyPages}
+                      </span>
+
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={dailyPage >= totalDailyPages}
+                        onClick={() =>
+                          setDailyPage((p) => Math.min(totalDailyPages, p + 1))
+                        }
+                        className={paginationButtonClass}
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </TabsContent>
+
 
             {/* ---------------- MONTHLY ---------------- */}
             <TabsContent value="monthly" className="mt-6">
               <div className="space-y-4">
                 <h3 className="text-xl font-bold">Monthly Summary</h3>
 
-                <div className="rounded-xl border shadow bg-white">
+                <div className={tableContainerClass}>
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-slate-50">
+                      <TableRow className={tableHeadClass}>
                         <TableHead>Month</TableHead>
                         <TableHead>Wet (Tons)</TableHead>
                         <TableHead>Dry (Tons)</TableHead>
+                        <TableHead>Mix (Tons)</TableHead>
                         <TableHead>Total (Tons)</TableHead>
                         <TableHead>Avg Daily</TableHead>
                       </TableRow>
@@ -1388,6 +1600,7 @@ export default function WasteCollection() {
                           <TableCell>{row.month}</TableCell>
                           <TableCell>{row.wet.toFixed(1)}</TableCell>
                           <TableCell>{row.dry.toFixed(1)}</TableCell>
+                          <TableCell>{row.mix.toFixed(1)}</TableCell>
                           <TableCell>{row.total.toFixed(1)}</TableCell>
                           <TableCell>{row.avgDaily.toFixed(1)}</TableCell>
                         </TableRow>
@@ -1433,7 +1646,12 @@ export default function WasteCollection() {
                         setWardDialog(false);
                         setZoneDialog(true);
                       }}
-                      className="cursor-pointer hover:shadow-xl hover:-translate-y-1 transition-all bg-indigo-50"
+                      className={cn(
+                        "cursor-pointer hover:-translate-y-1 transition-all",
+                        isDarkMode
+                          ? "bg-slate-900/70 border border-slate-800 text-slate-100"
+                          : "bg-indigo-50"
+                      )}
                     >
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
@@ -1455,7 +1673,12 @@ export default function WasteCollection() {
 
                 {/* DIALOG 1 — WARDS */}
                 <Dialog open={zoneDialog} onOpenChange={setZoneDialog}>
-                  <DialogContent className="h-[700px] overflow-y-auto lg:max-w-7xl">
+                  <DialogContent
+                    className={cn(
+                      "h-[700px] overflow-y-auto lg:max-w-7xl",
+                      isDarkMode ? "bg-slate-950 text-slate-100" : ""
+                    )}
+                  >
                     <DialogHeader>
                       <DialogTitle>
                         <button
@@ -1469,7 +1692,12 @@ export default function WasteCollection() {
                     </DialogHeader>
 
                     {/* -------------------- PIE CHART -------------------- */}
-                    <div className="bg-white rounded-xl p-4 shadow border mb-6">
+                    <div
+                      className={cn(
+                        "rounded-xl p-4 border mb-6",
+                        isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-white"
+                      )}
+                    >
                       <h3 className="text-lg font-semibold mb-4 text-center">
                         Total Waste Summary for {selectedZone}
                       </h3>
@@ -1495,7 +1723,12 @@ export default function WasteCollection() {
                             <Button
                               key={ward}
                               variant="outline"
-                              className="w-full justify-between"
+                              className={cn(
+                                "w-full justify-between",
+                                isDarkMode
+                                  ? "border-slate-700 text-slate-100 hover:bg-slate-900/60"
+                                  : undefined
+                              )}
                               onClick={() => handleWardSelection(ward)}
                             >
                               {ward}
@@ -1509,7 +1742,12 @@ export default function WasteCollection() {
 
                 {/* DIALOG 2 — WARD VIEW */}
                 <Dialog open={wardDialog} onOpenChange={setWardDialog}>
-                  <DialogContent className="h-[700px]  overflow-y-auto lg:max-w-7xl">
+                  <DialogContent
+                    className={cn(
+                      "h-[700px]  overflow-y-auto lg:max-w-7xl",
+                      isDarkMode ? "bg-slate-950 text-slate-100" : ""
+                    )}
+                  >
                     <DialogHeader>
                       <DialogTitle>
                         <button
@@ -1527,7 +1765,12 @@ export default function WasteCollection() {
 
                     {selectedWard ? (
                       <div className="space-y-6">
-                        <div className="bg-white rounded-xl p-4 shadow border">
+                        <div
+                          className={cn(
+                            "rounded-xl p-4 border",
+                            isDarkMode ? "bg-slate-900/80 border-slate-800" : "bg-white"
+                          )}
+                        >
                           <h3 className="text-lg font-semibold mb-4 text-center">
                             Ward Waste Mix · {selectedWard}
                           </h3>
@@ -1565,7 +1808,7 @@ export default function WasteCollection() {
                                 key={key}
                                 type="button"
                                 onClick={() => setSelectedWasteType(key)}
-                                className={`rounded-xl p-4 text-left border shadow-sm bg-gradient-to-br ${meta.gradient} ${
+                                className={`rounded-xl p-4 text-left border bg-gradient-to-br ${meta.gradient} ${
                                   selectedWasteType === key
                                     ? "ring-2 ring-indigo-500"
                                     : ""
@@ -1589,8 +1832,8 @@ export default function WasteCollection() {
                             );
                           })}
                         </div> */}
-{/* 
-                        <Card className="border shadow-sm">
+                        {/* 
+                        <Card className="border">
                           <CardHeader>
                             <CardTitle>
                               {WASTE_CATEGORY_META[selectedWasteType].label}{" "}
@@ -1631,7 +1874,7 @@ export default function WasteCollection() {
                           </CardContent>
                         </Card> */}
 
-                        <Card className="border shadow-sm">
+                        <Card className="border">
                           <CardHeader>
                             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                               <div>
@@ -1700,7 +1943,7 @@ export default function WasteCollection() {
                             <div className="rounded-xl border overflow-hidden">
                               <Table>
                                 <TableHeader>
-                                  <TableRow className="bg-slate-50">
+                                  <TableRow className={tableHeadClass}>
                                     <TableHead>ID</TableHead>
                                     <TableHead>Location</TableHead>
                                     <TableHead>Dry</TableHead>
@@ -1711,7 +1954,7 @@ export default function WasteCollection() {
                                 </TableHeader>
                                 <TableBody>
                                   {propertyRecords.map((record) => (
-                                    <TableRow key={record.id}>
+                                    <TableRow key={record.id} className={tableRowHoverClass}>
                                       <TableCell className="font-semibold">
                                         {record.id}
                                       </TableCell>
@@ -1732,7 +1975,12 @@ export default function WasteCollection() {
                                       <TableCell>
                                         {record.mixed.toFixed(2)} t
                                       </TableCell>
-                                      <TableCell className="text-sm text-slate-600">
+                                      <TableCell
+                                        className={cn(
+                                          "text-sm",
+                                          isDarkMode ? "text-slate-300" : "text-slate-600"
+                                        )}
+                                      >
                                         {record.lastPickup}
                                       </TableCell>
                                     </TableRow>

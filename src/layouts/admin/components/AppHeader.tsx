@@ -6,13 +6,13 @@ import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
 import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useSidebar } from "../../../contexts/SideBarContext";
+import { useSidebar } from "@/contexts/SideBarContext";
 import { cn } from "@/lib/utils";
 import {
   ADMIN_VIEW_MODE_DASHBOARD,
   setAdminViewPreference,
 } from "@/types/roles";
-import ZigmaLogo from "../../../images/logo.png";
+import ZigmaLogo from "@/images/logo.png";
 
 const AppHeader: React.FC = () => {
   const [isApplicationMenuOpen, setApplicationMenuOpen] = useState(false);
@@ -226,7 +226,7 @@ const AppHeader: React.FC = () => {
               whileTap={{ scale: 0.95 }}
               onClick={handleDashboardView}
               className={cn(
-                "rounded-xl px-4 py-2 text-sm font-semibold shadow transition-all",
+                "rainbow-border rounded-xl px-4 py-2 text-sm font-semibold shadow transition-all",
                 isDark
                   ? "border border-white/20 bg-white/5 text-white hover:bg-white/10"
                   : "border border-gray-200 bg-white text-blue-700 hover:bg-gray-50"

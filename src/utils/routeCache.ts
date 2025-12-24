@@ -8,6 +8,7 @@ export type EncryptedRoutes = {
   encComplaint: string;
   encContinents: string;
   encCountries: string;
+  encBins: string;
   encCustomerCreation: string;
   encCustomerMaster: string;
   encDistricts: string;
@@ -46,6 +47,17 @@ export type EncryptedRoutes = {
   encUserScreenAction: string;
   encMainScreen: string;
   encUserScreen: string;
+
+  // dashboard
+  encDashboardLiveMap: string;
+  encDashboardVehicleManagement: string;
+  encDashboardWasteCollection: string;
+  encDashboardResources: string;
+  encDashboardGrievances: string;
+  encDashboardAlerts: string;
+  encDashboardReports: string;
+  encDashboardWeighBridge: string;
+  encDashboardBins: string;
 };
 
 const plainRoutes: EncryptedRoutes = {
@@ -56,6 +68,7 @@ const plainRoutes: EncryptedRoutes = {
   encComplaint: "complaint",
   encContinents: "continents",
   encCountries: "countries",
+  encBins: "bins",
   encCustomerCreation: "customer-creation",
   encCustomerMaster: "customer-master",
   encDistricts: "districts",
@@ -94,6 +107,18 @@ const plainRoutes: EncryptedRoutes = {
   encMainScreen: "mainscreens",
   encUserScreen: "userscreens",
   encUserScreenPermission: "userscreenpermissions",
+
+  //dashboard
+
+  encDashboardLiveMap: "dashboard-map",
+  encDashboardVehicleManagement: "dashboard-vehicle",
+  encDashboardWasteCollection: "dashboard-waste-collection",
+  encDashboardResources: "dashboard-resources",
+  encDashboardGrievances: "dashboard-grievances",
+  encDashboardAlerts: "dashboard-alerts",
+  encDashboardReports: "dashboard-reports",
+  encDashboardWeighBridge: "dashboard-weighbridge",
+  encDashboardBins: "dashboard-bins"
 };
 
 const encryptRoutes = (routes: EncryptedRoutes): EncryptedRoutes => {

@@ -1,4 +1,5 @@
-import { ChangeEvent, JSX, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ChangeEvent, JSX } from "react";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import "./tripsummary.css";
@@ -42,36 +43,94 @@ type VisualStatus = "moving" | "parked" | "idle";
 
 const STATUS_ICONS: Record<VisualStatus, JSX.Element> = {
   moving: (
-    <svg viewBox="0 0 48 48" role="presentation" aria-hidden="true">
-      <circle cx="24" cy="24" r="22" fill="#d1fae5" />
-      <path
-        d="M16 26l16-12v7h9l-16 12v-7H16z"
-        fill="#047857"
-        stroke="#065f46"
-        strokeWidth="1"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: "16px",
+        background:
+          "linear-gradient(135deg, rgba(240,253,244,0.35), rgba(16,185,129,0.4))",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "1px solid rgba(16,185,129,0.55)",
+        boxShadow: "0 12px 28px rgba(16,185,129,0.35)",
+      }}
+    >
+      <svg viewBox="0 0 40 40" width="28" height="28" aria-hidden="true">
+        <circle cx="20" cy="20" r="15" fill="none" stroke="#10b981" strokeWidth="2" />
+        <path
+          d="M13 20h10l-4-4M23 20l-4 4"
+          fill="none"
+          stroke="#047857"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <path
+          d="M9 16h4M9 24h6"
+          stroke="#34d399"
+          strokeWidth="2"
+          strokeLinecap="round"
+        />
+      </svg>
+    </div>
   ),
   parked: (
-    <svg viewBox="0 0 48 48" role="presentation" aria-hidden="true">
-      <circle cx="24" cy="24" r="22" fill="#e0e7ff" />
-      <path
-        d="M12 26h24l4-8H8l4 8z"
-        fill="#1d4ed8"
-        stroke="#1e40af"
-        strokeWidth="1"
-      />
-      <rect x="14" y="22" width="5" height="5" fill="#bfdbfe" />
-      <rect x="29" y="22" width="5" height="5" fill="#bfdbfe" />
-    </svg>
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: "16px",
+        background:
+          "linear-gradient(135deg, rgba(59,130,246,0.18), rgba(37,99,235,0.45))",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "1px solid rgba(37,99,235,0.35)",
+        boxShadow: "0 10px 25px rgba(59,130,246,0.3)",
+      }}
+    >
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+        <path
+          d="M6 24V10a2 2 0 012-2h10a6 6 0 010 12H10v4"
+          fill="none"
+          stroke="#1d4ed8"
+          strokeWidth="2.2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <circle cx="22" cy="12" r="2.2" fill="#93c5fd" />
+      </svg>
+    </div>
   ),
   idle: (
-    <svg viewBox="0 0 48 48" role="presentation" aria-hidden="true">
-      <circle cx="24" cy="24" r="22" fill="#fef3c7" />
-      <rect x="16" y="14" width="6" height="20" rx="3" fill="#ca8a04" />
-      <rect x="26" y="14" width="6" height="20" rx="3" fill="#ca8a04" />
-    </svg>
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: "16px",
+        background:
+          "linear-gradient(135deg, rgba(251,191,36,0.2), rgba(217,119,6,0.45))",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        border: "1px solid rgba(217,119,6,0.35)",
+        boxShadow: "0 10px 25px rgba(251,191,36,0.25)",
+      }}
+    >
+      <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+        <path
+          d="M12 10v12M20 10v12"
+          fill="none"
+          stroke="#b45309"
+          strokeWidth="2.4"
+          strokeLinecap="round"
+        />
+        <circle cx="16" cy="8" r="1.5" fill="#fcd34d" />
+        <circle cx="16" cy="24" r="1.5" fill="#fcd34d" />
+      </svg>
+    </div>
   ),
 };
 
@@ -98,6 +157,19 @@ const formatInput = (date: Date) =>
   `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(
     date.getMinutes(),
   )}`;
+
+const isSameDate = (left: Date, right: Date) =>
+  left.getFullYear() === right.getFullYear() &&
+  left.getMonth() === right.getMonth() &&
+  left.getDate() === right.getDate();
+
+const shiftRangeByDays = (fromValue: string, toValue: string, offsetDays: number) => {
+  const from = new Date(fromValue);
+  const to = new Date(toValue);
+  from.setDate(from.getDate() + offsetDays);
+  to.setDate(to.getDate() + offsetDays);
+  return { from: formatInput(from), to: formatInput(to) };
+};
 
 const computeInitialRange = () => {
   const to = new Date();
@@ -129,6 +201,9 @@ export default function TripSummary() {
   const [loading, setLoading] = useState(false);
   const [rosterError, setRosterError] = useState("");
   const [summaryError, setSummaryError] = useState("");
+  const [rosterReady, setRosterReady] = useState(false);
+  const initialFetchRef = useRef(false);
+  const fallbackAppliedRef = useRef(false);
   const [filters, setFilters] = useState<{
     [key: string]: { value: string | null; matchMode: FilterMatchMode };
   }>({
@@ -167,6 +242,10 @@ export default function TripSummary() {
           setVehicleId(FALLBACK_VEHICLES[0].id);
           setRosterError("Live vehicle list unavailable. Using fallback list.");
         }
+      } finally {
+        if (!aborted) {
+          setRosterReady(true);
+        }
       }
     };
 
@@ -176,13 +255,17 @@ export default function TripSummary() {
     };
   }, []);
 
-  const fetchSummary = async () => {
+  const fetchSummary = async (options?: {
+    range?: { from: string; to: string };
+    allowFallback?: boolean;
+  }) => {
     if (!vehicleId) {
       setSummaryError("Please choose a vehicle.");
       return;
     }
-    const fromMs = new Date(fromDate).getTime();
-    const toMs = new Date(toDate).getTime();
+    const range = options?.range ?? { from: fromDate, to: toDate };
+    const fromMs = new Date(range.from).getTime();
+    const toMs = new Date(range.to).getTime();
     if (Number.isNaN(fromMs) || Number.isNaN(toMs)) {
       setSummaryError("Invalid date range.");
       return;
@@ -204,10 +287,26 @@ export default function TripSummary() {
       const res = await fetch(apiUrl);
       if (!res.ok) throw new Error(`Trip summary error (${res.status})`);
       const data = await res.json();
+      const historyRows = data?.data?.historyConsilated ?? [];
 
       if (data && data.data) {
         setSummary(data.data);
-        if (!data.data?.historyConsilated?.length) {
+        if (!historyRows.length) {
+          const allowFallback = options?.allowFallback;
+          const today = new Date();
+          if (
+            allowFallback &&
+            !fallbackAppliedRef.current &&
+            isSameDate(new Date(range.from), today) &&
+            isSameDate(new Date(range.to), today)
+          ) {
+            const fallbackRange = shiftRangeByDays(range.from, range.to, -1);
+            fallbackAppliedRef.current = true;
+            setFromDate(fallbackRange.from);
+            setToDate(fallbackRange.to);
+            await fetchSummary({ range: fallbackRange, allowFallback: false });
+            return;
+          }
           setSummaryError("No trip records for selected range.");
         }
       } else {
@@ -222,6 +321,12 @@ export default function TripSummary() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!rosterReady || initialFetchRef.current) return;
+    initialFetchRef.current = true;
+    fetchSummary({ allowFallback: true });
+  }, [rosterReady]);
 
   const handleExport = () => {
     const dataSource = summary?.historyConsilated ?? [];
@@ -287,12 +392,22 @@ export default function TripSummary() {
 
           <div className="filter-field">
             <label>From Date</label>
-            <input type="datetime-local" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+            <input
+              type="datetime-local"
+              className="trip-date-input"
+              value={fromDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
           </div>
 
           <div className="filter-field">
             <label>To Date</label>
-            <input type="datetime-local" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+            <input
+              type="datetime-local"
+              className="trip-date-input"
+              value={toDate}
+              onChange={(e) => setToDate(e.target.value)}
+            />
           </div>
 
           <button className="btn-go" onClick={fetchSummary} disabled={loading}>
@@ -359,7 +474,6 @@ export default function TripSummary() {
               <div className="flex justify-between items-center gap-4">
                 <div className="text-lg font-semibold text-gray-700">Trip Records</div>
                 <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
-                  <i className="pi pi-search text-gray-500" />
                   <InputText
                     value={globalFilterValue}
                     onChange={onGlobalFilterChange}

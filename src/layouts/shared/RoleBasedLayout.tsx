@@ -1,5 +1,5 @@
-import { AdminLayout } from "@/components/layouts/admin/AdminLayout";
-import { DashboardLayout } from "@/components/layouts/dashboard/DashboardLayout";
+import { AdminLayout } from "@/layouts/admin/AdminLayout";
+import { DashboardLayout } from "@/layouts/dashboard/DashboardLayout";
 import type { RoleBasedLayoutProps, UserRole } from "@/types/roles";
 import {
   ADMIN_ROLE,

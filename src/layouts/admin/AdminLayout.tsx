@@ -1,6 +1,6 @@
-import AppHeader from "@/components/layout/AdminPanelLayout/AppHeader";
-import AppSidebar from "@/components/layout/AdminPanelLayout/AppSideBar";
-import Backdrop from "@/components/layout/AdminPanelLayout/Backdrop";
+import AppHeader from "@/layouts/admin/components/AppHeader";
+import AppSidebar from "@/layouts/admin/components/AppSidebar";
+import Backdrop from "@/layouts/admin/components/Backdrop";
 import { SidebarProvider, useSidebar } from "@/contexts/SideBarContext";
 import type { AdminLayoutProps } from "@/types/roles";
 

@@ -1,7 +1,8 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./vehicletracking.css";
+import { useTheme } from "@/contexts/ThemeContext";
 
 type Status = "Running" | "Idle" | "Parked" | "No Data";
 
@@ -32,6 +33,8 @@ const createVehicleIcon = (status: Status) =>
   });
 
 export default function VehicleTracking() {
+  const { theme } = useTheme();
+  const isDarkMode = theme === "dark";
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [search, setSearch] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState("");
@@ -216,7 +219,7 @@ export default function VehicleTracking() {
 
   /* ================= JSX ================= */
   return (
-    <div className="tracking-page">
+    <div className={`tracking-page ${isDarkMode ? "dark-mode" : ""}`}>
       <div className="map-wrap">
         <div id="map" ref={mapDivRef} />
       </div>

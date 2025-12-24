@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { desktopApi } from "@/api";
 import Swal from "sweetalert2";
 import ReactDOM from "react-dom/client";
 
@@ -19,6 +18,14 @@ import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@radix-ui/react-tabs";
 import { Switch } from "@/components/ui/switch";
+import { customerCreationApi, userCreationApi } from "@/helpers/admin";
+
+const normalizeList = (payload: any) =>
+  Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.data)
+      ? payload.data
+      : payload?.data?.results ?? [];
 
 export default function UserCreationList() {
   const navigate = useNavigate();
@@ -40,16 +47,14 @@ export default function UserCreationList() {
   const fetchUsers = async () => {
     try {
       const [usersRes, customersRes] = await Promise.all([
-        desktopApi.get("users-creation/"),
-        desktopApi.get("customercreations/"),
+        userCreationApi.list(),
+        customerCreationApi.list(),
       ]);
 
-      setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
+      setUsers(normalizeList(usersRes));
 
       const map: Record<string, any> = {};
-      const customers = Array.isArray(customersRes.data)
-        ? customersRes.data
-        : [];
+      const customers = normalizeList(customersRes);
 
       customers.forEach((c: any) => {
         const key = c?.unique_id ?? c?.id;
@@ -133,9 +138,13 @@ export default function UserCreationList() {
 
     if (!r.isConfirmed) return;
 
-    await desktopApi.delete(`users-creation/${unique_id}/`);
-    Swal.fire("Deleted!", "User removed.", "success");
-    fetchUsers();
+    try {
+      await userCreationApi.remove(unique_id);
+      Swal.fire("Deleted!", "User removed.", "success");
+      fetchUsers();
+    } catch (err) {
+      Swal.fire("Error", "Unable to delete user", "error");
+    }
   };
 
   /**
@@ -144,7 +153,7 @@ export default function UserCreationList() {
    */
   const handleStatusToggle = async (unique_id: string, value: boolean) => {
     try {
-      await desktopApi.patch(`users-creation/${unique_id}/`, {
+      await userCreationApi.update(unique_id, {
         is_active: value ? 1 : 0,
       });
       fetchUsers();

@@ -7,120 +7,195 @@ import { VehicleStatusPanel } from "./VehicleStatusPanel";
 import { ComplaintsPanel } from "./ComplaintsPanel";
 import { RecentActivityTimeline } from "./RecentActivityTimeLine";
 import { WeighmentSummary } from "@/components/ui/WeighmentSummary";
-import { BinStatus } from "./binStatus";
 import { CameraStatus } from "./cameraStatus";
-import { MapFilters } from "@/components/map/MapFilters";
-
 import { useEffect, useState } from "react";
-
-const mockVehicles = [
-  {
-    vehicle_no: "TN38AB1234",
-    driver: "Ravi",
-    lat: 11.0185,
-    lng: 76.9552,
-    speed: 32,
-    status: "Active",
-    geo: {
-      continent: "Asia",
-      country: "India",
-      state: "Tamil Nadu",
-      district: "Coimbatore",
-      zone: "East Zone",
-      ward: "Ward 23",
-    },
-  },
-  {
-    vehicle_no: "TN37CD5678",
-    driver: "Suresh",
-    lat: 11.0054,
-    lng: 76.9481,
-    speed: 0,
-    status: "Idle",
-    geo: {
-      continent: "Asia",
-      country: "India",
-      state: "Tamil Nadu",
-      district: "Coimbatore",
-      zone: "West Zone",
-      ward: "Ward 45",
-    },
-  },
-];
+import { Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { getEncryptedRoute } from "@/utils/routeCache";
+import { BinMapPanel } from "./map/BinMapPanel";
+import { HouseholdMapPanel } from "./map/HouseholdMapPanel";
+import { MapTabs } from "./map/MapTabs";
+import { MAP_TABS, type MapTabKey } from "./map/mapUtils";
+import { customerCreationApi, wasteCollectionApi } from "@/helpers/admin";
+import { filterActiveCustomers, normalizeCustomerArray } from "@/utils/customerUtils";
 
 export function HomeDashboard() {
-
-  // ------------------------
-  // FILTER STATES
-  // ------------------------
-  const [filters, setFilters] = useState({
-    country: "India",
-    state: "Tamil Nadu",
-    district: "Coimbatore",
-    zone: "All Zones",
-    ward: "All Wards",
-    vehicle_no: "All Vehicles",
+  const binStats = { active: 84, inactive: 16 };
+  const binTotal = binStats.active + binStats.inactive;
+  const { encDashboardBins } = getEncryptedRoute();
+  const binsPath = `/dashboard/${encDashboardBins}`;
+  const [activeMapTab, setActiveMapTab] = useState<MapTabKey>("all");
+  const [householdStats, setHouseholdStats] = useState({
+    total: 0,
+    collected: 0,
+    notCollected: 0,
   });
 
-  const [zones] = useState(["All Zones", "East Zone", "West Zone"]);
-  const [wards] = useState(["All Wards", "Ward 23", "Ward 45"]);
-  const [vehicleNos, setVehicleNos] = useState<string[]>([]);
-
-  // Extract vehicle numbers from mockVehicles
   useEffect(() => {
-    setVehicleNos(["All Vehicles", ...mockVehicles.map((v) => v.vehicle_no)]);
-  }, []);
+    let isMounted = true;
+    const fetchHouseholdStats = async () => {
+      try {
+        const customerResponse = await customerCreationApi.list();
+        const normalized = normalizeCustomerArray(customerResponse);
+        const activeCustomers = filterActiveCustomers(normalized);
+        const total = activeCustomers.length;
 
-  function applyFilters() {
-    console.log("Filters applied:", filters);
-  }
+        const today = new Date().toISOString().split("T")[0];
+        let collectedIds: string[] = [];
+        try {
+          const collectionResponse = await wasteCollectionApi.list({
+            params: { collection_date: today },
+          });
+          if (Array.isArray(collectionResponse)) {
+            collectedIds = Array.from(
+              new Set(
+                collectionResponse
+                  .map((entry: any) =>
+                    String(
+                      entry.customer ??
+                        entry.customer_id ??
+                        entry.customer_unique_id ??
+                        ""
+                    )
+                  )
+                  .filter((id: string) => id.trim())
+              )
+            );
+          }
+        } catch (error) {
+          console.error("Failed to fetch waste collection summary:", error);
+        }
+
+        const collected = collectedIds.length;
+        const notCollected = Math.max(total - collected, 0);
+        if (isMounted) {
+          setHouseholdStats({ total, collected, notCollected });
+        }
+      } catch (error) {
+        console.error("Failed to fetch household summary:", error);
+      }
+    };
+
+    fetchHouseholdStats();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
 
   return (
-    <div className="min-h-screen overflow-hidden flex flex-col">
+    <div className="h-full min-h-0 overflow-hidden flex flex-col">
 
-      <DataCard className="h-[780px]">
+      <DataCard className="h-full overflow-hidden">
 
-        <div className="grid grid-cols-12 gap-3 flex-1 overflow-hidden">
+        <div className="grid grid-cols-12 gap-3 h-full overflow-hidden">
 
 
           {/* LEFT PANEL */}
-          <div className="col-span-3 space-y-3" style={{ maxHeight: "calc(110vh - 180px)" }}>
+          <div className="col-span-3 space-y-3 h-full overflow-y-auto pr-1">
 
-            <div className="col-span-3 space-y-4 pr-1" style={{ maxHeight: "calc(110vh - 180px)" }}>
+            <div className="space-y-4">
               <WastePieChart />
               <AttendanceMonitor />
               <RecentActivityTimeline />
+              <DataCard title="Household Status" compact>
+                <div className="grid grid-cols-3 gap-3 text-center text-xs font-medium">
+                  <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
+                    <div className="text-blue-700 dark:text-blue-400">Total</div>
+                    <div className="text-lg font-bold text-blue-700 dark:text-blue-400">
+                      {householdStats.total}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700">
+                    <div className="text-green-700 dark:text-green-400">Collected</div>
+                    <div className="text-lg font-bold text-green-700 dark:text-green-400">
+                      {householdStats.collected}
+                    </div>
+                  </div>
+                  <div className="p-2 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700">
+                    <div className="text-red-700 dark:text-red-400">Not Collected</div>
+                    <div className="text-lg font-bold text-red-700 dark:text-red-400">
+                      {householdStats.notCollected}
+                    </div>
+                  </div>
+                </div>
+              </DataCard>
             </div>
 
           </div>
 
           {/* CENTER (MAP) PANEL */}
-          <div className="col-span-6 flex flex-col gap-3" style={{ height: "calc(110vh - 180px)" }}>
+          <div className="col-span-6 flex flex-col gap-3 h-full">
 
-            <div style={{ height: "70%" }}>
-              <DataCard className="h-full overflow-y-auto pt-1" title="Vehicle Map">
+            <div style={{ height: "80%" }}>
+              <DataCard className="h-full overflow-hidden flex flex-col">
+                <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
+                      Operations Map
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {MAP_TABS.find((tab) => tab.key === activeMapTab)?.summary}
+                    </p>
+                  </div>
+                  <MapTabs activeKey={activeMapTab} onChange={setActiveMapTab} />
+                </div>
 
-                <MapFilters
-                  filters={filters}
-                  onChange={setFilters}
-                  zones={zones}
-                  wards={wards}
-                  vehicles={vehicleNos}
-                  onSearch={applyFilters}
-                
-                />
-
-                <LeafletMapContainer vehicles={[]} height="100%" />
+                <div className="flex-1 min-h-0">
+                  {activeMapTab === "all" && (
+                    <div className="h-full w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+                      <LeafletMapContainer height="100%" />
+                    </div>
+                  )}
+                  {activeMapTab === "bins" && <BinMapPanel />}
+                  {activeMapTab === "households" && <HouseholdMapPanel />}
+                </div>
               </DataCard>
             </div>
 
-            <div style={{ height: "25%" }}>
+            <div style={{ height: "16%" }}>
 
-              <div className="grid grid-cols-1 gap-3 mt-4">
-                <BinStatus active={84} inactive={16} />
-                {/* <CameraStatus active={42} inactive={5} /> */}
-                {/* <TotalStatus active={126} inactive={21}/> */}
+              <div className="grid gap-3 mt-1 md:grid-cols-2">
+                <div className="p-4 rounded-lg border bg-white dark:bg-gray-900 dark:border-gray-700 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Trash2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                      <h3 className="text-sm font-semibold">Bin Sensors</h3>
+                    </div>
+                    <Link
+                      to={binsPath}
+                      className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                    >
+                      View all
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 text-xs font-medium">
+                    <div className="p-2 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700">
+                      <div className="text-green-700 dark:text-green-400">Active</div>
+                      <div className="text-lg font-bold text-green-700 dark:text-green-400">
+                        {binStats.active}
+                      </div>
+                    </div>
+
+                    <div className="p-2 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700">
+                      <div className="text-red-700 dark:text-red-400">Inactive</div>
+                      <div className="text-lg font-bold text-red-700 dark:text-red-400">
+                        {binStats.inactive}
+                      </div>
+                    </div>
+
+                    <div className="p-2 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700">
+                      <div className="text-yellow-700 dark:text-yellow-400">Total</div>
+                      <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">
+                        {binTotal}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <CameraStatus active={42} inactive={5} /> 
+                {/* <TotalStatus active={126} inactive={21}/>  */}
               </div>
 
             </div>
@@ -128,10 +203,11 @@ export function HomeDashboard() {
           </div>
 
           {/* RIGHT PANEL */}
-          <div className="col-span-3 space-y-3" style={{ maxHeight: "calc(110vh - 180px)" }}>
+          <div className="col-span-3 space-y-3 h-full overflow-y-auto">
             <ComplaintsPanel />
-            <WeighmentSummary />
             <VehicleStatusPanel />
+            <WeighmentSummary />
+            
           </div>
         </div>
       </DataCard>

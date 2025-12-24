@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import {
     PieChart,
     Pie,
@@ -7,9 +8,21 @@ import {
     Tooltip,
 } from "recharts";
 import { DataCard } from "../ui/DataCard";
+import { getEncryptedRoute } from "@/utils/routeCache";
+
+const API_BASE =
+    "https://zigma.in/d2d/folders/waste_collected_summary_report/test_waste_collected_data_api.php";
+const API_KEY = "ZIGMA-DELHI-WEIGHMENT-2025-SECURE";
+
+const formatDate = (date: Date) => date.toISOString().split("T")[0];
+const parseWeight = (value: unknown) =>
+    Number(String(value ?? "0").replace(/,/g, "")) || 0;
+const formatTons = (value: number) => value.toFixed(1);
 
 export function WastePieChart() {
     const COLORS = ["#43A047", "#1E88E5", "#FB8C00"]; // Wet, Dry, Mixed
+    const { encDashboardWasteCollection } = getEncryptedRoute();
+    const wasteCollectionPath = `/dashboard/${encDashboardWasteCollection}`;
 
     const [data, setData] = useState([
         { name: "Wet Waste", value: 0 },
@@ -18,48 +31,66 @@ export function WastePieChart() {
     ]);
 
     const total = data.reduce((sum, i) => sum + i.value, 0);
+    const fallbackAppliedRef = useRef(false);
 
-    const dummyData = [
-        { name: "Wet Waste", value: 52 },
-        { name: "Dry Waste", value: 35 },
-        { name: "Mixed Waste", value: 20 },
-    ];
-
-    // API + FALLBACK
+    // API + FALLBACK (yesterday if no data for today)
     useEffect(() => {
-        async function loadData() {
-            console.log("API_CALL");
+        const controller = new AbortController();
+        async function loadData(dateParam: string, allowFallback: boolean) {
             try {
                 const url =
-                    "https://zigma.in/d2d/folders/waste_collected_summary_report/waste_collected_data_api.php?from_date=2025-10-01&key=ZIGMA-DELHI-WEIGHMENT-2025-SECURE";
+                    `${API_BASE}?action=day_wise_data&from_date=${dateParam}&to_date=${dateParam}&key=${API_KEY}`;
 
-                const res = await fetch(url);
+                const res = await fetch(url, { signal: controller.signal });
                 const json = await res.json();
-                console.log("API_RESPONSE:", json);
 
-                if (!json.status || !json.data || json.data.length === 0) {
-                    console.warn("API returned no data → using dummy values");
-                    setData(dummyData);
+                const rows = Array.isArray(json?.data) ? json.data : [];
+                if (!rows.length) {
+                    if (allowFallback && !fallbackAppliedRef.current) {
+                        const yesterday = new Date();
+                        yesterday.setDate(yesterday.getDate() - 1);
+                        fallbackAppliedRef.current = true;
+                        await loadData(formatDate(yesterday), false);
+                        return;
+                    }
+                    setData([
+                        { name: "Wet Waste", value: 0 },
+                        { name: "Dry Waste", value: 0 },
+                        { name: "Mixed Waste", value: 0 },
+                    ]);
                     return;
                 }
 
-                const d = json.data[0];
+                const totals = rows.reduce(
+                    (acc: { wet: number; dry: number; mix: number }, row: any) => {
+                        acc.wet += parseWeight(row.Wet_Wt);
+                        acc.dry += parseWeight(row.Dry_Wt);
+                        acc.mix += parseWeight(row.Mix_Wt);
+                        return acc;
+                    },
+                    { wet: 0, dry: 0, mix: 0 }
+                );
 
-                const mapped = [
-                    { name: "Wet Waste", value: d.wet_weight || dummyData[0].value },
-                    { name: "Dry Waste", value: d.dry_weight || dummyData[1].value },
-                    { name: "Mixed Waste", value: d.mix_weight || dummyData[2].value },
-                ];
-
-                setData(mapped);
+                setData([
+                    { name: "Wet Waste", value: totals.wet / 1000 },
+                    { name: "Dry Waste", value: totals.dry / 1000 },
+                    { name: "Mixed Waste", value: totals.mix / 1000 },
+                ]);
             } catch (error) {
-                console.error("API_ERROR:", error);
-                console.warn("API failed → using dummy data");
-                setData(dummyData);
+                if ((error as { name?: string })?.name === "AbortError") {
+                    return;
+                }
+                setData([
+                    { name: "Wet Waste", value: 0 },
+                    { name: "Dry Waste", value: 0 },
+                    { name: "Mixed Waste", value: 0 },
+                ]);
             }
         }
 
-        loadData();
+        const today = formatDate(new Date());
+        loadData(today, true);
+        return () => controller.abort();
     }, []);
 
     const CustomTooltip = ({ active, payload }: any) => {
@@ -74,7 +105,7 @@ export function WastePieChart() {
                         {item.name}
                     </div>
                     <div className="text-gray-600 dark:text-gray-400">
-                        {item.value} tons ({((item.value / total) * 100).toFixed(1)}%)
+                        {formatTons(item.value)} tons ({total ? ((item.value / total) * 100).toFixed(1) : "0.0"}%)
                     </div>
                 </div>
 
@@ -87,7 +118,18 @@ export function WastePieChart() {
     };
 
     return (
-        <DataCard title="Daily Waste Collection" compact>
+        <DataCard
+            title="Daily Waste Collection"
+            compact
+            action={
+                <Link
+                    to={wasteCollectionPath}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+                >
+                    View all
+                </Link>
+            }
+        >
             <div className="w-full h-48 relative flex">
 
                 {/* PIE CHART */}
@@ -116,7 +158,7 @@ export function WastePieChart() {
                         {/* TOTAL */}
                         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                             <span className="text-lg font-bold text-gray-800 dark:text-gray-200">
-                                {total}
+                                {formatTons(total)}
                             </span>
                             <span className="text-[10px] text-gray-500 dark:text-gray-400">
                                 Total (tons)
@@ -150,7 +192,7 @@ export function WastePieChart() {
                             </div>
 
                             <div className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
-                                {item.value} tons
+                                {formatTons(item.value)} tons
                             </div>
                         </div>
                     ))}

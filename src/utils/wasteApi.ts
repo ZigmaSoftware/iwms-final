@@ -79,7 +79,7 @@ const findArray = (node: any): any[] | null => {
 
 const parseProxyTemplates = (): string[] => {
   const fromEnv = RAW_PROXY_TEMPLATES.split(",")
-    .map((value) => value.trim())
+    .map((value: string) => value.trim())
     .filter(Boolean);
 
   return fromEnv.length > 0 ? fromEnv : DEFAULT_PROXY_TEMPLATES;

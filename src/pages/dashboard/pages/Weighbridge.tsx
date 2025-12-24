@@ -1,238 +1,386 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useEffect, useRef, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Scale, AlertTriangle, CheckCircle, Clock, Download } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Scale,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  RefreshCcw,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-const weighbridgeData = [
-  {
-    id: 1,
-    vehicle: "TRK-008",
-    time: "14:23",
-    expected: "2.8",
-    actual: "3.2",
-    difference: "+14%",
-    status: "critical",
-    zone: "Zone C",
-  },
-  {
-    id: 2,
-    vehicle: "TRK-001",
-    time: "13:45",
-    expected: "2.4",
-    actual: "2.5",
-    difference: "+4%",
-    status: "normal",
-    zone: "Zone A",
-  },
-  {
-    id: 3,
-    vehicle: "TRK-015",
-    time: "13:12",
-    expected: "3.1",
-    actual: "2.9",
-    difference: "-6%",
-    status: "warning",
-    zone: "Zone B",
-  },
-  {
-    id: 4,
-    vehicle: "TRK-022",
-    time: "12:38",
-    expected: "2.7",
-    actual: "2.7",
-    difference: "0%",
-    status: "normal",
-    zone: "Zone D",
-  },
-  {
-    id: 5,
-    vehicle: "TRK-019",
-    time: "11:56",
-    expected: "2.2",
-    actual: "2.8",
-    difference: "+27%",
-    status: "critical",
-    zone: "Zone E",
-  },
-  {
-    id: 6,
-    vehicle: "TRK-012",
-    time: "11:23",
-    expected: "3.0",
-    actual: "2.9",
-    difference: "-3%",
-    status: "normal",
-    zone: "Zone A",
-  },
-];
+/* =========================================================
+   API CONFIG (UNCHANGED)
+========================================================= */
+const API_BASE =
+  "https://zigma.in/d2d/folders/waste_collected_summary_report/test_waste_collected_data_api.php";
+const API_KEY = "ZIGMA-DELHI-WEIGHMENT-2025-SECURE";
 
+/* =========================================================
+   TYPES (UNCHANGED)
+========================================================= */
+type StatusType = "all" | "normal" | "warning" | "critical";
+
+type WeighbridgeRow = {
+  id: number;
+  vehicle: string;
+  time: string;
+  expected: string;
+  actual: string;
+  difference: string;
+  status: "normal" | "warning" | "critical";
+  zone: string;
+};
+
+/* =========================================================
+   STATUS STYLES (UNCHANGED)
+========================================================= */
+const statusStyles = {
+  normal: {
+    row: "bg-emerald-50/40 dark:bg-emerald-950/20",
+    diff: "text-emerald-600 dark:text-emerald-300",
+    badge:
+      "border-emerald-300 text-emerald-700 bg-emerald-50 dark:border-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300",
+    button:
+      "border-emerald-300 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-700 dark:text-emerald-300 dark:hover:bg-emerald-950/40",
+  },
+  warning: {
+    row: "bg-amber-50/40 dark:bg-amber-950/20",
+    diff: "text-amber-600 dark:text-amber-300",
+    badge:
+      "border-amber-300 text-amber-700 bg-amber-50 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-300",
+    button:
+      "border-amber-300 text-amber-600 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-300 dark:hover:bg-amber-950/40",
+  },
+  critical: {
+    row: "bg-rose-50/40 dark:bg-rose-950/20",
+    diff: "text-rose-600 dark:text-rose-300",
+    badge:
+      "border-rose-300 text-rose-700 bg-rose-50 dark:border-rose-700 dark:bg-rose-950/40 dark:text-rose-300",
+    button:
+      "border-rose-300 text-rose-600 hover:bg-rose-100 dark:border-rose-700 dark:text-rose-300 dark:hover:bg-rose-950/40",
+  },
+} as const;
+
+/* =========================================================
+   COMPONENT
+========================================================= */
 export default function Weighbridge() {
-  const criticalCount = weighbridgeData.filter((d) => d.status === "critical").length;
-  const warningCount = weighbridgeData.filter((d) => d.status === "warning").length;
-  const normalCount = weighbridgeData.filter((d) => d.status === "normal").length;        
+  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+  const today = formatDate(new Date());
+  const fallbackAppliedRef = useRef(false);
+  const initialLoadRef = useRef(true);
 
+  const [fromDate, setFromDate] = useState(today);
+  const [toDate, setToDate] = useState(today);
+  const [data, setData] = useState<WeighbridgeRow[]>([]);
+  const [activeStatus, setActiveStatus] = useState<StatusType>("all");
+
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  /* ================= FETCH (UNCHANGED) ================= */
+  useEffect(() => {
+    const url = `${API_BASE}?action=day_wise_data&from_date=${fromDate}&to_date=${toDate}&key=${API_KEY}`;
+
+    fetch(url)
+      .then(res => res.json())
+      .then(json => {
+        const rows = Array.isArray(json.data) ? json.data : [];
+        if (!rows.length) {
+          setData([]);
+          if (
+            initialLoadRef.current &&
+            !fallbackAppliedRef.current &&
+            fromDate === today &&
+            toDate === today
+          ) {
+            const yesterday = new Date();
+            yesterday.setDate(yesterday.getDate() - 1);
+            const fallbackDate = formatDate(yesterday);
+            fallbackAppliedRef.current = true;
+            setFromDate(fallbackDate);
+            setToDate(fallbackDate);
+          }
+          return;
+        }
+
+        const EXPECTED = 500;
+
+        const mapped = rows.map((r: any, i: number) => {
+          const actualKg = Number(String(r.Net_Wt ?? "0").replace(/,/g, ""));
+          const diffPct = ((actualKg - EXPECTED) / EXPECTED) * 100;
+
+          let status: WeighbridgeRow["status"] = "normal";
+          if (Math.abs(diffPct) > 10) status = "critical";
+          else if (Math.abs(diffPct) > 5) status = "warning";
+
+          return {
+            id: i + 1,
+            vehicle: r.Vehicle_No ?? "--",
+            time: r.Date?.split(" ")[1]?.slice(0, 5) ?? "--",
+            zone: r.Zone ?? "Delhi",
+            expected: (EXPECTED / 1000).toFixed(1),
+            actual: (actualKg / 1000).toFixed(1),
+            difference: `${diffPct > 0 ? "+" : ""}${diffPct.toFixed(0)}%`,
+            status,
+          };
+        });
+
+        setData(mapped);
+        setPage(1);
+        setActiveStatus("all");
+      })
+      .catch(() => setData([]))
+      .finally(() => {
+        initialLoadRef.current = false;
+      });
+  }, [fromDate, toDate]);
+
+  const filtered =
+    activeStatus === "all" ? data : data.filter(d => d.status === activeStatus);
+
+  const totalPages = Math.ceil(filtered.length / rowsPerPage) || 1;
+  const pageData = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+
+  /* ================= RENDER ================= */
   return (
-   <div className="space-y-6 h-[calc(100vh-80px)] overflow-y-auto pr-2 pb-6">
-      <div className="flex items-center justify-between">
+    <div className="p-6 space-y-6 bg-white dark:bg-slate-950 min-h-screen">
+
+      {/* HEADER (UNCHANGED) */}
+      <div className="flex items-center justify-between p-6 rounded-2xl border bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-slate-900 dark:to-slate-900 dark:border-slate-800">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground">Weighbridge Log</h2>
-          <p className="text-muted-foreground">Real-time weight tracking and discrepancy monitoring</p>
+          <h2 className="text-3xl font-bold text-blue-600 dark:text-blue-400">
+            Weighbridge Log
+          </h2>
+          <p className="text-muted-foreground">
+            Real-time weight tracking and discrepancy monitoring
+          </p>
         </div>
-        <Button>
-          <Download className="h-4 w-4 mr-2" />
-          Export Log
+
+        <Button
+          onClick={() => window.location.reload()}
+          className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white"
+        >
+          <RefreshCcw className="h-4 w-4" />
+          Refresh
         </Button>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold">{weighbridgeData.length}</p>
-                <p className="text-xs text-muted-foreground">Total Entries Today</p>
-              </div>
-              <Scale className="h-8 w-8 text-primary" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-success/50 bg-success/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-success">{normalCount}</p>
-                <p className="text-xs text-muted-foreground">Within Tolerance</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-success" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-warning/50 bg-warning/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-warning">{warningCount}</p>
-                <p className="text-xs text-muted-foreground">Minor Deviation</p>
-              </div>
-              <Clock className="h-8 w-8 text-warning" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-destructive/50 bg-destructive/5">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-destructive">{criticalCount}</p>
-                <p className="text-xs text-muted-foreground">Critical Mismatch</p>
-              </div>
-              <AlertTriangle className="h-8 w-8 text-destructive" />
-            </div>
-          </CardContent>
-        </Card>
+      {/* STATS — COLOR ADDED HERE ONLY */}
+      <div className="grid md:grid-cols-4 gap-4">
+        <Stat
+          title="Total Entries Today"
+          value={data.length}
+          icon={Scale}
+          active={activeStatus === "all"}
+          onClick={() => setActiveStatus("all")}
+          gradient="from-white to-blue-100 dark:from-slate-900 dark:to-blue-950/40"
+        />
+        <Stat
+          title="Within Tolerance"
+          value={data.filter(d => d.status === "normal").length}
+          icon={CheckCircle}
+          active={activeStatus === "normal"}
+          onClick={() => setActiveStatus("normal")}
+          gradient="from-white to-emerald-100 dark:from-slate-900 dark:to-emerald-950/40"
+        />
+        <Stat
+          title="Minor Deviations"
+          value={data.filter(d => d.status === "warning").length}
+          icon={Clock}
+          active={activeStatus === "warning"}
+          onClick={() => setActiveStatus("warning")}
+          gradient="from-white to-amber-100 dark:from-slate-900 dark:to-amber-950/40"
+        />
+        <Stat
+          title="Critical Mismatch"
+          value={data.filter(d => d.status === "critical").length}
+          icon={AlertTriangle}
+          active={activeStatus === "critical"}
+          onClick={() => setActiveStatus("critical")}
+          gradient="from-white to-rose-100 dark:from-slate-900 dark:to-rose-950/40"
+        />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Weight Entries Log</CardTitle>
-          <CardDescription>Real-time weighbridge integration with automatic discrepancy detection</CardDescription>
+      {/* TABLE (UNCHANGED) */}
+      <Card className="rounded-2xl bg-white dark:bg-slate-900 dark:border-slate-800">
+        <CardHeader className="flex flex-row justify-between items-start">
+          <div>
+            <CardTitle>Weight Entries Log</CardTitle>
+            <CardDescription>
+              Real-time weighbridge integration with automatic discrepancy detection
+            </CardDescription>
+          </div>
+
+          {/* CALENDAR (UNCHANGED) */}
+          <div className="flex items-center gap-2">
+            <input
+              type="date"
+              value={fromDate}
+              onChange={e => setFromDate(e.target.value)}
+              className="h-9 rounded-md border bg-white dark:bg-slate-950 dark:border-slate-700 px-3 text-sm"
+            />
+            <span className="text-sm font-medium dark:text-slate-300">to</span>
+            <input
+              type="date"
+              value={toDate}
+              onChange={e => setToDate(e.target.value)}
+              className="h-9 rounded-md border bg-white dark:bg-slate-950 dark:border-slate-700 px-3 text-sm"
+            />
+          </div>
         </CardHeader>
+
         <CardContent>
           <Table>
             <TableHeader>
-              <TableRow>
+              <TableRow className="bg-slate-100 dark:bg-slate-800">
                 <TableHead>Time</TableHead>
-                <TableHead>Vehicle ID</TableHead>
+                <TableHead>Vehicle</TableHead>
                 <TableHead>Zone</TableHead>
-                <TableHead>Expected Weight</TableHead>
-                <TableHead>Actual Weight</TableHead>
+                <TableHead>Expected</TableHead>
+                <TableHead>Actual</TableHead>
                 <TableHead>Difference</TableHead>
                 <TableHead>Status</TableHead>
-                <TableHead>Action</TableHead>
+                <TableHead className="text-right">Action</TableHead>
               </TableRow>
             </TableHeader>
+
             <TableBody>
-              {weighbridgeData.map((entry) => (
-                <TableRow key={entry.id} className={entry.status === "critical" ? "bg-destructive/5" : ""}>
-                  <TableCell className="font-medium">{entry.time}</TableCell>
-                  <TableCell>{entry.vehicle}</TableCell>
-                  <TableCell>{entry.zone}</TableCell>
-                  <TableCell>{entry.expected} tons</TableCell>
-                  <TableCell className="font-semibold">{entry.actual} tons</TableCell>
-                  <TableCell>
-                    <span
-                      className={`font-medium ${
-                        entry.status === "critical"
-                          ? "text-destructive"
-                          : entry.status === "warning"
-                          ? "text-warning"
-                          : "text-success"
-                      }`}
-                    >
-                      {entry.difference}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        entry.status === "critical"
-                          ? "border-destructive text-destructive bg-destructive/10"
-                          : entry.status === "warning"
-                          ? "border-warning text-warning bg-warning/10"
-                          : "border-success text-success bg-success/10"
-                      }
-                    >
-                      {entry.status === "critical" ? (
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                      ) : entry.status === "normal" ? (
-                        <CheckCircle className="h-3 w-3 mr-1" />
-                      ) : (
-                        <Clock className="h-3 w-3 mr-1" />
-                      )}
-                      {entry.status.toUpperCase()}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant={entry.status === "critical" ? "destructive" : "outline"}
-                      size="sm"
-                    >
-                      {entry.status === "critical" ? "Investigate" : "View"}
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {pageData.map(row => {
+                const s = statusStyles[row.status];
+                return (
+                  <TableRow key={row.id} className={s.row}>
+                    <TableCell>{row.time}</TableCell>
+                    <TableCell>{row.vehicle}</TableCell>
+                    <TableCell>{row.zone}</TableCell>
+                    <TableCell>{row.expected} tons</TableCell>
+                    <TableCell className="font-semibold">
+                      {row.actual} tons
+                    </TableCell>
+                    <TableCell className={s.diff}>{row.difference}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={s.badge}>
+                        {row.status.toUpperCase()}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button size="sm" variant="outline" className={s.button}>
+                        {row.status === "critical" ? "Investigate" : "View"}
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
-        </CardContent>
-      </Card>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tolerance Settings</CardTitle>
-          <CardDescription>Current weighbridge tolerance limits and alert thresholds</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Normal Tolerance</p>
-              <p className="text-2xl font-bold text-success">±5%</p>
-              <p className="text-xs text-muted-foreground">No alerts generated</p>
+          {/* PAGINATION (UNCHANGED) */}
+          <div className="flex justify-between items-center mt-4">
+            <div className="flex items-center gap-2 text-sm">
+              Rows per page
+              <select
+                value={rowsPerPage}
+                onChange={e => setRowsPerPage(Number(e.target.value))}
+                className="border rounded px-2 py-1 bg-white dark:bg-slate-950 dark:border-slate-700"
+              >
+                {[10, 20, 50].map(n => (
+                  <option key={n} value={n}>{n}</option>
+                ))}
+              </select>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Warning Threshold</p>
-              <p className="text-2xl font-bold text-warning">±10%</p>
-              <p className="text-xs text-muted-foreground">Requires verification</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-muted-foreground">Critical Threshold</p>
-              <p className="text-2xl font-bold text-destructive">&gt;10%</p>
-              <p className="text-xs text-muted-foreground">Immediate investigation</p>
+
+            <div className="flex items-center gap-2">
+              <Button size="icon" variant="ghost" disabled={page === 1}
+                onClick={() => setPage(p => p - 1)}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              Page {page} of {totalPages}
+              <Button size="icon" variant="ghost" disabled={page === totalPages}
+                onClick={() => setPage(p => p + 1)}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* TOLERANCE (UNCHANGED) */}
+      <Card className="rounded-2xl bg-white dark:bg-slate-900 dark:border-slate-800">
+        <CardHeader>
+          <CardTitle>Tolerance Settings</CardTitle>
+          <CardDescription>
+            Current weighbridge tolerance limits and alert thresholds
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid md:grid-cols-3 gap-4">
+          <ToleranceCard title="Normal Tolerance" value="±5%" description="No alerts generated" />
+          <ToleranceCard title="Warning Threshold" value="±10%" description="Requires verification" />
+          <ToleranceCard title="Critical Threshold" value=">10%" description="Immediate investigation" />
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+/* =========================================================
+   STAT CARD (COLOR ONLY HERE)
+========================================================= */
+function Stat({ title, value, icon: Icon, active, onClick, gradient }: any) {
+  return (
+    <Card
+      onClick={onClick}
+      className={cn(
+        "cursor-pointer rounded-2xl border bg-gradient-to-br transition",
+        gradient,
+        active && "ring-2 ring-blue-400"
+      )}
+    >
+      <CardContent className="flex justify-between items-center p-6">
+        <div>
+          <p className="text-sm text-muted-foreground">{title}</p>
+          <p className="text-3xl font-bold">{value}</p>
+        </div>
+        <Icon className="h-6 w-6 text-slate-600 dark:text-slate-400" />
+      </CardContent>
+    </Card>
+  );
+}
+/* =========================================================
+   TOLERANCE CARD (UNCHANGED)
+========================================================= */
+function ToleranceCard({
+  title,
+  value,
+  description,
+}: {
+  title: string;
+  value: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-xl border bg-white dark:bg-slate-950 dark:border-slate-800 p-6 shadow-sm">
+      <p className="text-sm text-muted-foreground">{title}</p>
+      <p className="text-3xl font-bold mt-2">{value}</p>
+      <p className="text-xs text-muted-foreground mt-2">{description}</p>
     </div>
   );
 }

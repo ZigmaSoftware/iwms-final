@@ -7,8 +7,6 @@ import {
   Pie,
   BarChart,
   Bar,
-  LineChart,
-  Line,
   Tooltip,
   ResponsiveContainer,
   XAxis,
@@ -50,6 +48,9 @@ import {
 import { MetricCard } from "./MetricCard";
 import { DashboardSection } from "./DashboardSection";
 
+/* -----------------------------------------
+   TYPES
+----------------------------------------- */
 interface DashboardStats {
   masterData: Record<string, number>;
   users: Record<string, number>;
@@ -58,6 +59,9 @@ interface DashboardStats {
   system: Record<string, number>;
 }
 
+/* -----------------------------------------
+   COMPONENT
+----------------------------------------- */
 export default function AdminHome() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
@@ -72,11 +76,14 @@ export default function AdminHome() {
     fetchDashboardData();
   }, []);
 
+  /* -----------------------------------------
+     DATA FETCH
+  ----------------------------------------- */
   const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
+    setLoading(true);
 
-      const r = await Promise.all([
+    try {
+      const requests = [
         continentApi.list(),
         countryApi.list(),
         stateApi.list(),
@@ -102,47 +109,51 @@ export default function AdminHome() {
         userScreenApi.list(),
         userScreenActionApi.list(),
         userScreenPermissionApi.list(),
-      ]);
+      ];
 
-      const safe = (a: any[]) => (Array.isArray(a) ? a.length : 0);
-      const users = r[9];
+      const results = await Promise.allSettled(requests);
+
+      const pick = <T,>(i: number): T[] =>
+        results[i]?.status === "fulfilled" ? results[i].value : [];
+
+      const users = pick<any>(9);
 
       setStats({
         masterData: {
-          Continents: safe(r[0]),
-          Countries: safe(r[1]),
-          States: safe(r[2]),
-          Districts: safe(r[3]),
-          Cities: safe(r[4]),
-          Zones: safe(r[5]),
-          Wards: safe(r[6]),
-          Properties: safe(r[7]),
-          "Sub Properties": safe(r[8]),
+          Continents: pick<any>(0).length,
+          Countries: pick<any>(1).length,
+          States: pick<any>(2).length,
+          Districts: pick<any>(3).length,
+          Cities: pick<any>(4).length,
+          Zones: pick<any>(5).length,
+          Wards: pick<any>(6).length,
+          Properties: pick<any>(7).length,
+          "Sub Properties": pick<any>(8).length,
         },
         users: {
-          "Total Users": safe(r[9]),
-          Staff: safe(r[12]),
-          Customers: safe(r[13]),
-          "User Types": safe(r[10]),
-          "Staff User Types": safe(r[11]),
-          "Active Users": users?.filter((u: any) => u.is_active)?.length || 0,
+          "Total Users": users.length,
+          Staff: pick<any>(12).length,
+          Customers: pick<any>(13).length,
+          "User Types": pick<any>(10).length,
+          "Staff User Types": pick<any>(11).length,
+          "Active Users": users.filter((u) => u?.is_active).length,
         },
         transport: {
-          Vehicles: safe(r[14]),
-          "Vehicle Types": safe(r[15]),
-          "Fuel Types": safe(r[16]),
+          Vehicles: pick<any>(14).length,
+          "Vehicle Types": pick<any>(15).length,
+          "Fuel Types": pick<any>(16).length,
         },
         operations: {
-          "Waste Collections": safe(r[17]),
-          Complaints: safe(r[18]),
-          Feedbacks: safe(r[19]),
+          "Waste Collections": pick<any>(17).length,
+          Complaints: pick<any>(18).length,
+          Feedbacks: pick<any>(19).length,
         },
         system: {
-          "Main Screen Types": safe(r[20]),
-          "Main Screens": safe(r[21]),
-          "User Screens": safe(r[22]),
-          "Screen Actions": safe(r[23]),
-          Permissions: safe(r[24]),
+          "Main Screen Types": pick<any>(20).length,
+          "Main Screens": pick<any>(21).length,
+          "User Screens": pick<any>(22).length,
+          "Screen Actions": pick<any>(23).length,
+          Permissions: pick<any>(24).length,
         },
       });
     } finally {
@@ -150,10 +161,10 @@ export default function AdminHome() {
     }
   };
 
-  const totalMaster = Object.values(stats.masterData).reduce(
-    (a, b) => a + b,
-    0
-  );
+  /* -----------------------------------------
+     DERIVED DATA
+  ----------------------------------------- */
+  const totalMaster = Object.values(stats.masterData).reduce((a, b) => a + b, 0);
   const totalOps = Object.values(stats.operations).reduce((a, b) => a + b, 0);
 
   const userPie = [
@@ -171,16 +182,13 @@ export default function AdminHome() {
     value: v,
   }));
 
-  const hasUserPieData =
-    Array.isArray(userPie) && userPie.some((d) => d.value > 0);
+  const hasUserPieData = userPie.some((d) => d.value > 0);
+  const hasMasterBarData = masterBar.some((d) => d.value > 0);
+  const hasOpsLineData = opsLine.some((d) => d.value > 0);
 
-  const hasMasterBarData =
-    Array.isArray(masterBar) && masterBar.some((d) => d.value > 0);
-
-  const hasOpsLineData =
-    Array.isArray(opsLine) && opsLine.some((d) => d.value > 0);
-  console.log("ops", opsLine);
-
+  /* -----------------------------------------
+     UI
+  ----------------------------------------- */
   return (
     <div className="space-y-8 p-6">
       {/* HEADER */}
@@ -199,30 +207,10 @@ export default function AdminHome() {
 
       {/* KPI STRIP */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard
-          title="Total Master Data"
-          value={totalMaster}
-          icon="public"
-          loading={loading}
-        />
-        <MetricCard
-          title="Total Users"
-          value={stats.users["Total Users"] || 0}
-          icon="group"
-          loading={loading}
-        />
-        <MetricCard
-          title="Total Operations"
-          value={totalOps}
-          icon="assignment"
-          loading={loading}
-        />
-        <MetricCard
-          title="Active Users"
-          value={stats.users["Active Users"] || 0}
-          icon="check_circle"
-          loading={loading}
-        />
+        <MetricCard title="Total Master Data" value={totalMaster} icon="public" loading={loading} />
+        <MetricCard title="Total Users" value={stats.users["Total Users"] || 0} icon="group" loading={loading} />
+        <MetricCard title="Total Operations" value={totalOps} icon="assignment" loading={loading} />
+        <MetricCard title="Active Users" value={stats.users["Active Users"] || 0} icon="check_circle" loading={loading} />
       </div>
 
       {/* CHARTS */}
@@ -231,13 +219,7 @@ export default function AdminHome() {
           {hasUserPieData ? (
             <ResponsiveContainer width="100%" height={220}>
               <PieChart>
-                <Pie
-                  data={userPie}
-                  dataKey="value"
-                  nameKey="name"
-                  outerRadius={80}
-                  label
-                >
+                <Pie data={userPie} dataKey="value" nameKey="name" outerRadius={80} label>
                   <Cell fill="#22c55e" />
                   <Cell fill="#3b82f6" />
                 </Pie>
@@ -245,11 +227,7 @@ export default function AdminHome() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart
-              icon="pie_chart"
-              title="No user data available"
-              subtitle=" Add staff or customers to see insights"
-            />
+            <EmptyChart icon="pie_chart" title="No user data" subtitle="No permission or data" />
           )}
         </ChartCard>
 
@@ -263,84 +241,23 @@ export default function AdminHome() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart
-              icon="bar_chart"
-              title="No master data available"
-              subtitle="Add locations or properties to view analytics"
-            />
+            <EmptyChart icon="bar_chart" title="No master data" subtitle="Permission restricted" />
           )}
         </ChartCard>
 
         <ChartCard title="Operations Snapshot" icon="show_chart">
           {hasOpsLineData ? (
-            <div className="group relative">
-              <ResponsiveContainer width="100%" height={220}>
-                <AreaChart
-                  data={opsLine}
-                  margin={{ top: 20, right: 20, left: 0, bottom: 50 }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 6"
-                    opacity={0.12}
-                    vertical={false}
-                  />
-
-                  <XAxis
-                    dataKey="name"
-                    interval={0}
-                    height={40}
-                    angle={-100}
-                    textAnchor="end"
-                    tickFormatter={(value: string) =>
-                      value.length > 14 ? value.slice(0, 14) + "…" : value
-                    }
-                    tick={{ fontSize: 11, opacity: 0.75 }}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-
-                  <YAxis hide />
-
-                  <Tooltip
-                    cursor={{
-                      stroke: "#6366F1",
-                      strokeWidth: 1,
-                      strokeDasharray: "4 4",
-                    }}
-                    contentStyle={{
-                      background: "hsl(var(--background))",
-                      borderRadius: "12px",
-                      border: "1px solid hsl(var(--border))",
-                      boxShadow: "0 12px 30px rgba(0,0,0,0.15)",
-                      padding: "10px 14px",
-                    }}
-                    labelStyle={{ fontWeight: 600 }}
-                    formatter={(value: number) => [value, "Total Count"]}
-                  />
-
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    stroke="#6366F1"
-                    strokeWidth={2.5}
-                    fill="rgba(99,102,241,0.18)"
-                    dot={false}
-                    activeDot={{
-                      r: 6,
-                      strokeWidth: 2,
-                      stroke: "#6366F1",
-                      fill: "hsl(var(--background))",
-                    }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            <ResponsiveContainer width="100%" height={220}>
+              <AreaChart data={opsLine}>
+                <CartesianGrid strokeDasharray="3 6" opacity={0.12} />
+                <XAxis dataKey="name" hide />
+                <YAxis hide />
+                <Tooltip />
+                <Area type="monotone" dataKey="value" stroke="#6366F1" fill="rgba(99,102,241,0.18)" />
+              </AreaChart>
+            </ResponsiveContainer>
           ) : (
-            <EmptyChart
-              icon="show_chart"
-              title="No operations data available"
-              subtitle="Data will appear once operations start"
-            />
+            <EmptyChart icon="show_chart" title="No operations data" subtitle="No permission or data" />
           )}
         </ChartCard>
       </div>
@@ -348,32 +265,22 @@ export default function AdminHome() {
       {/* DETAIL SECTIONS */}
       <DashboardSection title="Master Data" icon="location_on">
         {Object.entries(stats.masterData).map(([k, v]) => (
-          <MetricCard
-            key={k}
-            title={k}
-            value={v}
-            icon="database"
-            loading={loading}
-          />
+          <MetricCard key={k} title={k} value={v} icon="database" loading={loading} />
         ))}
       </DashboardSection>
 
       <DashboardSection title="User Management" icon="people">
         {Object.entries(stats.users).map(([k, v]) => (
-          <MetricCard
-            key={k}
-            title={k}
-            value={v}
-            icon="person"
-            loading={loading}
-          />
+          <MetricCard key={k} title={k} value={v} icon="person" loading={loading} />
         ))}
       </DashboardSection>
     </div>
   );
 }
 
-/* ---------- Chart Card ---------- */
+/* -----------------------------------------
+   UI HELPERS
+----------------------------------------- */
 
 const ChartCard = ({ title, icon, children }: any) => (
   <div className="rounded-2xl border bg-white p-5 shadow-sm transition hover:shadow-md dark:bg-slate-900">
@@ -385,15 +292,7 @@ const ChartCard = ({ title, icon, children }: any) => (
   </div>
 );
 
-const EmptyChart = ({
-  icon,
-  title,
-  subtitle,
-}: {
-  icon: string;
-  title: string;
-  subtitle: string;
-}) => (
+const EmptyChart = ({ icon, title, subtitle }: any) => (
   <div className="flex h-[220px] flex-col items-center justify-center text-center">
     <GIcon name={icon} className="mb-2 text-4xl text-muted-foreground" />
     <p className="text-sm font-medium text-muted-foreground">{title}</p>

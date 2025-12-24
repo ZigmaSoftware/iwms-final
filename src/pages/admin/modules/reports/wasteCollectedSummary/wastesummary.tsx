@@ -44,9 +44,6 @@ type ApiRow = {
   mix_weight: number;
   total_net_weight: number;
   average_weight_per_trip: number;
-  total_household?: number;
-  wt_collected?: number;
-  wt_not_collected?: number;
 };
 
 /* ================= COMPONENT ================= */
@@ -57,9 +54,13 @@ export default function WasteSummary() {
     today.getMonth() + 1
   ).padStart(2, "0")}`;
 
+  /** month input (UI only) */
   const [monthValue, setMonthValue] = useState(initialMonth);
+
+  /** applied month (used for API) */
+  const [appliedMonth, setAppliedMonth] = useState(initialMonth);
+
   const [rows, setRows] = useState<ApiRow[]>([]);
-  const [loading, setLoading] = useState(false);
 
   const [totalHouseholdCount, setTotalHouseholdCount] = useState<number | null>(null);
   const [totalWasteCollectedCount, setTotalWasteCollectedCount] = useState<number | null>(null);
@@ -107,23 +108,21 @@ export default function WasteSummary() {
 
   /* ================= FETCH MONTH DATA ================= */
 
-  const fetchMonthData = async () => {
-    setLoading(true);
+  const fetchMonthData = async (month: string) => {
     try {
-      const url = `${ZIGMA_API_BASE}/waste_collected_summary_report/waste_collected_data_api.php?from_date=${monthValue}-01&key=ZIGMA-DELHI-WEIGHMENT-2025-SECURE`;
+      const url = `${ZIGMA_API_BASE}/waste_collected_summary_report/waste_collected_data_api.php?from_date=${month}-01&key=ZIGMA-DELHI-WEIGHMENT-2025-SECURE`;
       const res = await fetch(url);
       const json = await res.json();
       setRows(Array.isArray(json?.data) ? json.data : []);
     } catch {
       setRows([]);
-    } finally {
-      setLoading(false);
     }
   };
 
+  /** fetch only when Go is clicked */
   useEffect(() => {
-    fetchMonthData();
-  }, [monthValue]);
+    fetchMonthData(appliedMonth);
+  }, [appliedMonth]);
 
   /* ================= MASTER COUNTS ================= */
 
@@ -200,7 +199,7 @@ export default function WasteSummary() {
 
     saveAs(
       new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })]),
-      `waste-summary-${monthValue}.xlsx`
+      `waste-summary-${appliedMonth}.xlsx`
     );
   };
 
@@ -220,7 +219,8 @@ export default function WasteSummary() {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          {/* 🔹 MONTH + GO + DOWNLOAD */}
+          <div className="flex gap-3 items-center">
             <input
               type="month"
               value={monthValue}
@@ -228,6 +228,13 @@ export default function WasteSummary() {
               onChange={(e) => setMonthValue(e.target.value)}
               className="border px-2 py-1 rounded"
             />
+
+            <button
+              onClick={() => setAppliedMonth(monthValue)}
+              className="bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              Go
+            </button>
 
             <button
               onClick={handleDownload}
@@ -243,7 +250,6 @@ export default function WasteSummary() {
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          loading={loading}
           filters={filters}
           header={renderHeader()}
           stripedRows

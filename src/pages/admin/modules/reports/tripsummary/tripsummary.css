@@ -74,13 +74,19 @@
   background: var(--admin-surfaceAlt);
 }
 
+.trip-date-input {
+  border: 2px solid rgba(56, 189, 248, 0.4);
+  background: linear-gradient(145deg, rgba(56, 189, 248, 0.08), rgba(255, 255, 255, 0.02));
+  color: var(--admin-text);
+}
+
 .btn-go {
   align-self: flex-end;
   border: none;
   border-radius: 10px;
   padding: 12px 28px;
   font-weight: 600;
-  background: var(--green-custom);
+  background: #2563eb;
   color: #fff;
   cursor: pointer;
 }

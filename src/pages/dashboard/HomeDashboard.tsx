@@ -68,62 +68,78 @@ const HomeDashboard: React.FC = () => {
       {/* KPI ROW */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">
               {t("dashboard.kpi_collections")}
             </CardTitle>
-            <GIcon name="local_shipping" className="text-base text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">128</div>
-            <p className="text-xs text-emerald-600 mt-1">
-              {t("dashboard.kpi_delta_collections")}
-            </p>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-semibold">128</div>
+              <p className="text-xs text-emerald-600 mt-1">
+                {t("dashboard.kpi_delta_collections")}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-100">
+              <GIcon name="local_shipping" className="text-lg text-emerald-600" />
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">
               {t("dashboard.kpi_efficiency")}
             </CardTitle>
-            <GIcon name="monitor_heart" className="text-base text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">92%</div>
-            <p className="text-xs text-emerald-600 mt-1">
-              {t("dashboard.kpi_delta_efficiency")}
-            </p>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-semibold">92%</div>
+              <p className="text-xs text-emerald-600 mt-1">
+                {t("dashboard.kpi_delta_efficiency")}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-sky-50 border border-sky-100">
+              <GIcon name="monitor_heart" className="text-lg text-sky-600" />
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">
               {t("dashboard.kpi_grievances")}
             </CardTitle>
-            <GIcon name="warning" className="text-base text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">17</div>
-            <p className="text-xs text-emerald-600 mt-1">
-              {t("dashboard.kpi_delta_grievances")}
-            </p>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-semibold">17</div>
+              <p className="text-xs text-emerald-600 mt-1">
+                {t("dashboard.kpi_delta_grievances")}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-100">
+              <GIcon name="warning" className="text-lg text-amber-600" />
+            </div>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground">
               {t("dashboard.kpi_workforce")}
             </CardTitle>
-            <GIcon name="groups" className="text-base text-muted-foreground" />
           </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-semibold">246</div>
-            <p className="text-xs text-emerald-600 mt-1">
-              {t("dashboard.kpi_delta_workforce")}
-            </p>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-semibold">246</div>
+              <p className="text-xs text-emerald-600 mt-1">
+                {t("dashboard.kpi_delta_workforce")}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-indigo-50 border border-indigo-100">
+              <GIcon name="groups" className="text-lg text-indigo-600" />
+            </div>
           </CardContent>
         </Card>
       </div>

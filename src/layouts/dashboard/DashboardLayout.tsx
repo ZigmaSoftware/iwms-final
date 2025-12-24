@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { LogOut, Moon, Sun } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
-import { HorizontalNav } from "@/components/HorizontalNav";
+import { HorizontalNav } from "@/layouts/dashboard/components/HorizontalNav";
 import { Button } from "@/components/ui/button";
 import { PageLoader } from "@/components/ui/PageLoader";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -97,7 +97,12 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             <HorizontalNav />
 
             {isAdmin && (
-              <Button variant="outline" size="sm" onClick={handleSwitchToAdmin}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSwitchToAdmin}
+                className="rainbow-border"
+              >
                 Admin View
               </Button>
             )}
