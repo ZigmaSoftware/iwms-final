@@ -14,6 +14,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
+import { complaintApi } from "@/helpers/admin";
 
 type Complaint = {
   id: number;
@@ -60,8 +61,8 @@ export default function ComplaintsList() {
 
   const fetchData = async () => {
     try {
-      const res = await desktopApi.get("/complaints/");
-      setComplaints(res.data);
+      const res = await complaintApi.list();
+      setComplaints(res);
     } catch {
       Swal.fire("Error", "Unable to load complaints", "error");
     } finally {
