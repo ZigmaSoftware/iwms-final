@@ -132,7 +132,7 @@ export default function MainComplaintCategoryList() {
 
   return (
     <div className="p-6">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+
         {/* TITLE ROW */}
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -193,7 +193,7 @@ export default function MainComplaintCategoryList() {
             style={{ width: "150px" }}
           />
         </DataTable>
-      </div>
+
     </div>
   );
 }

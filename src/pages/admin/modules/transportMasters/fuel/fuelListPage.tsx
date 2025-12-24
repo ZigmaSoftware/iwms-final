@@ -153,7 +153,7 @@ export default function FuelList() {
 
   return (
     <div className="p-3">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+
 
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -212,7 +212,7 @@ export default function FuelList() {
             style={{ width: "150px" }}
           />
         </DataTable>
-      </div>
+
     </div>
   );
 }

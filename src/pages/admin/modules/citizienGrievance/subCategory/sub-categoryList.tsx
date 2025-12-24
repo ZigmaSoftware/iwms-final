@@ -132,7 +132,7 @@ export default function SubComplaintCategoryList() {
 
   return (
     <div className="p-3">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+
 
         {/* PAGE TITLE */}
         <div className="flex justify-between items-center mb-6">
@@ -181,7 +181,7 @@ export default function SubComplaintCategoryList() {
             style={{ width: "150px" }}
           />
         </DataTable>
-      </div>
+  
     </div>
   );
 }

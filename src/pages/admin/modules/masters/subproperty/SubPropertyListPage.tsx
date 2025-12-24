@@ -148,7 +148,7 @@ export default function SubPropertyList() {
   /* ================= UI ================= */
   return (
     <div className="p-3">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
@@ -210,7 +210,7 @@ export default function SubPropertyList() {
             style={{ width: "150px", textAlign: "center" }}
           />
         </DataTable>
-      </div>
+    
     </div>
   );
 }

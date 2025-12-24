@@ -207,7 +207,6 @@ export default function WasteSummary() {
 
   return (
     <div className="p-3">
-      <div className="bg-white rounded-lg shadow-lg p-6">
 
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -282,7 +281,7 @@ export default function WasteSummary() {
             body={(r) => Number(r.average_weight_per_trip).toFixed(2)}
           />
         </DataTable>
-      </div>
+
     </div>
   );
 }

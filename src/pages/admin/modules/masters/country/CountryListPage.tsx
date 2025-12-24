@@ -188,7 +188,7 @@ export default function CountryList() {
 
   return (
     <div className="p-3">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+      
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">Countries</h1>
@@ -241,7 +241,7 @@ export default function CountryList() {
           <Column header="Status" body={statusTemplate} />
           <Column header="Actions" body={actionTemplate} />
         </DataTable>
-      </div>
+     
     </div>
   );
 }

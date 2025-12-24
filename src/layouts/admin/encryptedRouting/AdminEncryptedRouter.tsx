@@ -39,14 +39,14 @@ import CustomerCreationForm from "@/pages/admin/modules/customerMasters/customer
 import TripSummary from "@/pages/admin/modules/reports/tripsummary/tripsummary";
 import MonthlyDistance from "@/pages/admin/modules/reports/monthlydistance/monthlydistance";
 import WasteSummary from "@/pages/admin/modules/reports/wasteCollectedSummary/wastesummary";
-import ComplaintsList from "@/pages/admin/modules/citizienGrievance/complaints/complaints";
+import ComplaintsList from "@/pages/admin/modules/citizienGrievance/complaints/complaintsList";
 import ComplaintAddForm from "@/pages/admin/modules/citizienGrievance/complaints/complaintsForm";
 import ComplaintEditForm from "@/pages/admin/modules/citizienGrievance/complaints/complaintsEditForm";
 import FeedBackFormList from "@/pages/admin/modules/citizienGrievance/feedback/feedBackFormListPage";
 import FeedBackForm from "@/pages/admin/modules/citizienGrievance/feedback/feedBackForm";
 import FuelList from "@/pages/admin/modules/transportMasters/fuel/fuelListPage";
 import FuelForm from "@/pages/admin/modules/transportMasters/fuel/fuelForm";
-import VehicleTypeCreation from "@/pages/admin/modules/transportMasters/vehicleTypecreation/vehicle-typeCreation";
+import VehicleTypeCreation from "@/pages/admin/modules/transportMasters/vehicleTypecreation/vehicle-typeCreationList";
 import VehicleTypeCreationForm from "@/pages/admin/modules/transportMasters/vehicleTypecreation/vechicle-typeCreationForm";
 import VehicleCreation from "@/pages/admin/modules/transportMasters/vehicleCreation/vehicleCreation";
 import VehicleCreationForm from "@/pages/admin/modules/transportMasters/vehicleCreation/vehicleCreationForm";

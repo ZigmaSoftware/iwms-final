@@ -117,7 +117,7 @@ export default function UserScreenPermissionList() {
   if (!confirmDelete.isConfirmed) return;
 
   try {
-    // 🔥 Direct delete using backend new endpoint
+    //  Direct delete using backend new endpoint
     await userScreenPermissionApi.remove(
       `delete-by-staffusertype/${staffTypeId}`
     );
@@ -210,7 +210,7 @@ export default function UserScreenPermissionList() {
   ----------------------------------------------------------- */
   return (
     <div className="p-3">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+    
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">
@@ -252,7 +252,7 @@ export default function UserScreenPermissionList() {
           {/* <Column header="Status" body={statusTemplate} style={{ width: 120 }} /> */}
           <Column header="Actions" body={actionTemplate} style={{ width: 150 }} />
         </DataTable>
-      </div>
+
     </div>
   );
 }

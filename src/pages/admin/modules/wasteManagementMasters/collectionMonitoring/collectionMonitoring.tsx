@@ -440,7 +440,7 @@ const WasteCollectionMonitor: React.FC = () => {
 
   return (
     <div className="p-4 space-y-4">
-      <div className="bg-white rounded-xl shadow-md p-4">
+     
         <div className="flex justify-between items-center border-b pb-3">
           <h5 className="text-lg font-semibold flex items-center">
             Waste Collection Monitoring
@@ -589,7 +589,7 @@ const WasteCollectionMonitor: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
+     
     </div>
   );
 };
