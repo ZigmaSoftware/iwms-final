@@ -160,7 +160,7 @@ export default function ContinentList() {
 
   return (
     <div className="p-3">
-      <div className="bg-white shadow-lg rounded-lg p-6">
+
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Continents</h1>
@@ -217,7 +217,7 @@ export default function ContinentList() {
             style={{ width: "150px", textAlign: "center" }}
           />
         </DataTable>
-      </div>
+      
     </div>
   );
 }

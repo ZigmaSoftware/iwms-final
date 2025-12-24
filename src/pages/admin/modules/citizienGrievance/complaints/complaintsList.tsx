@@ -226,7 +226,7 @@ export default function ComplaintsList() {
         </button>
       </div>
 
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-3">
+     
         <DataTable
           value={complaints}
           dataKey="id"
@@ -294,7 +294,7 @@ export default function ComplaintsList() {
           <Column header="Image" body={imageTemplate} />
           <Column header="Comp Closure / Status" body={closureTemplate} />
         </DataTable>
-      </div>
+     
 
       {modalImage && (
         <div className="fixed inset-0 backdrop-blur-sm flex justify-center items-center z-50">
