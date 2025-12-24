@@ -33,6 +33,8 @@ export const customerCreationApi = adminApi.customerCreations;
 export const wasteCollectionApi = adminApi.wasteCollections;
 export const complaintApi = adminApi.complaints;
 export const feedbackApi = adminApi.feedbacks;
+export const mainCategoryApi = adminApi.mainCategory;
+export const subCategoryApi = adminApi.SubCategory;
 
 // Screens & Permissions
 export const mainScreenTypeApi = adminApi.mainscreentype;
@@ -40,6 +42,7 @@ export const mainScreenApi = adminApi.mainscreens;
 export const userScreenApi = adminApi.userscreens;
 export const userScreenActionApi = adminApi.userscreenaction;
 export const userScreenPermissionApi = adminApi.userscreenpermissions;
+
 
 // Utilities
 export * from "./endpoints";

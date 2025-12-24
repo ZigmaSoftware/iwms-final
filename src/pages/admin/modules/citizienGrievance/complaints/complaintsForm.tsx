@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { desktopApi, mobileApi } from "@/api";
+
 import Swal from "sweetalert2";
 
 import ComponentCard from "@/components/common/ComponentCard";
@@ -21,6 +21,15 @@ import {
   filterActiveRecords,
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
+
+import { mobileApi } from "@/api";
+import {
+  customerCreationApi,
+  zoneApi,
+  wardApi,
+  complaintApi,
+} from "@/helpers/admin";
+
 
 /* ================= CONSTANTS ================= */
 
@@ -79,8 +88,8 @@ export default function ComplaintAddForm() {
 
   /* ---------------- INIT LOAD ---------------- */
   useEffect(() => {
-    desktopApi.get("/customercreations/").then((res) => {
-      const normalized = normalizeCustomerArray(res.data);
+    customerCreationApi.list().then((res) => {
+      const normalized = normalizeCustomerArray(res);
       setCustomers(filterActiveCustomers(normalized));
     });
 
@@ -95,14 +104,14 @@ export default function ComplaintAddForm() {
 
   /* ---------------- CUSTOMER → ZONE → WARD ---------------- */
 
-  const loadZones = async (cid: number) => {
-    const res = await desktopApi.get(`/zones/?customer=${cid}`);
-    setZones(filterActiveRecords(listFromResponse(res.data)));
-  };
+  const loadZones = async (cid: string) => {
+  const res = await zoneApi.list({ params: { customer: cid } });
+  setZones(filterActiveRecords(listFromResponse(res)));
+};
 
   const loadWards = async (zid: string) => {
-    const res = await desktopApi.get(`/wards/?zone=${zid}`);
-    setWards(filterActiveRecords(listFromResponse(res.data)));
+    const res = await wardApi.list({ params: { zone: zid } });
+    setWards(filterActiveRecords(listFromResponse(res)));
   };
 
   const onCustomerChange = (id: string) => {
@@ -233,7 +242,7 @@ export default function ComplaintAddForm() {
     if (file) fd.append("image", file);
 
     try {
-      await desktopApi.post("/complaints/", fd, {
+      await complaintApi.create(fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       Swal.fire("Saved", "Complaint created successfully", "success");
