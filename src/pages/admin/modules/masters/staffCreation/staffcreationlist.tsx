@@ -313,7 +313,7 @@ export default function StaffCreationList() {
   return (
     <>
       <div className="p-3">
-        <div className="bg-white rounded-lg shadow-lg p-6">
+      
           <DataTable
             value={staffs}
             paginator
@@ -357,7 +357,7 @@ export default function StaffCreationList() {
 
             <Column header="Action" body={actionTemplate} style={{ width: 140 }} />
           </DataTable>
-        </div>
+    
       </div>
     </>
   );

@@ -194,7 +194,7 @@ export default function CustomerCreationList() {
 
   return (
     <div className="p-3">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+    
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
@@ -281,7 +281,7 @@ export default function CustomerCreationList() {
             style={{ width: "140px", textAlign: "center" }}
           />
         </DataTable>
-      </div>
+
     </div>
   );
 }

@@ -187,7 +187,7 @@ export default function VehicleTypeCreation() {
 
   return (
     <div className="p-3">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+    
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -247,7 +247,7 @@ export default function VehicleTypeCreation() {
             style={{ width: "150px" }}
           />
         </DataTable>
-      </div>
+   
     </div>
   );
 }

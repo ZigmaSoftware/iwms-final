@@ -151,7 +151,7 @@ export default function MainScreenTypeList() {
 
   return (
     <div className="px-3 py-3 w-full ">
-      <div className="bg-white rounded-lg shadow-lg p-6">
+    
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -186,7 +186,7 @@ export default function MainScreenTypeList() {
           <Column header="Status" body={statusTemplate} style={{ width: "150px" }} />
           <Column header="Actions" body={actionTemplate} style={{ width: "150px" }} />
         </DataTable>
-      </div>
+ 
     </div>
   );
 }

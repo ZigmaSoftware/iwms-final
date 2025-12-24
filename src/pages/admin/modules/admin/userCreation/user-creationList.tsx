@@ -189,11 +189,12 @@ export default function UserCreationList() {
 
   /* ================= RENDER ================= */
   return (
-    <div className="p-4 bg-white rounded-lg shadow">
+    <>
+        <div className="p-3">
       <div className="flex justify-between mb-4">
         <div>
           <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-gray-500 text-sm">Manage staff & customers</p>
+          <p className="text-g  ray-500 text-sm">Manage staff & customers</p>
         </div>
 
         <Button
@@ -327,5 +328,6 @@ export default function UserCreationList() {
         </TabsContent>
       </Tabs>
     </div>
+    </>
   );
 }

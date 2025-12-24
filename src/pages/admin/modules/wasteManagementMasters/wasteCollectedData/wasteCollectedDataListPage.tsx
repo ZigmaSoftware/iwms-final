@@ -180,8 +180,8 @@ export default function WasteCollectedDataList() {
   if (loading) return <div className="p-6">Loading Waste Collected Data...</div>;
 
   return (
-    <div className="">
-      <div className="bg-white rounded-lg shadow-lg ">
+    <div className="p-3">
+     
         {/* Page Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
@@ -268,7 +268,7 @@ export default function WasteCollectedDataList() {
             style={{ width: "150px" }}
           />
         </DataTable>
-      </div>
+
     </div>
   );
 }
