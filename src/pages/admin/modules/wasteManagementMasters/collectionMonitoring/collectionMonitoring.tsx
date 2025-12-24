@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import L from "leaflet";
 import flatpickr from "flatpickr";
 import type { Instance as FlatpickrInstance } from "flatpickr/dist/types/instance";
-import { desktopApi } from "@/api";
+import { customerCreationApi, wasteCollectionApi } from "@/helpers/admin";
 import "./collectionMonitor.css";
 import "flatpickr/dist/flatpickr.min.css";
 import {
@@ -208,8 +208,8 @@ const WasteCollectionMonitor: React.FC = () => {
     const resolveId = (c: any) => String(c?.unique_id ?? c?.id ?? "");
 
     try {
-      const response = await desktopApi.get("customercreations/");
-      const normalized = normalizeCustomerArray(response.data) as CustomerRecord[];
+      const response = await customerCreationApi.list();
+      const normalized = normalizeCustomerArray(response) as CustomerRecord[];
       const activeCustomers = filterActiveCustomers(normalized) as CustomerRecord[];
       households = activeCustomers.length;
       customerData = activeCustomers;
@@ -250,11 +250,11 @@ const WasteCollectionMonitor: React.FC = () => {
       if (fromDate) {
         params.collection_date = fromDate;
       }
-      const response = await desktopApi.get("wastecollections/", { params });
-      if (Array.isArray(response.data)) {
+      const response = await wasteCollectionApi.list({ params });
+      if (Array.isArray(response)) {
         collectedIds = Array.from(
           new Set(
-            response.data
+            response
               .map((entry: any) =>
                 String(
                   entry.customer ??

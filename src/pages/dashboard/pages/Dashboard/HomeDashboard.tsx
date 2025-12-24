@@ -8,7 +8,7 @@ import { ComplaintsPanel } from "./ComplaintsPanel";
 import { RecentActivityTimeline } from "./RecentActivityTimeLine";
 import { WeighmentSummary } from "@/components/ui/WeighmentSummary";
 import { CameraStatus } from "./cameraStatus";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getEncryptedRoute } from "@/utils/routeCache";
@@ -16,14 +16,71 @@ import { BinMapPanel } from "./map/BinMapPanel";
 import { HouseholdMapPanel } from "./map/HouseholdMapPanel";
 import { MapTabs } from "./map/MapTabs";
 import { MAP_TABS, type MapTabKey } from "./map/mapUtils";
+import { customerCreationApi, wasteCollectionApi } from "@/helpers/admin";
+import { filterActiveCustomers, normalizeCustomerArray } from "@/utils/customerUtils";
 
 export function HomeDashboard() {
   const binStats = { active: 84, inactive: 16 };
   const binTotal = binStats.active + binStats.inactive;
-  const householdStats = { total: 1200, collected: 980, notCollected: 220 };
   const { encDashboardBins } = getEncryptedRoute();
   const binsPath = `/dashboard/${encDashboardBins}`;
   const [activeMapTab, setActiveMapTab] = useState<MapTabKey>("all");
+  const [householdStats, setHouseholdStats] = useState({
+    total: 0,
+    collected: 0,
+    notCollected: 0,
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchHouseholdStats = async () => {
+      try {
+        const customerResponse = await customerCreationApi.list();
+        const normalized = normalizeCustomerArray(customerResponse);
+        const activeCustomers = filterActiveCustomers(normalized);
+        const total = activeCustomers.length;
+
+        const today = new Date().toISOString().split("T")[0];
+        let collectedIds: string[] = [];
+        try {
+          const collectionResponse = await wasteCollectionApi.list({
+            params: { collection_date: today },
+          });
+          if (Array.isArray(collectionResponse)) {
+            collectedIds = Array.from(
+              new Set(
+                collectionResponse
+                  .map((entry: any) =>
+                    String(
+                      entry.customer ??
+                        entry.customer_id ??
+                        entry.customer_unique_id ??
+                        ""
+                    )
+                  )
+                  .filter((id: string) => id.trim())
+              )
+            );
+          }
+        } catch (error) {
+          console.error("Failed to fetch waste collection summary:", error);
+        }
+
+        const collected = collectedIds.length;
+        const notCollected = Math.max(total - collected, 0);
+        if (isMounted) {
+          setHouseholdStats({ total, collected, notCollected });
+        }
+      } catch (error) {
+        console.error("Failed to fetch household summary:", error);
+      }
+    };
+
+    fetchHouseholdStats();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
 
   return (

@@ -33,6 +33,21 @@ type ErrorWithResponse = {
   };
 };
 
+const parseCoordinate = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+
+  const upper = trimmed.toUpperCase();
+  const hasNegative = upper.includes("S") || upper.includes("W");
+  const match = trimmed.match(/-?\d+(?:\.\d+)?/);
+  if (!match) return null;
+
+  const num = Number.parseFloat(match[0]);
+  if (Number.isNaN(num)) return null;
+
+  return hasNegative ? -Math.abs(num) : num;
+};
+
 const extractErrorMessage = (error: unknown) => {
   if (!error) return "Something went wrong while processing the request.";
   if (typeof error === "string") return error;
@@ -112,13 +127,15 @@ export default function BinForm() {
 
     setLoading(true);
     try {
+      const latitudeValue = parseCoordinate(latitude);
+      const longitudeValue = parseCoordinate(longitude);
       const payload = {
         name: name.trim(),
         code: code.trim() || null,
         capacity: capacity.trim() || null,
         address: address.trim() || null,
-        latitude: latitude.trim() || null,
-        longitude: longitude.trim() || null,
+        latitude: latitudeValue ?? null,
+        longitude: longitudeValue ?? null,
         is_active: isActive,
       };
 
