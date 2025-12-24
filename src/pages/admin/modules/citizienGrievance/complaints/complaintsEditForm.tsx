@@ -7,6 +7,12 @@ import Select from "@/components/form/Select";
 import Label from "@/components/form/Label";
 import Input from "@/components/form/input/InputField";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import {
+  customerCreationApi,
+  zoneApi,
+  wardApi,
+  complaintApi,
+} from "@/helpers/admin";
 
 const FILE_ICON =
   "https://cdn-icons-png.flaticon.com/512/337/337946.png";
@@ -48,7 +54,7 @@ export default function ComplaintEditForm() {
     f.type.startsWith("image/") || isImageUrl(f.name || "");
 
   const load = async () => {
-    const res = await desktopApi.get(`/complaints/${id}/`);
+    const res = await complaintApi.get(id as string);
     const c = res.data;
 
     setData(c);
@@ -93,7 +99,7 @@ export default function ComplaintEditForm() {
     if (closeFile) fd.append("close_image", closeFile);
 
     try {
-      await desktopApi.patch(`/complaints/${id}/`, fd, {
+      await complaintApi.update(id || "", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       Swal.fire("Updated", "Complaint updated", "success");
@@ -110,7 +116,7 @@ export default function ComplaintEditForm() {
     }
   };
 
-  if (!data) return <div>Loading…</div>;
+  // if (!data) return <div>Loading…</div>;
 
   return (
     <ComponentCard title="Update Complaint">

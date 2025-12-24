@@ -55,6 +55,9 @@ export const adminEndpoints = {
   wasteCollections: "customers/wastecollections",
   feedbacks: "customers/feedbacks",
   complaints: "customers/complaints",
+   mainCategory: "customers/main-category",
+   SubCategory: "customers/sub-category",
+  
 
   /* =========================
      VEHICLES

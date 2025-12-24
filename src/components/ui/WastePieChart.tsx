@@ -43,6 +43,7 @@ export function WastePieChart() {
 
                 const res = await fetch(url, { signal: controller.signal });
                 const json = await res.json();
+                console.log("WastePieChart - fetched data:", json);
 
                 const rows = Array.isArray(json?.data) ? json.data : [];
                 if (!rows.length) {
