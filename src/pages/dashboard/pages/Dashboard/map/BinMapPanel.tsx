@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 
@@ -14,6 +14,16 @@ import {
 /* ================= TYPES ================= */
 type Bin = (typeof BIN_POINTS)[number] & {
   priority: BinPriority;
+
+  city?: string;
+  wardNo?: string;
+  installedDate?: string;
+  lastCollectedOn?: string;
+  binType?: "Dry" | "Wet" | "Mixed";
+  capacityKg?: number;
+  status?: "Active" | "Inactive" | "Maintenance";
+  assignedVehicle?: string;
+  supervisor?: string;
 };
 
 /* ================= COMPONENT ================= */
@@ -40,6 +50,17 @@ export function BinMapPanel() {
       BIN_POINTS.map((bin) => ({
         ...bin,
         priority: getBinPriority(bin.fill),
+
+        // demo enrichment (replace with API)
+        city: "Coimbatore",
+        wardNo: "W-12",
+        installedDate: "2024-03-12",
+        lastCollectedOn: "2025-01-22 08:30",
+        binType: "Mixed",
+        capacityKg: 120,
+        status: "Active",
+        assignedVehicle: "TN-38-AQ-2190",
+        supervisor: "Zone Inspector",
       })),
     []
   );
@@ -49,15 +70,17 @@ export function BinMapPanel() {
     [bins, priorityFilter]
   );
 
-  const summary = useMemo(() => {
-    return bins.reduce(
-      (acc, b) => {
-        acc[b.priority] += 1;
-        return acc;
-      },
-      { high: 0, medium: 0, low: 0 }
-    );
-  }, [bins]);
+  const summary = useMemo(
+    () =>
+      bins.reduce(
+        (acc, b) => {
+          acc[b.priority] += 1;
+          return acc;
+        },
+        { high: 0, medium: 0, low: 0 }
+      ),
+    [bins]
+  );
 
   /* ================= MAP INIT ================= */
   useEffect(() => {
@@ -119,9 +142,7 @@ export function BinMapPanel() {
       marker.addTo(layer);
     });
 
-    if (bounds.length) {
-      map.fitBounds(bounds, { padding: [40, 40] });
-    }
+    if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
   }, [filteredBins]);
 
   /* ================= UI ================= */
@@ -156,10 +177,7 @@ export function BinMapPanel() {
                   type="checkbox"
                   checked={priorityFilter[key]}
                   onChange={() =>
-                    setPriorityFilter((prev) => ({
-                      ...prev,
-                      [key]: !prev[key],
-                    }))
+                    setPriorityFilter((p) => ({ ...p, [key]: !p[key] }))
                   }
                   className="hidden"
                 />
@@ -170,87 +188,135 @@ export function BinMapPanel() {
       </div>
 
       {/* SIDE PANEL */}
-      <SideDetailsPanel
+      <BinSideDetailsPanel
         bin={selectedBin}
         open={panelOpen}
         onToggle={() => setPanelOpen((v) => !v)}
+        onClose={() => setPanelOpen(false)}
       />
     </div>
   );
 }
 
 /* ================= SIDE DETAILS PANEL ================= */
-function SideDetailsPanel({
+function BinSideDetailsPanel({
   bin,
   open,
   onToggle,
+  onClose,
 }: {
   bin: Bin | null;
   open: boolean;
   onToggle: () => void;
+  onClose: () => void;
 }) {
   const meta = bin ? BIN_PRIORITY_META[bin.priority] : null;
   const WIDTH = 240;
 
   return (
     <div
-      className={`absolute left-0 top-0 z-[700] h-full transition-transform duration-300
-        ${open ? "translate-x-0" : `-translate-x-[${WIDTH}px]`}`}
-      style={{ width: WIDTH }}
+      className="absolute left-0 top-0 z-[700] h-full bg-white shadow-xl transition-transform duration-300"
+      style={{
+        width: WIDTH,
+        transform: open ? "translateX(0)" : `translateX(-${WIDTH}px)`,
+      }}
     >
-      <div className="relative h-full border-r bg-white shadow-xl">
-        {/* TOGGLE */}
-        <button
-          onClick={onToggle}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full border bg-white text-xs font-bold shadow"
-        >
-          {open ? "❮" : "❯"}
-        </button>
+      {/* CENTER TOGGLE */}
+      <button
+        onClick={onToggle}
+        className="absolute -right-3 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border bg-white text-xs font-bold shadow"
+      >
+        {open ? "❮" : "❯"}
+      </button>
 
+      {/* CLOSE */}
+      <button
+        onClick={onClose}
+        className="absolute right-2 top-2 rounded-full border bg-white px-2 py-1 text-xs font-bold shadow"
+      >
+        ✕
+      </button>
+
+      <div className="h-full overflow-y-auto border-r">
         {bin ? (
           <>
-            {/* HEADER */}
+            {/* HEADER WITH BIG ANIMATED BIN ICON */}
             <div className="flex items-center gap-3 border-b p-3">
-              <span
-                className="flex h-7 w-7 items-center justify-center rounded-md"
-                style={{ background: meta?.bg }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={meta?.color}
-                  strokeWidth="2"
-                  className="h-4 w-4"
-                >
-                  <path d="M3 6h18" />
-                  <path d="M8 6v14" />
-                  <path d="M16 6v14" />
-                  <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" />
-                </svg>
-              </span>
-
+              <AnimatedBinIcon
+                color={meta?.color}
+                bg={meta?.bg}
+              />
               <div>
                 <h3 className="text-sm font-bold">{bin.name}</h3>
                 <p className="text-[11px] text-gray-500">
-                  {meta?.label}
+                  {meta?.label} · {bin.fill}%
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2 p-3 text-xs">
-              <InfoRow label="Fill Level" value={`${bin.fill}%`} />
-              <InfoRow label="Latitude" value={bin.lat} />
-              <InfoRow label="Longitude" value={bin.lng} />
-              <InfoRow label="Area" value={bin.area} />
+            {/* DETAILS */}
+            <div className="space-y-4 p-3 text-xs">
+              <Section title="Bin Info">
+                <InfoRow label="Status" value={bin.status} />
+                <InfoRow label="Bin Type" value={bin.binType} />
+                <InfoRow label="Capacity (Kg)" value={bin.capacityKg} />
+              </Section>
+
+              <Section title="Location">
+                <InfoRow label="City" value={bin.city} />
+                <InfoRow label="Ward No" value={bin.wardNo} />
+                <InfoRow label="Latitude" value={bin.lat} />
+                <InfoRow label="Longitude" value={bin.lng} />
+              </Section>
+
+              <Section title="Operations">
+                <InfoRow label="Last Collected" value={bin.lastCollectedOn} />
+                <InfoRow label="Vehicle" value={bin.assignedVehicle} />
+                <InfoRow label="Supervisor" value={bin.supervisor} />
+              </Section>
             </div>
           </>
         ) : (
-          <div className="p-3 text-xs text-gray-400">
-            Select a bin
-          </div>
+          <div className="p-3 text-xs text-gray-400">Select a bin</div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ================= BIG ANIMATED BIN ICON ================= */
+function AnimatedBinIcon({
+  color = "#16a34a",
+  bg = "#dcfce7",
+}: {
+  color?: string;
+  bg?: string;
+}) {
+  return (
+    <div className="relative flex h-10 w-10 items-center justify-center">
+      {/* Pulse ring */}
+      <span
+        className="absolute inline-flex h-full w-full rounded-full animate-ping"
+        style={{ backgroundColor: bg, opacity: 0.6 }}
+      />
+      {/* Icon */}
+      <span
+        className="relative flex h-10 w-10 items-center justify-center rounded-lg animate-[bounce_0.6s_ease-out]"
+        style={{ backgroundColor: bg }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          className="h-6 w-6"
+        >
+          <path d="M3 6h18" />
+          <path d="M8 6v14" />
+          <path d="M16 6v14" />
+          <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" />
+        </svg>
+      </span>
     </div>
   );
 }
@@ -260,7 +326,26 @@ function InfoRow({ label, value }: { label: string; value: any }) {
   return (
     <div className="flex justify-between border-b pb-1">
       <span className="text-gray-500">{label}</span>
-      <span className="font-semibold">{value}</span>
+      <span className="font-semibold">{value ?? "—"}</span>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-bold uppercase text-gray-500">
+        {title}
+      </div>
+      <div className="space-y-1 rounded-md border bg-gray-50 p-2">
+        {children}
+      </div>
     </div>
   );
 }

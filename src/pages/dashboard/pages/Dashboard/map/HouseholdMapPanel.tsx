@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 
@@ -12,7 +12,18 @@ import {
 } from "./mapUtils";
 
 /* ================= TYPES ================= */
-type Household = (typeof HOUSEHOLD_POINTS)[number];
+type Household = (typeof HOUSEHOLD_POINTS)[number] & {
+  city?: string;
+  zone?: string;
+  street?: string;
+  ownerName?: string;
+  mobile?: string;
+  houseType?: "Individual" | "Apartment" | "Commercial";
+  occupancy?: "Occupied" | "Vacant";
+  lastCollectedOn?: string;
+  assignedVehicle?: string;
+  beatWorker?: string;
+};
 
 /* ================= COMPONENT ================= */
 export function HouseholdMapPanel() {
@@ -32,21 +43,41 @@ export function HouseholdMapPanel() {
     not_collected: true,
   });
 
-  /* ================= FILTERED DATA ================= */
-  const filteredHouseholds = useMemo(
-    () => HOUSEHOLD_POINTS.filter((h) => statusFilter[h.status]),
-    [statusFilter]
+  /* ================= DATA ================= */
+  const households = useMemo(
+    () =>
+      HOUSEHOLD_POINTS.map((h) => ({
+        ...h,
+        city: "Coimbatore",
+        zone: "North Zone",
+        street: "Gandhi Nagar",
+        ownerName: "Resident",
+        mobile: "9XXXXXXXXX",
+        houseType: "Individual",
+        occupancy: "Occupied",
+        lastCollectedOn: "2025-01-22 09:10",
+        assignedVehicle: "TN-38-BR-4482",
+        beatWorker: "Sanitation Worker",
+      })),
+    []
   );
 
-  const summary = useMemo(() => {
-    return HOUSEHOLD_POINTS.reduce(
-      (acc, h) => {
-        acc[h.status] += 1;
-        return acc;
-      },
-      { collected: 0, in_progress: 0, not_collected: 0 }
-    );
-  }, []);
+  const filteredHouseholds = useMemo(
+    () => households.filter((h) => statusFilter[h.status]),
+    [households, statusFilter]
+  );
+
+  const summary = useMemo(
+    () =>
+      households.reduce(
+        (acc, h) => {
+          acc[h.status] += 1;
+          return acc;
+        },
+        { collected: 0, in_progress: 0, not_collected: 0 }
+      ),
+    [households]
+  );
 
   /* ================= MAP INIT ================= */
   useEffect(() => {
@@ -108,11 +139,8 @@ export function HouseholdMapPanel() {
       marker.addTo(layer);
     });
 
-    if (bounds.length) {
-      map.fitBounds(bounds, { padding: [40, 40] });
-    } else {
-      map.setView(DEFAULT_CENTER, 13);
-    }
+    if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
+    else map.setView(DEFAULT_CENTER, 13);
   }, [filteredHouseholds]);
 
   /* ================= UI ================= */
@@ -147,10 +175,7 @@ export function HouseholdMapPanel() {
                   type="checkbox"
                   checked={statusFilter[key]}
                   onChange={() =>
-                    setStatusFilter((prev) => ({
-                      ...prev,
-                      [key]: !prev[key],
-                    }))
+                    setStatusFilter((p) => ({ ...p, [key]: !p[key] }))
                   }
                   className="hidden"
                 />
@@ -161,87 +186,132 @@ export function HouseholdMapPanel() {
       </div>
 
       {/* SIDE PANEL */}
-      <SideDetailsPanel
+      <HouseholdSideDetailsPanel
         house={selectedHouse}
         open={panelOpen}
         onToggle={() => setPanelOpen((v) => !v)}
+        onClose={() => setPanelOpen(false)}
       />
     </div>
   );
 }
 
 /* ================= SIDE DETAILS PANEL ================= */
-function SideDetailsPanel({
+function HouseholdSideDetailsPanel({
   house,
   open,
   onToggle,
+  onClose,
 }: {
   house: Household | null;
   open: boolean;
   onToggle: () => void;
+  onClose: () => void;
 }) {
   const statusMeta = house ? HOUSEHOLD_STATUS_META[house.status] : null;
   const WIDTH = 240;
 
   return (
     <div
-      className={`absolute left-0 top-0 z-[700] h-full transition-transform duration-300
-        ${open ? "translate-x-0" : `-translate-x-[${WIDTH}px]`}`}
-      style={{ width: WIDTH }}
+      className="absolute left-0 top-0 z-[700] h-full bg-white shadow-xl transition-transform duration-300"
+      style={{
+        width: WIDTH,
+        transform: open ? "translateX(0)" : `translateX(-${WIDTH}px)`,
+      }}
     >
-      <div className="relative h-full border-r bg-white shadow-xl">
-        {/* TOGGLE */}
-        <button
-          onClick={onToggle}
-          className="absolute -right-3 top-1/2 -translate-y-1/2 flex h-6 w-6 items-center justify-center rounded-full border bg-white text-xs font-bold shadow"
-        >
-          {open ? "❮" : "❯"}
-        </button>
+      {/* CENTER TOGGLE */}
+      <button
+        onClick={onToggle}
+        className="absolute -right-3 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border bg-white text-xs font-bold shadow"
+      >
+        {open ? "❮" : "❯"}
+      </button>
 
+      {/* CLOSE */}
+      <button
+        onClick={onClose}
+        className="absolute right-2 top-2 rounded-full border bg-white px-2 py-1 text-xs font-bold shadow"
+      >
+        ✕
+      </button>
+
+      <div className="h-full overflow-y-auto border-r">
         {house ? (
           <>
-            {/* HEADER */}
+            {/* HEADER WITH BIG ANIMATED ICON */}
             <div className="flex items-center gap-3 border-b p-3">
-              <span
-                className="flex h-7 w-7 items-center justify-center rounded-md"
-                style={{ background: statusMeta?.bg }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke={statusMeta?.color}
-                  strokeWidth="2"
-                  className="h-4 w-4"
-                >
-                  <path d="M3 10.5L12 3l9 7.5" />
-                  <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
-                </svg>
-              </span>
-
+              <AnimatedHouseIcon color={statusMeta?.color} bg={statusMeta?.bg} />
               <div>
                 <h3 className="text-sm font-bold">{house.name}</h3>
                 <p className="text-[11px] text-gray-500">
-                  Ward {house.ward}
+                  Ward {house.ward} · {statusMeta?.label}
                 </p>
               </div>
             </div>
 
-            <div className="space-y-2 p-3 text-xs">
-              <InfoRow
-                label="Status"
-                value={HOUSEHOLD_STATUS_META[house.status].label}
-              />
-              <InfoRow label="Latitude" value={house.lat} />
-              <InfoRow label="Longitude" value={house.lng} />
+            {/* DETAILS */}
+            <div className="space-y-4 p-3 text-xs">
+              <Section title="Household Info">
+                <InfoRow label="Owner" value={house.ownerName} />
+                <InfoRow label="Mobile" value={house.mobile} />
+                <InfoRow label="House Type" value={house.houseType} />
+                <InfoRow label="Occupancy" value={house.occupancy} />
+              </Section>
+
+              <Section title="Location">
+                <InfoRow label="City" value={house.city} />
+                <InfoRow label="Zone" value={house.zone} />
+                <InfoRow label="Street" value={house.street} />
+                <InfoRow label="Latitude" value={house.lat} />
+                <InfoRow label="Longitude" value={house.lng} />
+              </Section>
+
+              <Section title="Collection">
+                <InfoRow label="Last Collected" value={house.lastCollectedOn} />
+                <InfoRow label="Vehicle" value={house.assignedVehicle} />
+                <InfoRow label="Beat Worker" value={house.beatWorker} />
+              </Section>
             </div>
           </>
         ) : (
-          <div className="p-3 text-xs text-gray-400">
-            Select a house
-          </div>
+          <div className="p-3 text-xs text-gray-400">Select a household</div>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ================= BIG ANIMATED HOUSE ICON ================= */
+function AnimatedHouseIcon({
+  color = "#2563eb",
+  bg = "#dbeafe",
+}: {
+  color?: string;
+  bg?: string;
+}) {
+  return (
+    <div className="relative flex h-10 w-10 items-center justify-center">
+      {/* Pulse ring */}
+      <span
+        className="absolute inline-flex h-full w-full rounded-full animate-ping"
+        style={{ backgroundColor: bg, opacity: 0.6 }}
+      />
+      {/* Icon container */}
+      <span
+        className="relative flex h-10 w-10 items-center justify-center rounded-lg animate-[bounce_0.6s_ease-out]"
+        style={{ backgroundColor: bg }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          className="h-6 w-6"
+        >
+          <path d="M3 10.5L12 3l9 7.5" />
+          <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
+        </svg>
+      </span>
     </div>
   );
 }
@@ -251,7 +321,26 @@ function InfoRow({ label, value }: { label: string; value: any }) {
   return (
     <div className="flex justify-between border-b pb-1">
       <span className="text-gray-500">{label}</span>
-      <span className="font-semibold">{value}</span>
+      <span className="font-semibold">{value ?? "—"}</span>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-bold uppercase text-gray-500">
+        {title}
+      </div>
+      <div className="space-y-1 rounded-md border bg-gray-50 p-2">
+        {children}
+      </div>
     </div>
   );
 }
