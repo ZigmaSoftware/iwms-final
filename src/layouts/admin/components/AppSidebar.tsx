@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 
 import {
@@ -19,6 +19,7 @@ import {
 
 import { useSidebar } from "@/contexts/SideBarContext";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { decryptSegment } from "@/utils/routeCrypto";
 
 const {
   encMasters,
@@ -280,9 +281,39 @@ const AppSidebar: React.FC = () => {
   );
   const subMenuRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
+  const currentDecodedPath = useMemo(() => {
+    const [master, module] = location.pathname.split("/").filter(Boolean);
+    return {
+      master: decryptSegment(master || "") ?? null,
+      module: decryptSegment(module || "") ?? null,
+    };
+  }, [location.pathname]);
+
   const isActive = useCallback(
-    (path: string) => location.pathname === path,
-    [location.pathname]
+    (path: string, allowNestedRoutes = false) => {
+      if (!path) return false;
+
+      const segments = path.split("/").filter(Boolean);
+      const [encMaster, encModule] = segments;
+      const decodedMaster = decryptSegment(encMaster || "");
+      const decodedModule = decryptSegment(encModule || "");
+
+      // If decoding fails, fall back to direct path match (e.g., plain routes)
+      if (!decodedMaster && !decodedModule) {
+        if (location.pathname === path) return true;
+        return (
+          allowNestedRoutes &&
+          location.pathname.startsWith(path.endsWith("/") ? path : `${path}/`)
+        );
+      }
+
+      if (decodedMaster !== currentDecodedPath.master) return false;
+      if (!decodedModule) return true;
+
+      if (currentDecodedPath.module === decodedModule) return true;
+      return allowNestedRoutes && currentDecodedPath.module?.startsWith(decodedModule);
+    },
+    [currentDecodedPath, location.pathname]
   );
 
   useEffect(() => {
@@ -306,7 +337,7 @@ const AppSidebar: React.FC = () => {
     Object.entries(menus).forEach(([type, items]) => {
       items.forEach((nav, index) => {
         nav.subItems?.forEach((sub) => {
-          if (isActive(sub.path)) {
+          if (isActive(sub.path, true)) {
             setOpenSubmenu({ type: type as any, index });
             matched = true;
           }
@@ -375,7 +406,7 @@ const AppSidebar: React.FC = () => {
               <Link
                 to={nav.path}
                 className={`${menuButtonBase} ${
-                  isActive(nav.path)
+                  isActive(nav.path, true)
                     ? "border-[var(--admin-border)] bg-[var(--admin-primarySoft)]/80 text-[var(--admin-primary)] shadow-[0_18px_40px_rgba(1,62,126,0.16)]"
                     : "border-transparent text-[var(--admin-mutedText)] hover:border-[var(--admin-border)] hover:bg-[var(--admin-surfaceMuted)]/80 hover:text-[var(--admin-primary)]"
                 }`}
@@ -411,7 +442,7 @@ const AppSidebar: React.FC = () => {
                     <Link
                       to={subItem.path}
                       className={`block rounded-xl px-3 py-1.5 text-sm font-medium transition ${
-                        isActive(subItem.path)
+                        isActive(subItem.path, true)
                           ? "bg-[var(--admin-accentSoft)] text-[var(--admin-accent)]"
                           : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
                       }`}
