@@ -1,4 +1,4 @@
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
@@ -14,70 +14,192 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import { binApi } from "@/helpers/admin";
+import { binApi, wardApi } from "@/helpers/admin";
 import { encryptSegment } from "@/utils/routeCrypto";
-import type { BinRecord } from "./types";
 
+/* ================= ROUTES ================= */
 const encMasters = encryptSegment("masters");
 const encBins = encryptSegment("bins");
 const LIST_PATH = `/${encMasters}/${encBins}`;
 
+/* ================= TYPES ================= */
+type SelectOption = { value: string; label: string };
+
+/* ================= HELPERS ================= */
+const extractErr = (e: any): string => {
+  if (e?.response?.data) return String(e.response.data);
+  if (e?.message) return e.message;
+  return "Unexpected error";
+};
+
+/* ==========================================================
+      COMPONENT
+========================================================== */
 export default function BinForm() {
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
 
-  const [form, setForm] = useState<Partial<BinRecord>>({
-    bin_status: "active",
-    bin_type: "public",
-    waste_type: "organic",
-    is_active: true,
-  });
+  /* ================= FORM STATE ================= */
+  const [binName, setBinName] = useState("");
+  const [wardId, setWardId] = useState("");
+  const [pendingWard, setPendingWard] = useState("");
 
-  const onChange = (key: keyof BinRecord, value: any) => {
-    setForm((prev) => ({ ...prev, [key]: value }));
-  };
+  const [binType, setBinType] = useState("public");
+  const [wasteType, setWasteType] = useState("organic");
+  const [capacity, setCapacity] = useState<number | "">("");
+  const [colorCode, setColorCode] = useState("");
+  const [latitude, setLatitude] = useState<number | "">("");
+  const [longitude, setLongitude] = useState<number | "">("");
+  const [installationDate, setInstallationDate] = useState("");
+  const [expectedLife, setExpectedLife] = useState<number | "">("");
+  const [binStatus, setBinStatus] = useState("active");
+  const [isActive, setIsActive] = useState(true);
 
+  const [wards, setWards] = useState<SelectOption[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  /* ================= LOAD WARDS ================= */
+  useEffect(() => {
+    wardApi
+      .list()
+      .then((res: any) =>
+        setWards(
+          res
+            .filter((w: any) => w.is_active)
+            .map((w: any) => ({
+              value: String(w.unique_id),
+              label: w.name,
+            }))
+        )
+      )
+      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+  }, []);
+
+  /* ================= EDIT MODE LOAD ================= */
   useEffect(() => {
     if (!isEdit || !id) return;
-    binApi.get(id).then((data: BinRecord) => setForm(data));
+
+    binApi
+      .get(id)
+      .then((data: any) => {
+        setBinName(data.bin_name ?? "");
+        setBinType(data.bin_type ?? "public");
+        setWasteType(data.waste_type ?? "organic");
+        setCapacity(data.capacity_liters ?? "");
+        setColorCode(data.color_code ?? "");
+        setLatitude(data.latitude ?? "");
+        setLongitude(data.longitude ?? "");
+        setInstallationDate(data.installation_date ?? "");
+        setExpectedLife(data.expected_life_years ?? "");
+        setBinStatus(data.bin_status ?? "active");
+        setIsActive(Boolean(data.is_active));
+
+        // THIS IS THE KEY FIX
+        const w = String(data.ward_id ?? "");
+        if (w) setPendingWard(w);
+      })
+      .catch(() => Swal.fire("Error", "Failed to load bin details", "error"));
   }, [id, isEdit]);
 
-  const submit = async (e: FormEvent) => {
+  /* ================= APPLY PENDING WARD ================= */
+  useEffect(() => {
+    if (
+      pendingWard &&
+      wards.length > 0 &&
+      wards.some((w) => w.value === pendingWard)
+    ) {
+      setWardId(pendingWard);
+      setPendingWard("");
+    }
+  }, [pendingWard, wards]);
+
+  /* ================= SUBMIT ================= */
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (!binName.trim() || !wardId || !capacity) {
+      Swal.fire(
+        "Missing Fields",
+        "Bin name, ward and capacity are required.",
+        "warning"
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    const payload = {
+      bin_name: binName.trim(),
+      ward: wardId,
+      bin_type: binType,
+      waste_type: wasteType,
+      capacity_liters: Number(capacity),
+      color_code: colorCode,
+      latitude: latitude === "" ? null : Number(latitude),
+      longitude: longitude === "" ? null : Number(longitude),
+      installation_date: installationDate || null,
+      expected_life_years: expectedLife === "" ? null : Number(expectedLife),
+      bin_status: binStatus,
+      is_active: isActive,
+    };
 
     try {
       if (isEdit && id) {
-        await binApi.update(id, form);
+        console.log(payload);
+        await binApi.update(id, payload);
+        Swal.fire("Success", "Bin updated successfully!", "success");
       } else {
-        await binApi.create(form);
+        await binApi.create(payload);
+        Swal.fire("Success", "Bin added successfully!", "success");
       }
 
-      Swal.fire("Success", "Bin saved successfully", "success");
       navigate(LIST_PATH);
     } catch (err: any) {
-      Swal.fire("Error", err?.message || "Save failed", "error");
+      Swal.fire("Save failed", extractErr(err), "error");
+    } finally {
+      setLoading(false);
     }
   };
 
+  /* ================= JSX ================= */
   return (
-    <ComponentCard title={isEdit ? "Update Bin" : "Add Bin"}>
-      <form onSubmit={submit} className="grid grid-cols-2 gap-4">
-
+    <ComponentCard title={isEdit ? "Edit Bin" : "Add Bin"}>
+      <form
+        onSubmit={handleSubmit}
+        className="grid grid-cols-1 md:grid-cols-2 gap-6"
+        noValidate
+      >
+        {/* Bin Name */}
         <div>
-          <Label>Bin Name</Label>
-          <Input value={form.bin_name || ""} onChange={e => onChange("bin_name", e.target.value)} />
+          <Label>Bin Name *</Label>
+          <Input value={binName} onChange={(e) => setBinName(e.target.value)} />
         </div>
 
+        {/* Ward */}
         <div>
-          <Label>Ward</Label>
-          <Input value={form.ward || ""} onChange={e => onChange("ward", e.target.value)} />
+          <Label>Ward *</Label>
+          <Select value={wardId} onValueChange={setWardId}>
+            <SelectTrigger className="input-validate w-full">
+              <SelectValue placeholder="Select Ward" />
+            </SelectTrigger>
+            <SelectContent>
+              {wards.map((w) => (
+                <SelectItem key={w.value} value={w.value}>
+                  {w.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
+        {/* Bin Type */}
         <div>
           <Label>Bin Type</Label>
-          <Select value={form.bin_type} onValueChange={v => onChange("bin_type", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select value={binType} onValueChange={setBinType}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="public">Public</SelectItem>
               <SelectItem value="commercial">Commercial</SelectItem>
@@ -86,10 +208,13 @@ export default function BinForm() {
           </Select>
         </div>
 
+        {/* Waste Type */}
         <div>
           <Label>Waste Type</Label>
-          <Select value={form.waste_type} onValueChange={v => onChange("waste_type", v)}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
+          <Select value={wasteType} onValueChange={setWasteType}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
             <SelectContent>
               <SelectItem value="organic">Organic</SelectItem>
               <SelectItem value="plastic">Plastic</SelectItem>
@@ -100,41 +225,106 @@ export default function BinForm() {
           </Select>
         </div>
 
+        {/* Capacity */}
         <div>
-          <Label>Capacity (Liters)</Label>
-          <Input type="number" value={form.capacity_liters || ""} onChange={e => onChange("capacity_liters", +e.target.value)} />
+          <Label>Capacity (Liters) *</Label>
+          <Input
+            type="number"
+            value={capacity}
+            onChange={(e) => setCapacity(e.target.value ? +e.target.value : "")}
+          />
         </div>
 
+        {/* Color */}
         <div>
           <Label>Color Code</Label>
-          <Input value={form.color_code || ""} onChange={e => onChange("color_code", e.target.value)} />
+          <Input
+            value={colorCode}
+            onChange={(e) => setColorCode(e.target.value)}
+          />
         </div>
 
+        {/* Latitude */}
         <div>
           <Label>Latitude</Label>
-          <Input value={form.latitude || ""} onChange={e => onChange("latitude", +e.target.value)} />
+          <Input
+            type="number"
+            value={latitude}
+            onChange={(e) => setLatitude(e.target.value ? +e.target.value : "")}
+          />
         </div>
 
+        {/* Longitude */}
         <div>
           <Label>Longitude</Label>
-          <Input value={form.longitude || ""} onChange={e => onChange("longitude", +e.target.value)} />
+          <Input
+            type="number"
+            value={longitude}
+            onChange={(e) =>
+              setLongitude(e.target.value ? +e.target.value : "")
+            }
+          />
         </div>
 
-        <div> 
+        {/* Installation Date */}
+        <div>
           <Label>Installation Date</Label>
-          <Input type="date" value={form.installation_date || ""} onChange={e => onChange("installation_date", e.target.value)} />
+          <Input
+            type="date"
+            value={installationDate}
+            onChange={(e) => setInstallationDate(e.target.value)}
+          />
         </div>
 
+        {/* Expected Life */}
         <div>
           <Label>Expected Life (Years)</Label>
-          <Input type="number" value={form.expected_life_years || ""} onChange={e => onChange("expected_life_years", +e.target.value)} />
+          <Input
+            type="number"
+            value={expectedLife}
+            onChange={(e) =>
+              setExpectedLife(e.target.value ? +e.target.value : "")
+            }
+          />
         </div>
 
-        <div className="col-span-2 flex justify-end gap-3">
-          <Button type="submit">{isEdit ? "Update" : "Save"}</Button>
-          <Button type="button" variant="outline" onClick={() => navigate(LIST_PATH)}>Cancel</Button>
+        {/* Active Status */}
+        <div>
+          <Label>Active Status</Label>
+          <Select
+            value={isActive ? "true" : "false"}
+            onValueChange={(v) => setIsActive(v === "true")}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="true">Active</SelectItem>
+              <SelectItem value="false">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
+        {/* Buttons */}
+        <div className="md:col-span-2 flex justify-end gap-3">
+          <Button type="submit" disabled={loading}>
+            {loading
+              ? isEdit
+                ? "Updating..."
+                : "Saving..."
+              : isEdit
+                ? "Update"
+                : "Save"}
+          </Button>
+
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={() => navigate(LIST_PATH)}
+          >
+            Cancel
+          </Button>
+        </div>
       </form>
     </ComponentCard>
   );
