@@ -4,7 +4,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
@@ -22,6 +22,7 @@ type Bin = {
   unique_id: string;
   bin_name: string;
   capacity_liters: number;
+  ward_name: string;
   is_active: boolean;
 };
 
@@ -52,13 +53,15 @@ export default function BinList() {
   });
 
   const navigate = useNavigate();
+  const { id } = useParams<{ id: string }>();
+  const isEdit = Boolean(id);
 
   /* ================= DATA FETCH ================= */
 
   const fetchBins = useCallback(async () => {
     try {
-      setLoading(true);
       const data = await binApi.list();
+      console.log(data);
       setBins(data);
     } catch {
       Swal.fire("Error", "Failed to fetch bins", "error");
@@ -197,6 +200,12 @@ export default function BinList() {
           header="Capacity (L)"
           sortable
           style={{ minWidth: "150px" }}
+        />
+        <Column
+          field="ward_name"
+          header="Ward"
+          sortable
+          style={{ minWidth: "60px" }}
         />
 
         <Column
