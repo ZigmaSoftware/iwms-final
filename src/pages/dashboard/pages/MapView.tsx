@@ -474,10 +474,10 @@ export default function MapView() {
             }}
           >
             <CardHeader className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
-              <div>
+              {/* <div>
                 <CardTitle>Fleet Location Map</CardTitle>
                 <CardDescription>GPS-tracked vehicles with current status</CardDescription>
-              </div>
+              </div> */}
               <div className="relative ml-auto flex w-full max-w-xs lg:w-auto">
                 <button
                   type="button"
