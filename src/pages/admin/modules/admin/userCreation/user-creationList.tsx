@@ -52,6 +52,7 @@ export default function UserCreationList() {
       ]);
 
       setUsers(normalizeList(usersRes));
+      console.log("Users:", normalizeList(usersRes));  
 
       const map: Record<string, any> = {};
       const customers = normalizeList(customersRes);
@@ -62,6 +63,7 @@ export default function UserCreationList() {
       });
 
       setCustomerMap(map);
+      console.log("Customer Map:", map);
     } catch (err) {
       console.error("Error loading users:", err);
     }
@@ -77,24 +79,14 @@ export default function UserCreationList() {
   );
 
   const composeCustomerInfo = (row: any) => {
-    if (row?.customer_name || row?.customer_unique_id) {
-      return {
-        unique_id: row.customer_unique_id ?? row.customer_id,
-        customer_name: row.customer_name,
-        contact_no: row.customer_contact_no,
-        building_no: row.customer_building_no,
-        street: row.customer_street,
-        area: row.customer_area,
-        ward_name: row.customer_ward_name ?? row.ward_name,
-        zone_name: row.customer_zone_name ?? row.zone_name,
-        city_name: row.customer_city_name ?? row.city_name,
-        state_name: row.customer_state_name ?? row.state_name,
-      };
-    }
+  const key =
+    row?.customer_unique_id ||
+    row?.customer_id ||
+    row?.customer ||
+    row?.unique_id;
 
-    const key = row?.customer_unique_id ?? row?.customer_id ?? row?.customer;
-    return key ? customerMap[String(key)] ?? null : null;
-  };
+  return key ? customerMap[String(key)] ?? null : null;
+};
 
   const customerList = users
     .filter((u) => u.user_type_name?.toLowerCase() === "customer")
@@ -148,7 +140,7 @@ export default function UserCreationList() {
   };
 
   /**
-   * 🔥 ONLY FIX APPLIED HERE
+   *  ONLY FIX APPLIED HERE
    * Backend expects 1 / 0, not true / false
    */
   const handleStatusToggle = async (unique_id: string, value: boolean) => {
@@ -224,7 +216,7 @@ export default function UserCreationList() {
             rows={10}
             rowsPerPageOptions={[5, 10, 25, 50]}
             filters={filters}
-            globalFilterFields={["staff_name", "staffusertype_name", "zone_name"]}
+            globalFilterFields={["staff_name", "staffusertype_name", "zone_name", "ward_name", "user_type_name"]}
             header={searchBar}
             stripedRows
             showGridlines
@@ -273,6 +265,10 @@ export default function UserCreationList() {
             globalFilterFields={[
               "customer.customer_name",
               "customer.contact_no",
+              "customer.ward_name",
+              "customer.zone_name",
+              "customer.city_name",
+              "customer.state_name",
             ]}
             header={searchBar}
             stripedRows
@@ -281,12 +277,12 @@ export default function UserCreationList() {
           >
             <Column header="S.No" body={(_, o) => o.rowIndex + 1} />
             <Column header="User Type" body={(r) => cap(r.user_type_name)} />
-            <Column header="Customer Name" body={(r) => r.customer?.customer_name} />
+            <Column header="Customer Name" body={(r) => cap(r.customer?.customer_name)} />
             <Column header="Mobile" body={(r) => r.customer?.contact_no} />
-            <Column header="Ward" body={(r) => r.customer?.ward_name} />
-            <Column header="Zone" body={(r) => r.customer?.zone_name} />
-            <Column header="City" body={(r) => r.customer?.city_name} />
-            <Column header="State" body={(r) => r.customer?.state_name} />
+            <Column header="Ward" body={(r) => cap(r.customer?.ward_name)} />
+            <Column header="Zone" body={(r) => cap(r.customer?.zone_name)} />
+            <Column header="City" body={(r) => cap(r.customer?.city_name)} />
+            <Column header="State" body={(r) => cap(r.customer?.state_name)} />
             <Column
               header="QR"
               body={(r) => {
