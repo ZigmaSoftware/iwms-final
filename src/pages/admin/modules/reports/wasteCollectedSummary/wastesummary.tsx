@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import "./wastesummary.css";
 import { desktopApi } from "@/api";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
+import { customerCreationApi, wasteCollectionApi } from "@/helpers/admin";
 
 import {
   filterActiveCustomers,
@@ -50,6 +51,7 @@ type ApiRow = {
 
 export default function WasteSummary() {
   const today = new Date();
+  const todayKey = today.toISOString().split("T")[0];
   const initialMonth = `${today.getFullYear()}-${String(
     today.getMonth() + 1
   ).padStart(2, "0")}`;
@@ -63,8 +65,9 @@ export default function WasteSummary() {
   const [rows, setRows] = useState<ApiRow[]>([]);
 
   const [totalHouseholdCount, setTotalHouseholdCount] = useState<number | null>(null);
-  const [totalWasteCollectedCount, setTotalWasteCollectedCount] = useState<number | null>(null);
+  const [totalCollectedCount, setTotalCollectedCount] = useState<number | null>(null);
   const [vehicleTrackingCount, setVehicleTrackingCount] = useState<number | null>(null);
+  const [collectedByDate, setCollectedByDate] = useState<Record<string, number>>({});
 
   /* ===== PrimeReact Search ===== */
 
@@ -80,10 +83,36 @@ export default function WasteSummary() {
     return Number.isNaN(n) ? null : n;
   };
 
+  const toDateKey = (value?: string | null) => {
+    if (!value) return "";
+    const raw = String(value).trim();
+    const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+    if (isoMatch) return isoMatch[1];
+    const dmyMatch = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+    if (dmyMatch) {
+      const [, day, month, year] = dmyMatch;
+      return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    }
+    const parsed = new Date(raw);
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed.toISOString().split("T")[0];
+    }
+    return raw;
+  };
+
   const formatNum = (v?: number | string | null) => {
     const n = parseNum(v);
     return n !== null ? n.toLocaleString() : "-";
   };
+
+  const getCollectionDateValue = (entry: any) =>
+    entry?.collection_date ??
+    entry?.collectionDate ??
+    entry?.created_at ??
+    entry?.createdAt ??
+    entry?.date ??
+    entry?.created_date ??
+    entry?.createdDate;
 
   const getVehicleCount = (row: ApiRow) => {
     const values = [
@@ -101,10 +130,58 @@ export default function WasteSummary() {
     return vehicleTrackingCount;
   };
 
-  const notCollected =
-    totalHouseholdCount !== null && totalWasteCollectedCount !== null
-      ? Math.max(totalHouseholdCount - totalWasteCollectedCount, 0)
-      : null;
+  const getCollectedCount = (dateValue?: string | null) => {
+    const dateKey = toDateKey(dateValue ?? "");
+    if (dateKey && collectedByDate[dateKey] !== undefined) {
+      return collectedByDate[dateKey];
+    }
+    const rawKey = String(dateValue ?? "").trim();
+    if (rawKey && collectedByDate[rawKey] !== undefined) {
+      return collectedByDate[rawKey];
+    }
+    return 0;
+  };
+
+  const displayRows = useMemo(() => {
+    const map = new Map<string, ApiRow>();
+
+    rows.forEach((row) => {
+      const rawDate = String(row.date ?? "").trim();
+      const dateKey = toDateKey(rawDate) || rawDate;
+      if (!dateKey) return;
+      if (!map.has(dateKey)) {
+        map.set(
+          dateKey,
+          rawDate ? row : { ...row, date: dateKey }
+        );
+      }
+    });
+
+    Object.keys(collectedByDate).forEach((dateKey) => {
+      if (map.has(dateKey)) return;
+      map.set(dateKey, {
+        date: dateKey,
+        dry_weight: 0,
+        wet_weight: 0,
+        mix_weight: 0,
+        total_net_weight: 0,
+        average_weight_per_trip: 0,
+      });
+    });
+
+    return Array.from(map.values())
+      .filter((row) => {
+        const dateKey = toDateKey(row.date) || row.date;
+        if (!dateKey) return false;
+        return dateKey <= todayKey;
+      })
+      .sort((a, b) => {
+      const aKey = toDateKey(a.date) || a.date;
+      const bKey = toDateKey(b.date) || b.date;
+      if (aKey === bKey) return 0;
+      return aKey > bKey ? -1 : 1;
+    });
+  }, [rows, collectedByDate, todayKey]);
 
   /* ================= FETCH MONTH DATA ================= */
 
@@ -113,7 +190,17 @@ export default function WasteSummary() {
       const url = `${ZIGMA_API_BASE}/waste_collected_summary_report/waste_collected_data_api.php?from_date=${month}-01&key=ZIGMA-DELHI-WEIGHMENT-2025-SECURE`;
       const res = await fetch(url);
       const json = await res.json();
-      setRows(Array.isArray(json?.data) ? json.data : []);
+      const data = Array.isArray(json?.data) ? json.data : [];
+      const normalized = data.map((row: any) => ({
+        ...row,
+        date:
+          row?.date ??
+          row?.Date ??
+          row?.collection_date ??
+          row?.collectionDate ??
+          "",
+      }));
+      setRows(normalized);
     } catch {
       setRows([]);
     }
@@ -126,22 +213,68 @@ export default function WasteSummary() {
 
   /* ================= MASTER COUNTS ================= */
 
+  const fetchHouseholdStats = useCallback(async (month: string) => {
+    let totalHouseholds = 0;
+    try {
+      const response = await customerCreationApi.list();
+      const normalized = normalizeCustomerArray(response);
+      const activeCustomers = filterActiveCustomers(normalized);
+      totalHouseholds = activeCustomers.length;
+      setTotalHouseholdCount(totalHouseholds);
+    } catch {
+      setTotalHouseholdCount(0);
+    }
+
+    try {
+      const response = await wasteCollectionApi.list();
+      const data = Array.isArray(response) ? response : [];
+      const filtered = month
+        ? data.filter((row: any) =>
+            toDateKey(getCollectionDateValue(row)).startsWith(month)
+          )
+        : data;
+      const countsByDateSets: Record<string, Set<string>> = {};
+      const totalCollectedSet = new Set<string>();
+      filtered.forEach((entry: any, index: number) => {
+        const dateKey = toDateKey(getCollectionDateValue(entry));
+        if (!dateKey) return;
+        const customerId = String(
+          entry.customer ?? entry.customer_id ?? entry.customer_unique_id ?? ""
+        ).trim();
+        const entryKey = String(
+          customerId ||
+            entry.unique_id ||
+            entry.id ||
+            entry.collection_id ||
+            index
+        ).trim();
+        if (!countsByDateSets[dateKey]) {
+          countsByDateSets[dateKey] = new Set();
+        }
+        countsByDateSets[dateKey].add(entryKey);
+        if (entryKey) {
+          totalCollectedSet.add(entryKey);
+        }
+      });
+
+      const countsByDate: Record<string, number> = {};
+      Object.entries(countsByDateSets).forEach(([dateKey, idSet]) => {
+        countsByDate[dateKey] = idSet.size;
+      });
+
+      setCollectedByDate(countsByDate);
+      setTotalCollectedCount(totalCollectedSet.size);
+    } catch {
+      setCollectedByDate({});
+      setTotalCollectedCount(0);
+    }
+  }, []);
+
   useEffect(() => {
-    (async () => {
-      const res = await desktopApi.get("customercreations/");
-      const active = filterActiveCustomers(
-        normalizeCustomerArray(res.data)
-      );
-      setTotalHouseholdCount(active.length);
-    })();
+    fetchHouseholdStats(appliedMonth);
+  }, [appliedMonth, fetchHouseholdStats]);
 
-    (async () => {
-      const res = await desktopApi.get("wastecollections/");
-      setTotalWasteCollectedCount(
-        Array.isArray(res.data) ? res.data.length : 0
-      );
-    })();
-
+  useEffect(() => {
     (async () => {
       const res = await fetch(VEHICLE_TRACKING_API);
       const body = await res.json();
@@ -179,11 +312,17 @@ export default function WasteSummary() {
   /* ================= EXPORT ================= */
 
   const handleDownload = () => {
-    const exportRows = rows.map((r) => ({
+    const exportRows = displayRows.map((r) => ({
       Date: r.date,
       "Total Household": totalHouseholdCount,
-      "Wt Collected": totalWasteCollectedCount,
-      "Wt Not Collected": notCollected,
+      Collected: totalCollectedCount,
+      "Not Collected":
+        totalHouseholdCount !== null
+          ? Math.max(
+              totalHouseholdCount - (totalCollectedCount ?? 0),
+              0
+            )
+          : null,
       "No. of Vehicle": getVehicleCount(r),
       "No. of Trip": parseNum(r.total_trip),
       "Dry Wt/kg": parseNum(r.dry_weight),
@@ -245,7 +384,7 @@ export default function WasteSummary() {
         </div>
 
         <DataTable
-          value={rows}
+          value={displayRows}
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25, 50]}
@@ -267,8 +406,23 @@ export default function WasteSummary() {
           <Column header="S.No" body={(_, o) => o.rowIndex + 1} style={{ width: "80px" }} />
           <Column field="date" header="Date" sortable />
           <Column header="Total Household" body={() => formatNum(totalHouseholdCount)} />
-          <Column header="Wt Collected" body={() => formatNum(totalWasteCollectedCount)} />
-          <Column header="Wt Not Collected" body={() => formatNum(notCollected)} />
+          <Column
+            header="Collected"
+            body={() => formatNum(totalCollectedCount)}
+          />
+          <Column
+            header="Not Collected"
+            body={(row) =>
+              formatNum(
+                totalHouseholdCount !== null
+                  ? Math.max(
+                      totalHouseholdCount - (totalCollectedCount ?? 0),
+                      0
+                    )
+                  : null
+              )
+            }
+          />
           <Column header="No. of Vehicle" body={(r) => formatNum(getVehicleCount(r))} />
           <Column field="total_trip" header="No. of Trip" sortable />
           <Column field="dry_weight" header="Dry Wt/kg" sortable />
