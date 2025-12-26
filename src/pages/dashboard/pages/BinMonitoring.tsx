@@ -1,29 +1,42 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { binApi } from "@/helpers/admin";
 
 type BinPriority = "high" | "medium" | "low";
+
+type ApiBin = {
+  unique_id: string;
+  bin_name: string;
+  ward_name?: string;
+  ward?: string;
+  bin_type?: string;
+  waste_type?: string;
+  color_code?: string;
+  capacity_liters?: number | string;
+  latitude?: number | string;
+  longitude?: number | string;
+  installation_date?: string;
+  expected_life_years?: number | string;
+  bin_status?: string;
+  is_active?: boolean;
+  created_at?: string;
+  updated_at?: string;
+};
 
 type BinRecord = {
   id: string;
   name: string;
   lat: number;
   lng: number;
-  fill: number;
-  area: string;
-  updatedAt: string;
+  priority: BinPriority;
+  ward?: string;
+  status?: string;
+  colorCode?: string;
+  updatedAt?: string;
 };
-
-const BIN_DATA: BinRecord[] = [
-  { id: "BIN-101", name: "Bin 101", lat: 28.6129, lng: 77.2295, fill: 92, area: "Central Zone", updatedAt: "5 min ago" },
-  { id: "BIN-118", name: "Bin 118", lat: 28.6202, lng: 77.2167, fill: 78, area: "Central Zone", updatedAt: "12 min ago" },
-  { id: "BIN-130", name: "Bin 130", lat: 28.6059, lng: 77.2402, fill: 64, area: "South Zone", updatedAt: "18 min ago" },
-  { id: "BIN-142", name: "Bin 142", lat: 28.5951, lng: 77.2249, fill: 88, area: "South Zone", updatedAt: "9 min ago" },
-  { id: "BIN-156", name: "Bin 156", lat: 28.6328, lng: 77.2189, fill: 42, area: "North Zone", updatedAt: "22 min ago" },
-  { id: "BIN-171", name: "Bin 171", lat: 28.6404, lng: 77.2321, fill: 55, area: "North Zone", updatedAt: "35 min ago" },
-];
 
 const priorityConfig: Record<BinPriority, { label: string; color: string; bg: string }> = {
   high: { label: "High", color: "#b91c1c", bg: "rgba(239,68,68,0.15)" },
@@ -31,10 +44,74 @@ const priorityConfig: Record<BinPriority, { label: string; color: string; bg: st
   low: { label: "Low", color: "#15803d", bg: "rgba(34,197,94,0.12)" },
 };
 
-const getPriority = (fill: number): BinPriority => {
-  if (fill >= 80) return "high";
-  if (fill >= 60) return "medium";
+const parseCoordinate = (value?: number | string | null) => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(String(value).replace(/,/g, "."));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const formatLabel = (value?: string) => {
+  if (!value) return undefined;
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const parseHexColor = (value: string) => {
+  let hex = value.trim().toLowerCase();
+  if (!hex) return null;
+  if (hex.startsWith("#")) hex = hex.slice(1);
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+  if (hex.length !== 6) return null;
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+  if ([r, g, b].some((c) => Number.isNaN(c))) return null;
+  return { r, g, b };
+};
+
+const getPriorityFromColor = (
+  colorCode?: string,
+  status?: string
+): BinPriority => {
+  const normalized = String(colorCode ?? "").trim().toLowerCase();
+  if (normalized) {
+    if (normalized.includes("red")) return "high";
+    if (
+      normalized.includes("orange") ||
+      normalized.includes("yellow") ||
+      normalized.includes("amber")
+    ) {
+      return "medium";
+    }
+    if (normalized.includes("green")) return "low";
+    const rgb = parseHexColor(normalized);
+    if (rgb) {
+      if (rgb.r >= 200 && rgb.g < 120) return "high";
+      if (rgb.g >= 170 && rgb.r < 140) return "low";
+      if (rgb.r >= 180 && rgb.g >= 120) return "medium";
+    }
+  }
+
+  const statusValue = String(status ?? "").trim().toLowerCase();
+  if (statusValue === "full") return "high";
+  if (statusValue === "maintenance" || statusValue === "damaged") {
+    return "medium";
+  }
+
   return "low";
+};
+
+const formatDateTime = (value?: string) => {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
 };
 
 const createBinIcon = (priority: BinPriority) => {
@@ -107,13 +184,65 @@ export default function BinMonitoring() {
   const markerLookupRef = useRef<Record<string, L.Marker>>({});
   const [focusedBin, setFocusedBin] = useState<string | null>(null);
   const [allBinSearch, setAllBinSearch] = useState("");
+  const [binRecords, setBinRecords] = useState<ApiBin[]>([]);
+  const [selectedBin, setSelectedBin] = useState<BinRecord | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    const fetchBins = async () => {
+      try {
+        const data = await binApi.list();
+        if (!isMounted) return;
+        setBinRecords(Array.isArray(data) ? data : []);
+      } catch {
+        if (!isMounted) return;
+        setBinRecords([]);
+      }
+    };
+
+    fetchBins();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const prioritized = useMemo(() => {
-    return BIN_DATA.map((bin) => ({
-      ...bin,
-      priority: getPriority(bin.fill),
-    })).sort((a, b) => b.fill - a.fill);
-  }, []);
+    const records = binRecords.reduce<BinRecord[]>((acc, bin) => {
+      if (bin.is_active === false) return acc;
+      const lat = parseCoordinate(bin.latitude);
+      const lng = parseCoordinate(bin.longitude);
+      if (lat === null || lng === null) return acc;
+      const record: BinRecord = {
+        id: String(bin.unique_id ?? ""),
+        name: bin.bin_name ?? bin.unique_id ?? "Unnamed Bin",
+        lat,
+        lng,
+        priority: getPriorityFromColor(bin.color_code, bin.bin_status),
+        ward: bin.ward_name || bin.ward || undefined,
+        status: formatLabel(bin.bin_status),
+        colorCode: bin.color_code || undefined,
+        updatedAt: formatDateTime(bin.updated_at ?? bin.created_at),
+      };
+      acc.push(record);
+      return acc;
+    }, []);
+
+    return records.sort((a, b) => {
+      const order: Record<BinPriority, number> = {
+        high: 3,
+        medium: 2,
+        low: 1,
+      };
+      return order[b.priority] - order[a.priority];
+    });
+  }, [binRecords]);
+
+  const handleSelectBin = (bin: BinRecord) => {
+    setSelectedBin(bin);
+    setPanelOpen(true);
+    setFocusedBin(bin.id);
+  };
 
   const highPriority = prioritized.filter((bin) => bin.priority === "high");
   const filteredAllBins = useMemo(() => {
@@ -123,7 +252,8 @@ export default function BinMonitoring() {
       (bin) =>
         bin.name.toLowerCase().includes(term) ||
         bin.id.toLowerCase().includes(term) ||
-        bin.area.toLowerCase().includes(term),
+        (bin.ward ?? "").toLowerCase().includes(term) ||
+        (bin.status ?? "").toLowerCase().includes(term),
     );
   }, [allBinSearch, prioritized]);
 
@@ -169,9 +299,11 @@ export default function BinMonitoring() {
         title: bin.name,
       });
       marker.bindPopup(
-        `<strong>${bin.name}</strong><br/>Fill: ${bin.fill}%<br/>Priority: ${priorityConfig[bin.priority].label}`,
+        `<strong>${bin.name}</strong><br/>Priority: ${priorityConfig[bin.priority].label}<br/>Color: ${bin.colorCode ?? "—"}<br/>Status: ${bin.status ?? "—"}`,
       );
-      marker.on("click", () => setFocusedBin(bin.id));
+      marker.on("click", () => handleSelectBin(bin));
+      marker.on("mouseover", () => marker.openPopup());
+      marker.on("mouseout", () => marker.closePopup());
       marker.addTo(layer);
       markerLookupRef.current[bin.id] = marker;
     });
@@ -194,7 +326,7 @@ export default function BinMonitoring() {
     <div className="space-y-4">
       <div>
         <h2 className="text-3xl font-bold text-sky-500">Bin Monitoring</h2>
-        <p className="text-muted-foreground">Live bin fill levels and priority alerts</p>
+        <p className="text-muted-foreground">Live bin status and priority alerts</p>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
@@ -202,11 +334,17 @@ export default function BinMonitoring() {
           <Card className="h-[760px] overflow-hidden">
             <CardHeader>
               <CardTitle>Bin Location Map</CardTitle>
-              <CardDescription>Track bins with fill-level priorities</CardDescription>
+              <CardDescription>Track bins with color-based priorities</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="relative h-[640px] w-full rounded-lg border-2 border-dashed border-border overflow-hidden bg-gradient-to-br from-secondary to-muted">
                 <div ref={mapDivRef} className="absolute inset-0" />
+                <BinSideDetailsPanel
+                  bin={selectedBin}
+                  open={panelOpen}
+                  onToggle={() => setPanelOpen((v) => !v)}
+                  onClose={() => setPanelOpen(false)}
+                />
               </div>
             </CardContent>
           </Card>
@@ -216,7 +354,7 @@ export default function BinMonitoring() {
           <Card>
             <CardHeader>
               <CardTitle>All Bins</CardTitle>
-              <CardDescription>Live fill levels from the map</CardDescription>
+              <CardDescription>Live status and priority view</CardDescription>
             </CardHeader>
             <CardContent className="h-[280px] space-y-2 overflow-y-auto pr-1">
               <div>
@@ -235,18 +373,22 @@ export default function BinMonitoring() {
                     <button
                       key={bin.id}
                       type="button"
-                      onClick={() => setFocusedBin(bin.id)}
+                      onClick={() => handleSelectBin(bin)}
                       className="flex w-full items-center justify-between rounded-lg border border-border px-3 py-2 text-left transition hover:border-emerald-300"
                     >
                       <div>
                         <p className="text-sm font-semibold">{bin.name}</p>
-                        <p className="text-[11px] text-muted-foreground">{bin.area}</p>
+                        <p className="text-[11px] text-muted-foreground">
+                          {bin.ward ?? "Ward N/A"}
+                        </p>
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-semibold" style={{ color: meta.color }}>
-                          {bin.fill}%
+                          {meta.label}
                         </span>
-                        <p className="text-[10px] text-muted-foreground">{meta.label}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {bin.colorCode ?? "—"}
+                        </p>
                       </div>
                     </button>
                   );
@@ -296,21 +438,23 @@ export default function BinMonitoring() {
                       <button
                         key={bin.id}
                         type="button"
-                        onClick={() => setFocusedBin(bin.id)}
+                        onClick={() => handleSelectBin(bin)}
                         className="w-full rounded-lg border border-border px-3 py-3 text-left transition hover:border-emerald-300"
                         style={{ background: meta.bg }}
                       >
                         <div className="flex items-center justify-between">
                           <div>
                             <p className="text-sm font-semibold">{bin.name}</p>
-                            <p className="text-xs text-muted-foreground">{bin.area}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {bin.ward ?? "Ward N/A"}
+                            </p>
                           </div>
                           <span className="text-sm font-semibold" style={{ color: meta.color }}>
-                            {bin.fill}%
+                            {meta.label}
                           </span>
                         </div>
                         <div className="mt-2 text-[11px] text-muted-foreground">
-                          Updated {bin.updatedAt}
+                          Updated {bin.updatedAt ?? "—"}
                         </div>
                       </button>
                     );
@@ -322,6 +466,141 @@ export default function BinMonitoring() {
             </Card>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function BinSideDetailsPanel({
+  bin,
+  open,
+  onToggle,
+  onClose,
+}: {
+  bin: BinRecord | null;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+}) {
+  const meta = bin ? priorityConfig[bin.priority] : null;
+  const WIDTH = 260;
+
+  return (
+    <div
+      className="absolute left-0 top-0 z-[700] h-full bg-white shadow-xl transition-transform duration-300"
+      style={{
+        width: WIDTH,
+        transform: open ? "translateX(0)" : `translateX(-${WIDTH}px)`,
+      }}
+    >
+      <button
+        onClick={onToggle}
+        className="absolute -right-3 top-1/2 -translate-y-1/2 flex h-7 w-7 items-center justify-center rounded-full border bg-white text-xs font-bold shadow"
+      >
+        {open ? "❮" : "❯"}
+      </button>
+
+      <button
+        onClick={onClose}
+        className="absolute right-2 top-2 rounded-full border bg-white px-2 py-1 text-xs font-bold shadow"
+      >
+        ✕
+      </button>
+
+      <div className="h-full overflow-y-auto border-l">
+        {bin ? (
+          <>
+            <div className="flex items-center gap-3 border-b p-3">
+              <AnimatedBinIcon color={meta?.color} bg={meta?.bg} />
+              <div>
+                <h3 className="text-sm font-bold">{bin.name}</h3>
+                <p className="text-[11px] text-gray-500">{meta?.label}</p>
+              </div>
+            </div>
+
+            <div className="space-y-4 p-3 text-xs">
+              <Section title="Bin Info">
+                <InfoRow label="Priority" value={meta?.label} />
+                <InfoRow label="Status" value={bin.status} />
+                <InfoRow label="Color Code" value={bin.colorCode} />
+              </Section>
+
+              <Section title="Location">
+                <InfoRow label="Ward" value={bin.ward} />
+                <InfoRow label="Latitude" value={bin.lat} />
+                <InfoRow label="Longitude" value={bin.lng} />
+              </Section>
+
+              <Section title="Updated">
+                <InfoRow label="Last Update" value={bin.updatedAt} />
+              </Section>
+            </div>
+          </>
+        ) : (
+          <div className="p-3 text-xs text-gray-400">Select a bin</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AnimatedBinIcon({
+  color = "#16a34a",
+  bg = "#dcfce7",
+}: {
+  color?: string;
+  bg?: string;
+}) {
+  return (
+    <div className="relative flex h-10 w-10 items-center justify-center">
+      <span
+        className="absolute inline-flex h-full w-full rounded-full animate-ping"
+        style={{ backgroundColor: bg, opacity: 0.6 }}
+      />
+      <span
+        className="relative flex h-10 w-10 items-center justify-center rounded-lg animate-[bounce_0.6s_ease-out]"
+        style={{ backgroundColor: bg }}
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={color}
+          strokeWidth="2"
+          className="h-6 w-6"
+        >
+          <path d="M3 6h18" />
+          <path d="M8 6v14" />
+          <path d="M16 6v14" />
+          <path d="M5 6l1 14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-14" />
+        </svg>
+      </span>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value: any }) {
+  return (
+    <div className="flex justify-between border-b pb-1">
+      <span className="text-gray-500">{label}</span>
+      <span className="font-semibold">{value ?? "—"}</span>
+    </div>
+  );
+}
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-2 text-[11px] font-bold uppercase text-gray-500">
+        {title}
+      </div>
+      <div className="space-y-1 rounded-md border bg-gray-50 p-2">
+        {children}
       </div>
     </div>
   );

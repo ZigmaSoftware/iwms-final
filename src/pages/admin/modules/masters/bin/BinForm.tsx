@@ -27,7 +27,19 @@ type SelectOption = { value: string; label: string };
 
 /* ================= HELPERS ================= */
 const extractErr = (e: any): string => {
-  if (e?.response?.data) return String(e.response.data);
+  const data = e?.response?.data;
+  if (data) {
+    if (typeof data === "string") return data;
+    if (typeof data === "object") {
+      return Object.entries(data)
+        .map(([key, value]) => {
+          if (Array.isArray(value)) return `${key}: ${value.join(", ")}`;
+          return `${key}: ${String(value)}`;
+        })
+        .join("\n");
+    }
+    return String(data);
+  }
   if (e?.message) return e.message;
   return "Unexpected error";
 };
@@ -49,8 +61,8 @@ export default function BinForm() {
   const [wasteType, setWasteType] = useState("organic");
   const [capacity, setCapacity] = useState<number | "">("");
   const [colorCode, setColorCode] = useState("");
-  const [latitude, setLatitude] = useState<number | "">("");
-  const [longitude, setLongitude] = useState<number | "">("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
   const [installationDate, setInstallationDate] = useState("");
   const [expectedLife, setExpectedLife] = useState<number | "">("");
   const [binStatus, setBinStatus] = useState("active");
@@ -80,23 +92,31 @@ export default function BinForm() {
   useEffect(() => {
     if (!isEdit || !id) return;
 
+    const toNumberOrEmpty = (value: unknown): number | "" => {
+      if (value === null || value === undefined || value === "") return "";
+      const parsed = Number(value);
+      return Number.isFinite(parsed) ? parsed : "";
+    };
+    const toStringOrEmpty = (value: unknown): string =>
+      value === null || value === undefined ? "" : String(value);
+
     binApi
       .get(id)
       .then((data: any) => {
         setBinName(data.bin_name ?? "");
         setBinType(data.bin_type ?? "public");
         setWasteType(data.waste_type ?? "organic");
-        setCapacity(data.capacity_liters ?? "");
+        setCapacity(toNumberOrEmpty(data.capacity_liters));
         setColorCode(data.color_code ?? "");
-        setLatitude(data.latitude ?? "");
-        setLongitude(data.longitude ?? "");
+        setLatitude(toStringOrEmpty(data.latitude));
+        setLongitude(toStringOrEmpty(data.longitude));
         setInstallationDate(data.installation_date ?? "");
-        setExpectedLife(data.expected_life_years ?? "");
+        setExpectedLife(toNumberOrEmpty(data.expected_life_years));
         setBinStatus(data.bin_status ?? "active");
         setIsActive(Boolean(data.is_active));
 
         // THIS IS THE KEY FIX
-        const w = String(data.ward_id ?? "");
+        const w = String(data.ward ?? data.ward_id ?? "");
         if (w) setPendingWard(w);
       })
       .catch(() => Swal.fire("Error", "Failed to load bin details", "error"));
@@ -118,10 +138,27 @@ export default function BinForm() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (!binName.trim() || !wardId || !capacity) {
+    const missingFields: string[] = [];
+    const hasNumber = (value: number | "") =>
+      typeof value === "number" && Number.isFinite(value);
+
+    if (!binName.trim()) missingFields.push("Bin name");
+    if (!wardId) missingFields.push("Ward");
+    if (typeof capacity !== "number" || capacity <= 0) {
+      missingFields.push("Capacity");
+    }
+    if (!colorCode.trim()) missingFields.push("Color code");
+    if (!latitude.trim()) missingFields.push("Latitude");
+    if (!longitude.trim()) missingFields.push("Longitude");
+    if (!installationDate) missingFields.push("Installation date");
+    if (typeof expectedLife !== "number" || expectedLife <= 0) {
+      missingFields.push("Expected life");
+    }
+
+    if (missingFields.length > 0) {
       Swal.fire(
         "Missing Fields",
-        "Bin name, ward and capacity are required.",
+        `Please provide: ${missingFields.join(", ")}.`,
         "warning"
       );
       return;
@@ -129,17 +166,28 @@ export default function BinForm() {
 
     setLoading(true);
 
+    const latValue = Number.parseFloat(latitude.replace(/,/g, "."));
+    const lonValue = Number.parseFloat(longitude.replace(/,/g, "."));
+    if (Number.isNaN(latValue) || Number.isNaN(lonValue)) {
+      Swal.fire(
+        "Invalid Coordinates",
+        "Latitude and Longitude must be valid numbers.",
+        "warning"
+      );
+      return;
+    }
+
     const payload = {
       bin_name: binName.trim(),
       ward: wardId,
       bin_type: binType,
       waste_type: wasteType,
       capacity_liters: Number(capacity),
-      color_code: colorCode,
-      latitude: latitude === "" ? null : Number(latitude),
-      longitude: longitude === "" ? null : Number(longitude),
-      installation_date: installationDate || null,
-      expected_life_years: expectedLife === "" ? null : Number(expectedLife),
+      color_code: colorCode.trim(),
+      latitude: latValue,
+      longitude: lonValue,
+      installation_date: installationDate,
+      expected_life_years: Number(expectedLife),
       bin_status: binStatus,
       is_active: isActive,
     };
@@ -173,7 +221,11 @@ export default function BinForm() {
         {/* Bin Name */}
         <div>
           <Label>Bin Name *</Label>
-          <Input value={binName} onChange={(e) => setBinName(e.target.value)} />
+          <Input
+            value={binName}
+            onChange={(e) => setBinName(e.target.value)}
+            required
+          />
         </div>
 
         {/* Ward */}
@@ -232,59 +284,67 @@ export default function BinForm() {
             type="number"
             value={capacity}
             onChange={(e) => setCapacity(e.target.value ? +e.target.value : "")}
+            min={1}
+            required
           />
         </div>
 
         {/* Color */}
         <div>
-          <Label>Color Code</Label>
+          <Label>Color Code *</Label>
           <Input
             value={colorCode}
             onChange={(e) => setColorCode(e.target.value)}
+            required
           />
         </div>
 
         {/* Latitude */}
         <div>
-          <Label>Latitude</Label>
+          <Label>Latitude *</Label>
           <Input
-            type="number"
+            type="text"
+            inputMode="decimal"
             value={latitude}
-            onChange={(e) => setLatitude(e.target.value ? +e.target.value : "")}
+            onChange={(e) => setLatitude(e.target.value)}
+            required
           />
         </div>
 
         {/* Longitude */}
         <div>
-          <Label>Longitude</Label>
+          <Label>Longitude *</Label>
           <Input
-            type="number"
+            type="text"
+            inputMode="decimal"
             value={longitude}
-            onChange={(e) =>
-              setLongitude(e.target.value ? +e.target.value : "")
-            }
+            onChange={(e) => setLongitude(e.target.value)}
+            required
           />
         </div>
 
         {/* Installation Date */}
         <div>
-          <Label>Installation Date</Label>
+          <Label>Installation Date *</Label>
           <Input
             type="date"
             value={installationDate}
             onChange={(e) => setInstallationDate(e.target.value)}
+            required
           />
         </div>
 
         {/* Expected Life */}
         <div>
-          <Label>Expected Life (Years)</Label>
+          <Label>Expected Life (Years) *</Label>
           <Input
             type="number"
             value={expectedLife}
             onChange={(e) =>
               setExpectedLife(e.target.value ? +e.target.value : "")
             }
+            min={1}
+            required
           />
         </div>
 

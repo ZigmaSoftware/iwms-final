@@ -82,7 +82,7 @@ export default function ZoneList() {
   //   Load Data
   // ===========================
   const fetchZones = useCallback(async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const data = (await zoneApi.list()) as ZoneRecord[];
       setZones(data);

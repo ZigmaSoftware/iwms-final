@@ -562,7 +562,7 @@ export function LeafletMapContainer({
           left: "50%",
           transform: "translateX(-50%)",
           zIndex: 1000,
-          background: isDarkMode ? "rgba(15,23,42,.96)" : "#fff",
+          background: isDarkMode ? "rgba(15,23,42,.85)" : "rgba(255,255,255,.8)",
           padding: "6px 10px",
           borderRadius: 8,
           display: "flex",

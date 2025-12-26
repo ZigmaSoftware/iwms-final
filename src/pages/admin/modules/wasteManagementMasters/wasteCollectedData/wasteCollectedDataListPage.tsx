@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { adminApi } from "@/helpers/admin/registry";
-import Swal from "sweetalert2";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
@@ -13,7 +12,7 @@ import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
-import { PencilIcon, TrashBinIcon } from "@/icons";
+import { PencilIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 import { Switch } from "@/components/ui/switch";
@@ -84,38 +83,6 @@ export default function WasteCollectedDataList() {
     fetchWasteCollectedData();
   }, []);
 
-  // Delete Record
-  const handleDelete = async (id: string) => {
-    const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This wastecollection will be permanently deleted!",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
-    });
-
-    if (!confirm.isConfirmed) return;
-
-    try {
-      await wasteApi.remove(id);
-      Swal.fire({
-        icon: "success",
-        title: "Deleted successfully!",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      fetchWasteCollectedData();
-    } catch {
-      Swal.fire({
-        icon: "error",
-        title: "Error deleting record",
-        text: "Something went wrong.",
-      });
-    }
-  };
-
   // Search
   const onGlobalFilterChange = (e: any) => {
     const updated = { ...filters };
@@ -164,13 +131,6 @@ export default function WasteCollectedDataList() {
         <PencilIcon className="size-5" />
       </button>
 
-      <button
-        onClick={() => handleDelete(row.unique_id)}
-        className="inline-flex items-center justify-center text-red-600 hover:text-red-800"
-        title="Delete"
-      >
-        <TrashBinIcon className="size-5" />
-      </button>
     </div>
   );
 
@@ -210,7 +170,6 @@ export default function WasteCollectedDataList() {
             "customer_name",
             "zone_name",
             "city_name",
-            "collection_date",
           ]}
           rowsPerPageOptions={[5, 10, 25, 50]}
           header={header}
@@ -237,7 +196,6 @@ export default function WasteCollectedDataList() {
             body={(r: WasteCollection) => cap(r.customer_name)}
             sortable
           />
-          <Column field="collection_date" header="Collected Date" sortable />
           <Column field="dry_waste" header="Dry Waste" sortable />
           <Column field="wet_waste" header="Wet Waste" sortable />
           <Column field="total_quantity" header="Quantity" sortable />

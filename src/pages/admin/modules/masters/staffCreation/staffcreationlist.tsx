@@ -66,7 +66,7 @@ export default function StaffCreationList() {
   ];
 
   const fetchStaffs = async (params = filterParams) => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const payload: any = await staffCreationApi.list({ params });
       const data = Array.isArray(payload)

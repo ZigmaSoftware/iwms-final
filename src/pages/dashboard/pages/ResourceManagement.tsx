@@ -5,81 +5,19 @@ import { Input } from "@/components/ui/input";
 import { Search, Mail, Phone, Sparkles } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { userCreationApi } from "@/helpers/admin";
 
-// -----------------------------------------------------------------------------
-// MOCK DATA
-// -----------------------------------------------------------------------------
-const mockEmployees = [
-  {
-    id: "E001",
-    name: "Rajesh Kumar",
-    role: "Driver",
-    zone: "Zone A",
-    status: "active",
-    phone: "+91 98765 43210",
-    email: "rajesh.k@fleet.com",
-    vehicle: "DL-01-AB-1234",
-    joinDate: "2024-01-15",
-  },
-  {
-    id: "E002",
-    name: "Amit Singh",
-    role: "Driver",
-    zone: "Zone B",
-    status: "on-leave",
-    phone: "+91 98765 43211",
-    email: "amit.s@fleet.com",
-    vehicle: "DL-01-CD-5678",
-    joinDate: "2024-02-20",
-  },
-  {
-    id: "E003",
-    name: "Suresh Yadav",
-    role: "Driver",
-    zone: "Zone C",
-    status: "active",
-    phone: "+91 98765 43212",
-    email: "suresh.y@fleet.com",
-    vehicle: "DL-01-EF-9012",
-    joinDate: "2024-03-10",
-  },
-  {
-    id: "E004",
-    name: "Priya Sharma",
-    role: "Supervisor",
-    zone: "Zone A",
-    status: "active",
-    phone: "+91 98765 43213",
-    email: "priya.s@fleet.com",
-    vehicle: "-",
-    joinDate: "2023-11-05",
-  },
-  {
-    id: "E005",
-    name: "Ravi Verma",
-    role: "Helper",
-    zone: "Zone B",
-    status: "active",
-    phone: "+91 98765 43214",
-    email: "ravi.v@fleet.com",
-    vehicle: "DL-01-CD-5678",
-    joinDate: "2024-05-18",
-  },
-  {
-    id: "E006",
-    name: "Anita Devi",
-    role: "Helper",
-    zone: "Zone A",
-    status: "active",
-    phone: "+91 98765 43215",
-    email: "anita.d@fleet.com",
-    vehicle: "DL-01-AB-1234",
-    joinDate: "2024-06-22",
-  },
-];
+const normalizeList = (payload: any) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.data?.results)) return payload.data.results;
+  if (payload && typeof payload === "object") return Object.values(payload);
+  return [];
+};
 
 export default function ResourceManagement() {
+  const [employees, setEmployees] = useState<any[]>([]);
   // FILTER STATES
   const [searchQuery, setSearchQuery] = useState("");
   const [roleFilter, setRoleFilter] = useState("All Roles");
@@ -87,10 +25,56 @@ export default function ResourceManagement() {
   const [vehicleFilter, setVehicleFilter] = useState("All Vehicles");
   const [joinDateFilter, setJoinDateFilter] = useState("All Join Dates");
 
+  // Fetch staff users only
+  useEffect(() => {
+    const fetchStaff = async () => {
+      try {
+        const res = await userCreationApi.list();
+        const all = normalizeList(res);
+        const staffOnly = all.filter(
+          (u: any) =>
+            u?.user_type_name?.toLowerCase() === "staff" ||
+            u?.staffusertype_name?.toLowerCase() === "staff"
+        );
+
+        const mapped = staffOnly.map((u: any) => ({
+          id: u.unique_id ?? u.id ?? "-",
+          name: u.staff_name ?? u.customer_name ?? "Unknown",
+          role: u.staffusertype_name ?? u.user_type_name ?? "Staff",
+          zone: u.zone_name ?? u.customer_zone ?? "-",
+          status: u.is_active ? "active" : "inactive",
+          phone: u.staff_contact_mobile ?? "-",
+          email: u.staff_contact_email ?? "-",
+          vehicle: u.vehicle_name ?? "-",
+          joinDate: u.staff_doj ?? u.created_at ?? "-",
+        }));
+
+        setEmployees(mapped);
+      } catch (err) {
+        console.error("Failed to load staff", err);
+      }
+    };
+
+    fetchStaff();
+  }, []);
+
   // CLEAN LABEL OPTIONS
-  const zoneOptions = ["All Zones", ...new Set(mockEmployees.map((e) => e.zone))];
-  const vehicleOptions = ["All Vehicles", ...new Set(mockEmployees.map((e) => e.vehicle))];
-  const joinDateOptions = ["All Join Dates", ...new Set(mockEmployees.map((e) => e.joinDate))];
+  const roleOptions = useMemo(
+    () => ["All Roles", ...new Set(employees.map((e) => e.role || "Staff"))],
+    [employees]
+  );
+  const zoneOptions = useMemo(
+    () => ["All Zones", ...new Set(employees.map((e) => e.zone || "-"))],
+    [employees]
+  );
+  const vehicleOptions = useMemo(
+    () => ["All Vehicles", ...new Set(employees.map((e) => e.vehicle || "-"))],
+    [employees]
+  );
+  const joinDateOptions = useMemo(
+    () => ["All Join Dates", ...new Set(employees.map((e) => e.joinDate || "-"))],
+    [employees]
+  );
 
   // RESET FILTERS
   const clearFilters = () => {
@@ -102,7 +86,7 @@ export default function ResourceManagement() {
   };
 
   // FILTER LOGIC
-  const filteredEmployees = mockEmployees.filter((emp) => {
+  const filteredEmployees = employees.filter((emp) => {
     const matchesSearch =
       emp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       emp.zone.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -123,7 +107,7 @@ export default function ResourceManagement() {
     return matchesSearch && matchesRole && matchesZone && matchesVehicle && matchesJoinDate;
   });
 
-  const roleCounts = mockEmployees.reduce(
+  const roleCounts = employees.reduce(
     (acc, emp) => {
       const key = emp.role.toLowerCase();
       acc[key] = (acc[key] || 0) + 1;
@@ -135,7 +119,7 @@ export default function ResourceManagement() {
   const workforceStats = [
     {
       label: "Total Workforce",
-      value: mockEmployees.length,
+      value: employees.length,
       subtext: "All personnel",
       accent: "from-white via-sky-50 to-sky-200 dark:from-slate-900 dark:via-sky-950/40 dark:to-slate-900",
       filterValue: "All Roles",
@@ -163,11 +147,11 @@ export default function ResourceManagement() {
       },
     },
     {
-      label: "Supervisors",
-      value: roleCounts["supervisor"] ?? 0,
-      subtext: "Leadership",
+      label: "Operators",
+      value: roleCounts["operator"] ?? 0,
+      subtext: "Operations crew",
       accent: "from-white via-amber-50 to-amber-200 dark:from-slate-900 dark:via-amber-950/40 dark:to-slate-900",
-      filterValue: "Supervisor",
+      filterValue: "Operator",
       border: "border-amber-200/80 dark:border-amber-500/40",
       ringColor: "ring-amber-300 dark:ring-amber-500/60",
       colors: {
@@ -176,36 +160,32 @@ export default function ResourceManagement() {
         sparkle: "text-amber-400 dark:text-amber-200",
       },
     },
-    {
-      label: "Helpers",
-      value: roleCounts["helper"] ?? 0,
-      subtext: "Support crew",
-      accent: "from-white via-rose-50 to-rose-200 dark:from-slate-900 dark:via-rose-950/40 dark:to-slate-900",
-      filterValue: "Helper",
-      border: "border-rose-200/80 dark:border-rose-500/40",
-      ringColor: "ring-rose-300 dark:ring-rose-500/60",
-      colors: {
-        label: "text-rose-500 dark:text-rose-200",
-        value: "text-rose-600 dark:text-rose-200",
-        sparkle: "text-rose-400 dark:text-rose-200",
-      },
-    },
+    // {
+    //   label: "Helpers",
+    //   value: roleCounts["helper"] ?? 0,
+    //   subtext: "Support crew",
+    //   accent: "from-white via-rose-50 to-rose-200 dark:from-slate-900 dark:via-rose-950/40 dark:to-slate-900",
+    //   filterValue: "Helper",
+    //   border: "border-rose-200/80 dark:border-rose-500/40",
+    //   ringColor: "ring-rose-300 dark:ring-rose-500/60",
+    //   colors: {
+    //     label: "text-rose-500 dark:text-rose-200",
+    //     value: "text-rose-600 dark:text-rose-200",
+    //     sparkle: "text-rose-400 dark:text-rose-200",
+    //   },
+    // },
   ];
-
-  const statusCardGradients: Record<string, string> = {
-    active: "from-white via-emerald-50 to-emerald-300 dark:from-slate-900 dark:via-emerald-900/30 dark:to-emerald-800",
-    "on-leave": "from-white via-amber-50 to-amber-200 dark:from-slate-900 dark:via-amber-900/30 dark:to-amber-800",
-  };
 
   const roleAccentLines: Record<string, string> = {
     driver: "from-white via-emerald-100 to-emerald-400 dark:from-emerald-900 dark:via-emerald-800 dark:to-emerald-700",
-    supervisor: "from-white via-amber-100 to-amber-400 dark:from-amber-900 dark:via-amber-800 dark:to-amber-700",
+    operator: "from-white via-amber-100 to-amber-400 dark:from-amber-900 dark:via-amber-800 dark:to-amber-700",
     helper: "from-white via-rose-100 to-rose-400 dark:from-rose-900 dark:via-rose-800 dark:to-rose-700",
     default: "from-white via-slate-100 to-slate-300 dark:from-slate-900 dark:via-slate-800 dark:to-slate-700",
   };
 
   const statusGlowColors: Record<string, string> = {
     active: "bg-emerald-100/70 dark:bg-emerald-900/40",
+    inactive: "bg-slate-200/70 dark:bg-slate-800/40",
     "on-leave": "bg-amber-100/70 dark:bg-amber-900/40",
   };
 
@@ -214,6 +194,8 @@ export default function ResourceManagement() {
     switch (status) {
       case "active":
         return "bg-success/10 text-success border-success/20";
+      case "inactive":
+        return "bg-muted text-muted-foreground border-border";
       case "on-leave":
         return "bg-warning/10 text-warning border-warning/20";
       default:
@@ -225,7 +207,7 @@ export default function ResourceManagement() {
     switch (role.toLowerCase()) {
       case "driver":
         return "bg-primary/10 text-primary border-primary/20";
-      case "supervisor":
+      case "operator":
         return "bg-purple-500/10 text-purple-600 border-purple-500/20";
       case "helper":
         return "bg-blue-500/10 text-blue-600 border-blue-500/20";
@@ -273,10 +255,11 @@ export default function ResourceManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All Roles">All Roles</SelectItem>
-                  <SelectItem value="Driver">Driver</SelectItem>
-                  <SelectItem value="Helper">Helper</SelectItem>
-                  <SelectItem value="Supervisor">Supervisor</SelectItem>
+                  {roleOptions.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {role}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
 
@@ -390,7 +373,7 @@ export default function ResourceManagement() {
                   <div className="flex items-start gap-4">
                     <Avatar className="h-12 w-12">
                       <AvatarFallback className="bg-sky-50 dark:bg-slate-800 text-primary font-semibold">
-                        {emp.name.split(" ").map((n) => n[0]).join("")}
+                        {emp.name.split(" ").map((n:any) => n[0]).join("")}
                       </AvatarFallback>
                     </Avatar>
 

@@ -74,7 +74,7 @@ export default function CountryList() {
     `/${encMasters}/${encCountries}/${unique_id}/edit`;
 
   const fetchCountries = useCallback(async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const data = (await countryApi.list()) as CountryRecord[];
       setCountries(data);

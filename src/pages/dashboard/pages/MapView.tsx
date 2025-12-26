@@ -120,13 +120,6 @@ function createVehicleIcon(status: StatusKey, isFocused: boolean) {
   });
 }
 
-const FALLBACK_VEHICLE_INFO = [
-  { id: "TRK-001", lat: 40.7128, lng: -74.006, status: "Running", staff: "John Doe", route: "Zone A", weight: "2.4 tons" },
-  { id: "TRK-015", lat: 40.758, lng: -73.9855, status: "Idle", staff: "Jane Smith", route: "Zone B", weight: "1.8 tons" },
-  { id: "TRK-008", lat: 40.7489, lng: -73.968, status: "Completed", staff: "Mike Johnson", route: "Zone C", weight: "3.1 tons" },
-  { id: "TRK-022", lat: 40.7614, lng: -73.9776, status: "Running", staff: "Sarah Williams", route: "Zone D", weight: "2.7 tons" },
-];
-
 const TRACKING_API_URL =
   "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM";
 
@@ -222,17 +215,9 @@ type LiveVehicle = {
   status: StatusKey;
   speed: number;
   lastUpdate: string;
+  driver?: string;
+  location?: string;
 };
-
-const FALLBACK_TRACKED_VEHICLES: LiveVehicle[] = FALLBACK_VEHICLE_INFO.map((vehicle) => ({
-  id: vehicle.id,
-  label: vehicle.id,
-  lat: vehicle.lat,
-  lng: vehicle.lng,
-  status: mapStatusKey(vehicle.status),
-  speed: 0,
-  lastUpdate: new Date().toISOString(),
-}));
 
 function normalizeVehicle(record: RawRecord): LiveVehicle | null {
   const id = pick(record, ["vehicleId", "vehicle_id", "vehicleNo", "regNo", "vehicle_number"]);
@@ -242,6 +227,8 @@ function normalizeVehicle(record: RawRecord): LiveVehicle | null {
   const timestampValue = pickRaw(record, HISTORY_TIMESTAMP_KEYS);
   const timestamp = parseVamosysTimestamp(timestampValue) ?? new Date();
   const speed = pickNum(record, ["speedKmph", "speed", "speedKMH", "speedKmH", "speedMs"]) ?? 0;
+  const driver = pick(record, ["driverName", "driver_name", "driver", "staffName", "staff"], "");
+  const location = pick(record, ["location", "address", "lastLocation", "last_location"], "");
   return {
     id,
     label: id,
@@ -250,15 +237,18 @@ function normalizeVehicle(record: RawRecord): LiveVehicle | null {
     status: deriveVehicleStatus(record, speed),
     speed: Math.max(0, speed),
     lastUpdate: timestamp.toISOString(),
+    driver: driver || undefined,
+    location: location || undefined,
   };
 }
 
 export default function MapView() {
   const { theme, palette } = useTheme();
   const isDarkMode = theme === "dark";
-  const [vehicleId, setVehicleId] = useState(FALLBACK_TRACKED_VEHICLES[0].id);
-  const [liveVehicles, setLiveVehicles] = useState<LiveVehicle[]>(FALLBACK_TRACKED_VEHICLES);
-  const [focusedVehicleId, setFocusedVehicleId] = useState<string>(FALLBACK_TRACKED_VEHICLES[0].id);
+  const preferredVehicleId = "UP16KT1737";
+  const [vehicleId, setVehicleId] = useState(preferredVehicleId);
+  const [liveVehicles, setLiveVehicles] = useState<LiveVehicle[]>([]);
+  const [focusedVehicleId, setFocusedVehicleId] = useState<string>(preferredVehicleId);
   const [statusFilter, setStatusFilter] = useState<"all" | StatusKey>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -267,6 +257,7 @@ export default function MapView() {
   const [loadingLive, setLoadingLive] = useState(true);
   const [liveError, setLiveError] = useState("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState(new Date());
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -312,8 +303,11 @@ export default function MapView() {
 
   useEffect(() => {
     if (mapRef.current || !mapDivRef.current) return;
+    if (!liveVehicles.length) return;
+    const initialVehicle =
+      liveVehicles.find((vehicle) => vehicle.id === preferredVehicleId) ?? liveVehicles[0];
     const map = L.map(mapDivRef.current, {
-      center: [40.75, -73.98],
+      center: [initialVehicle.lat, initialVehicle.lng],
       zoom: 11,
       zoomControl: false,
     });
@@ -331,7 +325,7 @@ export default function MapView() {
       mapRef.current = null;
       markersRef.current = null;
     };
-  }, []);
+  }, [liveVehicles, preferredVehicleId]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -356,9 +350,9 @@ export default function MapView() {
           )} km/h`,
         )
         .addTo(layer);
-      if (isFocused) {
-        marker.openPopup();
-      }
+      marker.on("mouseover", () => marker.openPopup());
+      marker.on("mouseout", () => marker.closePopup());
+      marker.on("click", () => handleVehicleClick(vehicle.id));
     });
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [32, 32] });
@@ -403,11 +397,23 @@ export default function MapView() {
           ) as LiveVehicle[];
         if (!isMounted) return;
         if (normalized.length) {
-          const limited = normalized.slice(0, 20);
+          let limited = normalized.slice(0, 20);
+          const preferred = normalized.find((vehicle) => vehicle.id === preferredVehicleId);
+          if (preferred && !limited.some((vehicle) => vehicle.id === preferredVehicleId)) {
+            limited = [preferred, ...limited.slice(0, 19)];
+          }
           setLiveVehicles(limited);
-          setFocusedVehicleId((prev) =>
-            limited.some((vehicle) => vehicle.id === prev) ? prev : limited[0]?.id ?? prev,
-          );
+          if (preferred && limited.some((vehicle) => vehicle.id === preferredVehicleId)) {
+            setVehicleId(preferredVehicleId);
+            setFocusedVehicleId(preferredVehicleId);
+          } else {
+            setFocusedVehicleId((prev) =>
+              limited.some((vehicle) => vehicle.id === prev) ? prev : limited[0]?.id ?? prev,
+            );
+            setVehicleId((prev) =>
+              limited.some((vehicle) => vehicle.id === prev) ? prev : limited[0]?.id ?? prev,
+            );
+          }
           setLiveError("");
           setLastUpdatedAt(new Date());
         } else {
@@ -448,6 +454,7 @@ export default function MapView() {
     if (liveVehicles.some((vehicle) => vehicle.id === id)) {
       setFocusedVehicleId(id);
     }
+    setPanelOpen(true);
   };
 
   const lastUpdatedLabel = lastUpdatedAt.toLocaleTimeString("en-US", {
@@ -455,6 +462,8 @@ export default function MapView() {
     minute: "2-digit",
     second: "2-digit",
   });
+
+  const selectedVehicle = liveVehicles.find((vehicle) => vehicle.id === vehicleId);
 
   return (
     <div className="space-y-3">
@@ -542,8 +551,7 @@ export default function MapView() {
                               event.preventDefault();
                               setSearchTerm(vehicle.label);
                               setIsDropdownOpen(false);
-                              setVehicleId(vehicle.id);
-                              setFocusedVehicleId(vehicle.id);
+                              handleVehicleClick(vehicle.id);
                             }}
                           >
                             <span>{vehicle.label}</span>
@@ -561,6 +569,13 @@ export default function MapView() {
             <CardContent>
               <div className="relative h-[640px] bg-gradient-to-br from-secondary to-muted rounded-lg border-2 border-dashed border-border overflow-hidden">
                 <div ref={mapDivRef} className="absolute inset-0" />
+                <VehicleSidePanel
+                  vehicle={selectedVehicle}
+                  open={panelOpen}
+                  onToggle={() => setPanelOpen((prev) => !prev)}
+                  onClose={() => setPanelOpen(false)}
+                  isDarkMode={isDarkMode}
+                />
                 <div className="absolute left-3 bottom-3 rounded-md bg-background/80 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow">
                   <div>{`Live vehicles: ${liveVehicles.length}`}</div>
                   <div>{`Updated ${lastUpdatedLabel}`}</div>
@@ -694,6 +709,155 @@ export default function MapView() {
           </Card>
         </div>
       </div>
+    </div>
+  );
+}
+
+function VehicleSidePanel({
+  vehicle,
+  open,
+  onToggle,
+  onClose,
+  isDarkMode,
+}: {
+  vehicle?: LiveVehicle;
+  open: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+  isDarkMode: boolean;
+}) {
+  const [infoOpen, setInfoOpen] = useState(true);
+  const meta = vehicle ? STATUS_META[vehicle.status] : null;
+  const surface = meta ? (isDarkMode ? meta.surfaceDark : meta.surfaceLight) : null;
+  const WIDTH = 280;
+  const locationLabel = vehicle?.location?.trim() ? vehicle.location : "Location unavailable";
+  const driverLabel = vehicle?.driver?.trim() ? vehicle.driver : "-";
+  const lastUpdatedLabel = vehicle
+    ? new Date(vehicle.lastUpdate).toLocaleString("en-US")
+    : "—";
+
+  return (
+    <div
+      className={`absolute left-0 top-0 z-[700] h-full shadow-xl transition-transform duration-300 ${
+        isDarkMode ? "bg-slate-950/95 text-slate-100" : "bg-white text-slate-900"
+      }`}
+      style={{
+        width: WIDTH,
+        transform: open ? "translateX(0)" : `translateX(-${WIDTH}px)`,
+      }}
+    >
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`absolute -right-3 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full border text-xs font-bold shadow ${
+          isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
+        }`}
+      >
+        {open ? "❮" : "❯"}
+      </button>
+
+      <button
+        type="button"
+        onClick={onClose}
+        className={`absolute right-2 top-2 rounded-full border px-2 py-1 text-xs font-bold shadow ${
+          isDarkMode ? "border-slate-700 bg-slate-900" : "border-slate-200 bg-white"
+        }`}
+      >
+        ✕
+      </button>
+
+      <div className="h-full overflow-y-auto border-l border-border/60">
+        {vehicle ? (
+          <>
+            <div className="flex items-start justify-between border-b border-border px-3 py-3">
+              <div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Vehicle
+                </div>
+                <div className="text-base font-semibold">{vehicle.label}</div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 px-3 pt-3">
+              <div
+                className="flex h-[72px] w-[72px] items-center justify-center rounded-xl border text-2xl"
+                style={{
+                  background: surface?.bg ?? (isDarkMode ? "rgba(148,163,184,0.12)" : "#f1f5f9"),
+                  borderColor: surface?.border ?? "transparent",
+                }}
+              >
+                🚚
+              </div>
+              <div className="text-xs leading-relaxed">
+                <div className="font-semibold">Live Vehicle</div>
+                <div className="text-muted-foreground">{locationLabel}</div>
+              </div>
+            </div>
+
+            <div className="space-y-3 px-3 pt-3 text-xs">
+              <div className="space-y-1">
+                <div>
+                  <span className="font-semibold">Status:</span>{" "}
+                  <span className="text-muted-foreground">{meta?.label ?? "Unknown"}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Driver:</span>{" "}
+                  <span className="text-muted-foreground">{driverLabel}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Speed:</span>{" "}
+                  <span className="text-muted-foreground">{vehicle.speed.toFixed(1)} km/h</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Coordinates:</span>{" "}
+                  <span className="text-muted-foreground">
+                    {vehicle.lat.toFixed(5)}, {vehicle.lng.toFixed(5)}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-semibold">Location:</span>{" "}
+                  <span className="text-muted-foreground">{locationLabel}</span>
+                </div>
+                <div>
+                  <span className="font-semibold">Last Updated:</span>{" "}
+                  <span className="text-muted-foreground">{lastUpdatedLabel}</span>
+                </div>
+              </div>
+
+              <div className="border-t border-border/60 pt-3">
+                <button
+                  type="button"
+                  onClick={() => setInfoOpen((prev) => !prev)}
+                  className="flex w-full items-center justify-between text-xs font-semibold"
+                >
+                  <span>Vehicle Information</span>
+                  <span className="text-base">{infoOpen ? "−" : "+"}</span>
+                </button>
+                {infoOpen && (
+                  <div className="mt-2 space-y-1 rounded-md border border-border/60 bg-background/60 p-2">
+                    <InfoRow label="Vehicle No" value={vehicle.label} />
+                    <InfoRow label="Status" value={meta?.label ?? "Unknown"} />
+                    <InfoRow label="Driver" value={driverLabel} />
+                    <InfoRow label="Speed" value={`${vehicle.speed.toFixed(1)} km/h`} />
+                    <InfoRow label="Last Updated" value={lastUpdatedLabel} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="p-3 text-xs text-muted-foreground">Select a vehicle</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InfoRow({ label, value }: { label: string; value?: string | number | null }) {
+  return (
+    <div className="flex justify-between border-b border-border/60 pb-1">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-semibold">{value ?? "—"}</span>
     </div>
   );
 }
