@@ -78,24 +78,28 @@ export const getBinPriority = (fill: number): BinPriority => {
   return "low";
 };
 
-export const createBinIcon = (priority: BinPriority) => {
+export const createBinIcon = (priority: BinPriority, isFocused = false) => {
   const meta = BIN_PRIORITY_META[priority];
+  const size = isFocused ? 40 : 34;
+  const shadow = isFocused
+    ? "0 0 0 4px rgba(255,255,255,0.9), 0 8px 18px rgba(0,0,0,.3)"
+    : "0 6px 14px rgba(0,0,0,.25)";
   return L.divIcon({
     className: "",
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -18],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
     html: `
       <div
         style="
-          width:34px;
-          height:34px;
+          width:${size}px;
+          height:${size}px;
           border-radius:50%;
           background:${meta.color};
           display:flex;
           align-items:center;
           justify-content:center;
-          box-shadow:0 6px 14px rgba(0,0,0,.25);
+          box-shadow:${shadow};
           border:2px solid #fff;
         "
       >
@@ -120,24 +124,28 @@ export const createBinIcon = (priority: BinPriority) => {
   });
 };
 
-export const createHouseIcon = (status: HouseholdStatus) => {
+export const createHouseIcon = (status: HouseholdStatus, isFocused = false) => {
   const meta = HOUSEHOLD_STATUS_META[status];
+  const size = isFocused ? 38 : 32;
+  const shadow = isFocused
+    ? "0 0 0 4px rgba(255,255,255,0.9), 0 8px 16px rgba(0,0,0,.3)"
+    : "0 6px 12px rgba(0,0,0,.22)";
   return L.divIcon({
     className: "",
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
     html: `
       <div
         style="
-          width:32px;
-          height:32px;
+          width:${size}px;
+          height:${size}px;
           border-radius:10px;
           background:${meta.color};
           display:flex;
           align-items:center;
           justify-content:center;
-          box-shadow:0 6px 12px rgba(0,0,0,.22);
+          box-shadow:${shadow};
           border:2px solid #fff;
         "
       >

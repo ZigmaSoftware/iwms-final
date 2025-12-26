@@ -5,6 +5,18 @@ import "leaflet/dist/leaflet.css";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { binApi } from "@/helpers/admin";
 
+const binMarkerAnimations = `
+  @keyframes binPulse {
+    0% { transform: translateX(-50%) scale(0.9); opacity: 0.6; }
+    100% { transform: translateX(-50%) scale(1.35); opacity: 0; }
+  }
+  @keyframes binBounce {
+    0% { transform: translateX(-50%) scale(0.9); }
+    60% { transform: translateX(-50%) scale(1.08); }
+    100% { transform: translateX(-50%) scale(1); }
+  }
+`;
+
 type BinPriority = "high" | "medium" | "low";
 
 type ApiBin = {
@@ -114,35 +126,63 @@ const formatDateTime = (value?: string) => {
   return parsed.toLocaleString();
 };
 
-const createBinIcon = (priority: BinPriority) => {
+const createBinIcon = (priority: BinPriority, isFocused = false) => {
   const meta = priorityConfig[priority];
+  const shadow = isFocused
+    ? "0 0 0 4px rgba(255,255,255,0.9), 0 10px 22px rgba(0,0,0,.35)"
+    : "0 8px 16px rgba(0,0,0,.28)";
+  const size = isFocused ? 48 : 36;
+  const pointer = isFocused ? 14 : 12;
+  const iconSize: [number, number] = [size + 6, size + pointer + 4];
+  const anchorX = Math.round(iconSize[0] / 2);
+  const anchorY = iconSize[1] - 2;
   return L.divIcon({
     className: "",
-    iconSize: [42, 52],
-    iconAnchor: [21, 50],
+    iconSize,
+    iconAnchor: [anchorX, anchorY],
     popupAnchor: [0, -44],
     html: `
-      <div style="position:relative; width:42px; height:52px;">
+      <div style="position:relative; width:${iconSize[0]}px; height:${iconSize[1]}px;">
+        ${
+          isFocused
+            ? `
+        <span
+          style="
+            position:absolute;
+            top:${Math.max(size * 0.12, 4)}px;
+            left:50%;
+            transform:translateX(-50%);
+            width:${Math.round(size * 1.15)}px;
+            height:${Math.round(size * 1.15)}px;
+            border-radius:14px;
+            background:${meta.bg};
+            opacity:0.65;
+            animation: binPulse 1.3s ease-out infinite;
+          "
+        ></span>`
+            : ""
+        }
         <div
           style="
             position:absolute;
             top:0;
             left:50%;
             transform:translateX(-50%);
-            width:36px;
-            height:36px;
+            width:${size}px;
+            height:${size}px;
             border-radius:12px;
             background:${meta.color};
             display:flex;
             align-items:center;
             justify-content:center;
-            box-shadow:0 8px 16px rgba(0,0,0,.28);
+            box-shadow:${shadow};
             border:2px solid #fff;
+            ${isFocused ? "animation: binBounce 0.6s ease-out;" : ""}
           "
         >
           <svg
-            width="18"
-            height="18"
+            width="${Math.round(size * 0.5)}"
+            height="${Math.round(size * 0.5)}"
             viewBox="0 0 24 24"
             fill="none"
             stroke="#fff"
@@ -161,14 +201,14 @@ const createBinIcon = (priority: BinPriority) => {
         <div
           style="
             position:absolute;
-            top:32px;
+            top:${size - 4}px;
             left:50%;
             transform:translateX(-50%);
             width:0;
             height:0;
-            border-left:8px solid transparent;
-            border-right:8px solid transparent;
-            border-top:12px solid ${meta.color};
+            border-left:${Math.round(pointer * 0.6)}px solid transparent;
+            border-right:${Math.round(pointer * 0.6)}px solid transparent;
+            border-top:${pointer}px solid ${meta.color};
             filter:drop-shadow(0 4px 6px rgba(0,0,0,.25));
           "
         ></div>
@@ -259,6 +299,12 @@ export default function BinMonitoring() {
 
   useEffect(() => {
     if (!mapDivRef.current || mapRef.current) return;
+    if (!document.getElementById("bin-marker-animations")) {
+      const style = document.createElement("style");
+      style.id = "bin-marker-animations";
+      style.textContent = binMarkerAnimations;
+      document.head.appendChild(style);
+    }
     const map = L.map(mapDivRef.current, {
       center: [28.6129, 77.2295],
       zoom: 12,
@@ -295,7 +341,7 @@ export default function BinMonitoring() {
       const position: LatLngTuple = [bin.lat, bin.lng];
       bounds.push(position);
       const marker = L.marker(position, {
-        icon: createBinIcon(bin.priority),
+        icon: createBinIcon(bin.priority, bin.id === focusedBin),
         title: bin.name,
       });
       marker.bindPopup(
@@ -310,14 +356,16 @@ export default function BinMonitoring() {
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [40, 40] });
     }
-  }, [prioritized]);
+  }, [prioritized, focusedBin]);
 
   useEffect(() => {
     if (!focusedBin) return;
     const map = mapRef.current;
     const marker = markerLookupRef.current[focusedBin];
     if (map && marker) {
-      map.setView(marker.getLatLng(), Math.max(map.getZoom(), 13));
+      map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15), {
+        animate: true,
+      });
       marker.openPopup();
     }
   }, [focusedBin]);

@@ -89,9 +89,15 @@ type MonthlyStat = {
 };
 
 // ---------------------- Fallback Samples ----------------------
+const todayKey = new Date().toISOString().slice(0, 10);
+const currentMonthLabel = new Date().toLocaleString("en-US", {
+  month: "long",
+  year: "numeric",
+});
+
 const FALLBACK_DAILY_DATA: DailyRow[] = [
   {
-    date: "2025-10-15",
+    date: todayKey,
     zone: "Zone A",
     wet: 8.5,
     dry: 5.2,
@@ -113,7 +119,14 @@ const ZONE_WASTE_SUMMARY: Record<
 };
 
 const FALLBACK_MONTHLY_STATS: MonthlyStat[] = [
-  { month: "October 2025", wet: 245, dry: 156, total: 401, avgDaily: 13.4 , mix: 0},
+  {
+    month: currentMonthLabel,
+    wet: 245,
+    dry: 156,
+    total: 401,
+    avgDaily: 13.4,
+    mix: 0,
+  },
 ];
 
 const WEIGHMENT_API_URL =
@@ -131,6 +144,8 @@ const formatMonthLabel = (isoDate: string) => {
   if (Number.isNaN(d.getTime())) return "Current Month";
   return d.toLocaleString("en-US", { month: "long", year: "numeric" });
 };
+
+const toDateKey = (value?: string) => (typeof value === "string" ? value.slice(0, 10) : "");
 
 // ---------------------- Drilldown Dummy Data ----------------------
 const CITY_DATA: Record<string, { zones: Record<string, string[]> }> = {
@@ -1064,8 +1079,13 @@ export default function WasteCollection() {
       const rows: ApiWasteRow[] = Array.isArray(data?.data) ? data.data : [];
       if (!rows.length) return false;
 
+      const activeRows = rows.filter((row) => {
+        const dateKey = toDateKey(row.date);
+        return dateKey && dateKey <= todayKey;
+      });
+
       // Daily
-      const formatted = rows
+      const formatted = activeRows
         .map((row) => {
           const wet = toTons(row.wet_weight);
           const dry = toTons(row.dry_weight);
@@ -1075,7 +1095,7 @@ export default function WasteCollection() {
             : wet + dry + mix;
 
           return {
-            date: row.date ?? "",
+            date: toDateKey(row.date),
             zone: data?.site ?? "All Zones",
             wet,
             dry,
@@ -1085,15 +1105,18 @@ export default function WasteCollection() {
             households: Number(row.no_of_household ?? 0),
           };
         })
-        .filter((r) => r.date)
         .sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
 
-      if (formatted.length) setDailyData(formatted);
+      if (formatted.length) {
+        setDailyData(formatted);
+      } else {
+        setDailyData([]);
+      }
 
       // Monthly
-      const totals = rows.reduce(
+      const totals = activeRows.reduce(
         (a, r) => {
           a.wet += r.wet_weight ?? 0;
           a.dry += r.dry_weight ?? 0;
@@ -1105,8 +1128,8 @@ export default function WasteCollection() {
       );
 
       const actDays =
-        rows.filter((r) => Number(r.total_net_weight ?? 0) > 0).length ||
-        rows.length ||
+        activeRows.filter((r) => Number(r.total_net_weight ?? 0) > 0).length ||
+        activeRows.length ||
         1;
 
       setMonthlyStats([

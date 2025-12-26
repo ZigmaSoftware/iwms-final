@@ -87,6 +87,18 @@ const STATUS_FILTERS: { key: StatusFilterKey; label: string }[] = [
 
 const VEHICLE_ICON_EMOJI = "🚚";
 
+const vehicleMarkerAnimations = `
+  @keyframes vehiclePulse {
+    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+    100% { transform: translate(-50%, -50%) scale(1.35); opacity: 0; }
+  }
+  @keyframes vehicleBounce {
+    0% { transform: scale(0.9); }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+`;
+
 function createVehicleIcon(status: StatusKey, isFocused: boolean) {
   const meta = STATUS_META[status];
   const size = isFocused ? 40 : 32;
@@ -112,8 +124,26 @@ function createVehicleIcon(status: StatusKey, isFocused: boolean) {
           font-size:${isFocused ? 20 : 16}px;
           box-shadow:${shadow};
           border:${border}px solid #fff;
+          position:relative;
+          ${isFocused ? "animation: vehicleBounce 0.6s ease-out;" : ""}
         "
       >
+        ${
+          isFocused
+            ? `<span style="
+                position:absolute;
+                top:50%;
+                left:50%;
+                width:${Math.round(size * 1.15)}px;
+                height:${Math.round(size * 1.15)}px;
+                border-radius:50%;
+                background:${meta.accent};
+                opacity:0.35;
+                transform:translate(-50%, -50%);
+                animation: vehiclePulse 1.4s ease-out infinite;
+              "></span>`
+            : ""
+        }
         <span style="line-height:1;">${VEHICLE_ICON_EMOJI}</span>
       </div>
     `,
@@ -303,6 +333,12 @@ export default function MapView() {
 
   useEffect(() => {
     if (mapRef.current || !mapDivRef.current) return;
+    if (!document.getElementById("vehicle-marker-animations")) {
+      const style = document.createElement("style");
+      style.id = "vehicle-marker-animations";
+      style.textContent = vehicleMarkerAnimations;
+      document.head.appendChild(style);
+    }
     if (!liveVehicles.length) return;
     const initialVehicle =
       liveVehicles.find((vehicle) => vehicle.id === preferredVehicleId) ?? liveVehicles[0];

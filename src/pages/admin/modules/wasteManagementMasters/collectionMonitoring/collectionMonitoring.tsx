@@ -24,6 +24,8 @@ interface Vehicle {
   updatedAt: string;
 }
 
+type VehicleStatus = Vehicle["status"];
+
 type CustomerRecord = CustomerRecordBase & {
   customer_name?: string;
   zone_name?: string;
@@ -53,6 +55,70 @@ const parseCoordinate = (value?: number | string | null) => {
   if (value === null || value === undefined || value === "") return null;
   const parsed = Number(String(value).replace(/,/g, "."));
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const VEHICLE_STATUS_COLORS: Record<VehicleStatus, string> = {
+  Running: "#66E066",
+  Idle: "#FFB03F",
+  Parked: "#808080",
+  "No Data": "#999",
+};
+
+const createTruckIcon = (status: VehicleStatus, isFocused: boolean) => {
+  const color = VEHICLE_STATUS_COLORS[status];
+  const size = isFocused ? 38 : 30;
+  const pulseSize = Math.round(size * 1.2);
+
+  return L.divIcon({
+    className: "custom-marker",
+    html: `
+      <div class="truck-marker ${isFocused ? "focused" : ""}" style="width:${size}px;height:${size}px;background:${color};--accent:${color};">
+        ${
+          isFocused
+            ? `<span class="truck-pulse" style="width:${pulseSize}px;height:${pulseSize}px;"></span>`
+            : ""
+        }
+        <span class="truck-emoji">🚛</span>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  });
+};
+
+const createHouseIcon = (color: string, isFocused: boolean) => {
+  const size = isFocused ? 40 : 32;
+  const pulseSize = Math.round(size * 1.15);
+
+  return L.divIcon({
+    className: "custom-marker",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+    html: `
+      <div class="house-marker ${isFocused ? "focused" : ""}" style="width:${size}px;height:${size}px;background:${color};--accent:${color};">
+        ${
+          isFocused
+            ? `<span class="house-pulse" style="width:${pulseSize}px;height:${pulseSize}px;"></span>`
+            : ""
+        }
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#fff"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="house-icon"
+        >
+          <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+          <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        </svg>
+      </div>
+    `,
+  });
 };
 
 const pickCoordinate = (record: Record<string, any>, keys: string[]) => {
@@ -85,6 +151,8 @@ const WasteCollectionMonitor: React.FC = () => {
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [map, setMap] = useState<L.Map | null>(null);
+  const [focusedVehicleId, setFocusedVehicleId] = useState("");
+  const vehicleMarkerLookupRef = useRef<Record<string, L.Marker>>({});
   const statusOptions = [
     {
       label: "Not Collected",
@@ -195,18 +263,24 @@ const WasteCollectionMonitor: React.FC = () => {
       console.log("Raw API data:", data);
 
       const parsedData: Vehicle[] =
-        data?.data?.map((v: any, index: number) => ({
-          id: index.toString(),
-          number: v.vehicleNumber || "Unknown",
-          lat: parseFloat(v.latitude) || 28.61,
-          lon: parseFloat(v.longitude) || 77.23,
-          status: v.status || "Idle",
-          speed: v.speed || 0,
-          ignition: v.ignitionStatus === "ON",
-          location: v.location || "Unknown Area",
-          distance: v.distance || 0,
-          updatedAt: v.updatedAt || new Date().toISOString(),
-        })) || [];
+        data?.data?.map((v: any, index: number) => {
+          const number =
+            v.vehicleNumber || v.vehicleNo || v.vehicle_number || v.regNo || "Unknown";
+          const resolvedId =
+            number && number !== "Unknown" ? String(number) : String(index);
+          return {
+            id: resolvedId,
+            number,
+            lat: parseFloat(v.latitude) || 28.61,
+            lon: parseFloat(v.longitude) || 77.23,
+            status: v.status || "Idle",
+            speed: v.speed || 0,
+            ignition: v.ignitionStatus === "ON",
+            location: v.location || "Unknown Area",
+            distance: v.distance || 0,
+            updatedAt: v.updatedAt || new Date().toISOString(),
+          };
+        }) || [];
 
       setVehicles(parsedData);
     } catch (error) {
@@ -236,32 +310,33 @@ const WasteCollectionMonitor: React.FC = () => {
       console.error("Failed to fetch household summary:", error);
     }
 
-    const locations = customerData
-      .map((customer) => {
-        const lat = pickCoordinate(customer, [
-          "latitude",
-          "lat",
-          "latitude_value",
-          "latitudeValue",
-        ]);
-        const lon = pickCoordinate(customer, [
-          "longitude",
-          "lng",
-          "longitude_value",
-          "longitudeValue",
-        ]);
-        if (lat === null || lon === null) return null;
-        return {
-          id: resolveId(customer),
-          name: customer.customer_name ?? "Unknown",
-          lat,
-          lon,
-          address: `${customer.building_no || ""} ${customer.street || ""} ${customer.area || ""}`.trim(),
-          zone: customer.zone_name,
-          ward: customer.ward_name,
-        } satisfies CustomerLocation;
-      })
-      .filter((loc): loc is CustomerLocation => Boolean(loc) && Boolean(loc.id));
+    const locations = customerData.reduce<CustomerLocation[]>((acc, customer) => {
+      const lat = pickCoordinate(customer, [
+        "latitude",
+        "lat",
+        "latitude_value",
+        "latitudeValue",
+      ]);
+      const lon = pickCoordinate(customer, [
+        "longitude",
+        "lng",
+        "longitude_value",
+        "longitudeValue",
+      ]);
+      if (lat === null || lon === null) return acc;
+      const id = resolveId(customer);
+      if (!id) return acc;
+      acc.push({
+        id,
+        name: customer.customer_name ?? "Unknown",
+        lat,
+        lon,
+        address: `${customer.building_no || ""} ${customer.street || ""} ${customer.area || ""}`.trim(),
+        zone: customer.zone_name,
+        ward: customer.ward_name,
+      });
+      return acc;
+    }, []);
 
     setCustomerLocations(locations);
     setTotalHouseholdCount(households);
@@ -357,34 +432,41 @@ const WasteCollectionMonitor: React.FC = () => {
     if (!map) return;
     const vehicleLayer = L.layerGroup();
 
+    vehicleMarkerLookupRef.current = {};
     vehicles.forEach((v) => {
-      const color =
-        v.status === "Running"
-          ? "#66E066"
-          : v.status === "Idle"
-          ? "#FFB03F"
-          : v.status === "Parked"
-          ? "#808080"
-          : "#999";
-
-      const truckIcon = L.divIcon({
-        html: `<div class="truck-marker" style="color:${color}">🚛</div>`,
-        iconSize: [28, 28],
-        className: "custom-marker",
-      });
-
-      L.marker([v.lat, v.lon], { icon: truckIcon })
+      const isFocused = v.id === focusedVehicleId;
+      const marker = L.marker([v.lat, v.lon], {
+        icon: createTruckIcon(v.status, isFocused),
+      })
         .addTo(vehicleLayer)
         .bindPopup(
           `<b>${v.number}</b><br>Status: ${v.status}<br>Speed: ${v.speed} km/h<br>${v.location}`
         );
+      marker.on("mouseover", () => marker.openPopup());
+      marker.on("mouseout", () => marker.closePopup());
+      marker.on("click", () => setFocusedVehicleId(v.id));
+      vehicleMarkerLookupRef.current[v.id] = marker;
     });
 
     vehicleLayer.addTo(map);
     return () => {
       vehicleLayer.remove();
     };
-  }, [map, vehicles]);
+  }, [map, vehicles, focusedVehicleId]);
+
+  useEffect(() => {
+    if (!map || !focusedVehicleId) return;
+    const target = vehicles.find((v) => v.id === focusedVehicleId);
+    if (!target) return;
+    const marker = vehicleMarkerLookupRef.current[focusedVehicleId];
+    if (marker) {
+      marker.openPopup();
+    }
+    const currentZoom = map.getZoom();
+    map.setView([target.lat, target.lon], Math.max(currentZoom, 15), {
+      animate: true,
+    });
+  }, [map, focusedVehicleId, vehicles]);
 
   useEffect(() => {
     if (!map) return;
@@ -403,50 +485,18 @@ const WasteCollectionMonitor: React.FC = () => {
         ? "#dc2626"
         : "#2563eb";
 
-    const houseIcon = L.divIcon({
-      className: "",
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -16],
-      html: `
-        <div
-          style="
-            width:32px;
-            height:32px;
-            border-radius:10px;
-            background:${color};
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            box-shadow:0 6px 12px rgba(0,0,0,.22);
-            border:2px solid #fff;
-          "
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#fff"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            style="width:16px;height:16px;"
-          >
-            <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
-            <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          </svg>
-        </div>
-      `,
-    });
-
     selectedLocations.forEach((location) => {
-      L.marker([location.lat, location.lon], { icon: houseIcon })
+      const isFocused = selectedCustomerLocation?.id === location.id;
+      const marker = L.marker([location.lat, location.lon], {
+        icon: createHouseIcon(color, isFocused),
+      })
         .addTo(dataLayer)
         .bindPopup(
           `<strong>${location.name}</strong><br>${location.address}<br>${location.zone || ""} ${
             location.ward || ""
           }`
         );
+      marker.on("click", () => setCustomerId(location.id));
     });
 
     dataLayer.addTo(map);
@@ -459,6 +509,7 @@ const WasteCollectionMonitor: React.FC = () => {
     customerLocations,
     collectedCustomerLocations,
     notCollectedCustomerLocations,
+    selectedCustomerLocation,
   ]);
 
   useEffect(() => {

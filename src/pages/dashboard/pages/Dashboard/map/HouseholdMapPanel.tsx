@@ -94,6 +94,7 @@ export function HouseholdMapPanel() {
   const mapRef = useRef<L.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
+  const markerLookupRef = useRef<Record<string, L.Marker>>({});
 
   const [households, setHouseholds] = useState<Household[]>([]);
   const [summaryCounts, setSummaryCounts] = useState({
@@ -289,6 +290,7 @@ export function HouseholdMapPanel() {
     if (!map || !layer) return;
 
     layer.clearLayers();
+    markerLookupRef.current = {};
     const bounds: LatLngTuple[] = [];
 
     filteredHouseholds.forEach((house) => {
@@ -296,7 +298,7 @@ export function HouseholdMapPanel() {
       bounds.push(pos);
 
       const marker = L.marker(pos, {
-        icon: createHouseIcon(house.status),
+        icon: createHouseIcon(house.status, house.id === selectedHouse?.id),
         title: house.name,
       });
 
@@ -317,11 +319,24 @@ export function HouseholdMapPanel() {
       });
 
       marker.addTo(layer);
+      markerLookupRef.current[house.id] = marker;
     });
 
     if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
     else map.setView(DEFAULT_CENTER, 13);
-  }, [filteredHouseholds]);
+  }, [filteredHouseholds, selectedHouse]);
+
+  useEffect(() => {
+    if (!selectedHouse) return;
+    const map = mapRef.current;
+    const marker = markerLookupRef.current[selectedHouse.id];
+    if (map && marker) {
+      map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15), {
+        animate: true,
+      });
+      marker.openPopup();
+    }
+  }, [selectedHouse]);
 
   /* ================= UI ================= */
   return (

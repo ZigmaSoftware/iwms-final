@@ -106,29 +106,61 @@ function extractVehicleRows(payload: any): RawRecord[] {
   return [];
 }
 
+const vehicleMarkerAnimations = `
+  @keyframes vehiclePulse {
+    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+    100% { transform: translate(-50%, -50%) scale(1.35); opacity: 0; }
+  }
+  @keyframes vehicleBounce {
+    0% { transform: scale(0.9); }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+`;
+
 /* ================= VEHICLE ICON ================= */
-function getVehicleIcon(status: VehicleStatus) {
+function getVehicleIcon(status: VehicleStatus, isFocused = false) {
   const color = STATUS_COLORS[status];
+  const size = isFocused ? 42 : 34;
+  const shadow = isFocused
+    ? "0 0 0 4px rgba(255,255,255,0.9), 0 8px 18px rgba(0,0,0,.35)"
+    : "0 4px 10px rgba(0,0,0,.35)";
 
   return L.divIcon({
     className: "",
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -18],
     html: `
       <div
         style="
-          width:34px;
-          height:34px;
+          width:${size}px;
+          height:${size}px;
           border-radius:50%;
           background:${color};
           display:flex;
           align-items:center;
           justify-content:center;
-          box-shadow:0 4px 10px rgba(0,0,0,.35);
+          box-shadow:${shadow};
           border:2px solid #fff;
+          ${isFocused ? "animation: vehicleBounce 0.6s ease-out;" : ""}
         "
       >
+        ${
+          isFocused
+            ? `<span style="
+                position:absolute;
+                top:50%;
+                left:50%;
+                width:${Math.round(size * 1.15)}px;
+                height:${Math.round(size * 1.15)}px;
+                border-radius:50%;
+                background:${color};
+                opacity:0.35;
+                animation: vehiclePulse 1.4s ease-out infinite;
+              "></span>`
+            : ""
+        }
         <span style="font-size:18px; line-height:1;">🚚</span>
       </div>
     `,
@@ -169,6 +201,12 @@ export function LeafletMapContainer({
   /* ================= MAP INIT ================= */
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
+    if (!document.getElementById("vehicle-marker-animations")) {
+      const style = document.createElement("style");
+      style.id = "vehicle-marker-animations";
+      style.textContent = vehicleMarkerAnimations;
+      document.head.appendChild(style);
+    }
 
     const map = L.map(mapContainerRef.current, {
       zoomControl: true,
@@ -305,8 +343,9 @@ export function LeafletMapContainer({
     displayedVehicles
       .filter((v) => statusFilter[v.status])
       .forEach((v) => {
+        const isFocused = selectedVehicle?.vehicle_no === v.vehicle_no;
         const marker = L.marker([v.lat, v.lng], {
-          icon: getVehicleIcon(v.status),
+          icon: getVehicleIcon(v.status, isFocused),
         });
         marker.on("click", () => {
           setSelectedVehicle(v);
@@ -324,8 +363,11 @@ export function LeafletMapContainer({
             `,
             { direction: "top", offset: [0, -12], opacity: 0.95 }
           ).addTo(vehicleLayerRef.current!);
+        if (isFocused) {
+          marker.openTooltip();
+        }
       });
-  }, [displayedVehicles, statusFilter]);
+  }, [displayedVehicles, statusFilter, selectedVehicle]);
 
   /* ================= DRAW GEOFENCES ================= */
   useEffect(() => {
@@ -356,6 +398,13 @@ export function LeafletMapContainer({
       mapRef.current.fitBounds(bounds, { padding: [40, 40] });
     }
   }, [geofenceSites, displayedVehicles]);
+
+  useEffect(() => {
+    if (!mapRef.current || !selectedVehicle) return;
+    mapRef.current.setView([selectedVehicle.lat, selectedVehicle.lng], Math.max(mapRef.current.getZoom(), 15), {
+      animate: true,
+    });
+  }, [selectedVehicle]);
 
   /* ================= UI ================= */
   return (

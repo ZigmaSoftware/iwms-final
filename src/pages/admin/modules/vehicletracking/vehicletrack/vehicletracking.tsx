@@ -22,15 +22,27 @@ const API_URL =
   "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM";
 
 /* ================= MAP ICON ================= */
-const createVehicleIcon = (status: Status) =>
-  L.divIcon({
+const createVehicleIcon = (status: Status, isFocused: boolean) => {
+  const size = isFocused ? 42 : 34;
+  const statusClass = status.toLowerCase().replace(" ", "");
+  const pulseSize = Math.round(size * 1.2);
+
+  return L.divIcon({
     className: "custom-marker",
-    html: `<div class="vehicle-icon ${status
-      .toLowerCase()
-      .replace(" ", "")}">🚚</div>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13],
+    html: `
+      <div class="vehicle-icon ${statusClass} ${isFocused ? "focused" : ""}" style="width:${size}px;height:${size}px;">
+        ${
+          isFocused
+            ? `<span class="vehicle-pulse" style="width:${pulseSize}px;height:${pulseSize}px;"></span>`
+            : ""
+        }
+        <span class="vehicle-emoji">🚚</span>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
+};
 
 export default function VehicleTracking() {
   const { theme } = useTheme();
@@ -38,6 +50,7 @@ export default function VehicleTracking() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [search, setSearch] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState("");
+  const [focusedVehicleId, setFocusedVehicleId] = useState("");
   const [filters, setFilters] = useState<Record<Status, boolean>>({
     Running: true,
     Idle: true,
@@ -47,6 +60,7 @@ export default function VehicleTracking() {
 
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  const markerLookupRef = useRef<Record<string, L.Marker>>({});
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
 
@@ -170,6 +184,7 @@ export default function VehicleTracking() {
     if (!layerRef.current || !mapRef.current) return;
 
     layerRef.current.clearLayers();
+    markerLookupRef.current = {};
 
     filteredVehicles.forEach((v) => {
       const popupHtml = `
@@ -186,8 +201,9 @@ export default function VehicleTracking() {
         </div>
       `;
 
-      L.marker([v.lat, v.lng], {
-        icon: createVehicleIcon(v.status),
+      const isFocused = v.id === focusedVehicleId;
+      const marker = L.marker([v.lat, v.lng], {
+        icon: createVehicleIcon(v.status, isFocused),
       })
         .bindPopup(popupHtml, {
           closeButton: true,
@@ -195,8 +211,12 @@ export default function VehicleTracking() {
           offset: [0, -8],
         })
         .addTo(layerRef.current!);
+      marker.on("mouseover", () => marker.openPopup());
+      marker.on("mouseout", () => marker.closePopup());
+      marker.on("click", () => setFocusedVehicleId(v.id));
+      markerLookupRef.current[v.id] = marker;
     });
-  }, [filteredVehicles]);
+  }, [filteredVehicles, focusedVehicleId]);
 
   /* ================= AUTO FIT ================= */
   useEffect(() => {
@@ -208,6 +228,20 @@ export default function VehicleTracking() {
 
     mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
   }, [filteredVehicles]);
+
+  useEffect(() => {
+    if (!mapRef.current || !focusedVehicleId) return;
+    const target = filteredVehicles.find((v) => v.id === focusedVehicleId);
+    if (!target) return;
+    const marker = markerLookupRef.current[focusedVehicleId];
+    if (marker) {
+      marker.openPopup();
+    }
+    const currentZoom = mapRef.current.getZoom();
+    mapRef.current.setView([target.lat, target.lng], Math.max(currentZoom, 15), {
+      animate: true,
+    });
+  }, [focusedVehicleId, filteredVehicles]);
 
   /* ================= SCROLL ================= */
   const scroll = (dir: "left" | "right") => {
@@ -239,7 +273,11 @@ export default function VehicleTracking() {
             <select
               className="vehicle-dropdown"
               value={selectedVehicle}
-              onChange={(e) => setSelectedVehicle(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedVehicle(value);
+                setFocusedVehicleId(value);
+              }}
             >
               <option value="">All Vehicles</option>
               {vehicles.map((v) => (

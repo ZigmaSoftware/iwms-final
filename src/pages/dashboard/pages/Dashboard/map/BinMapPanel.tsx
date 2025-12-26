@@ -119,6 +119,7 @@ export function BinMapPanel() {
   const mapRef = useRef<L.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
+  const markerLookupRef = useRef<Record<string, L.Marker>>({});
 
   const [selectedBin, setSelectedBin] = useState<Bin | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -230,6 +231,7 @@ export function BinMapPanel() {
     if (!map || !layer) return;
 
     layer.clearLayers();
+    markerLookupRef.current = {};
     const bounds: LatLngTuple[] = [];
 
     filteredBins.forEach((bin) => {
@@ -237,7 +239,7 @@ export function BinMapPanel() {
       bounds.push(pos);
 
       const marker = L.marker(pos, {
-        icon: createBinIcon(bin.priority),
+        icon: createBinIcon(bin.priority, bin.id === selectedBin?.id),
         title: bin.name,
       });
 
@@ -259,10 +261,23 @@ export function BinMapPanel() {
       });
 
       marker.addTo(layer);
+      markerLookupRef.current[bin.id] = marker;
     });
 
     if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
-  }, [filteredBins]);
+  }, [filteredBins, selectedBin]);
+
+  useEffect(() => {
+    if (!selectedBin) return;
+    const map = mapRef.current;
+    const marker = markerLookupRef.current[selectedBin.id];
+    if (map && marker) {
+      map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15), {
+        animate: true,
+      });
+      marker.openPopup();
+    }
+  }, [selectedBin]);
 
   /* ================= UI ================= */
   return (
