@@ -72,7 +72,7 @@ export default function StateList() {
     `/${encMasters}/${encStates}/${unique_id}/edit`;
 
   const fetchStates = useCallback(async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const data = (await stateApi.list()) as StateRecord[];
       setStates(data);

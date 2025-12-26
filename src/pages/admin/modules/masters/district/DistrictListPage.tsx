@@ -69,7 +69,7 @@ export default function DistrictListPage() {
     `/${encMasters}/${encDistricts}/${id}/edit`;
 
   const fetchDistricts = useCallback(async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const res = await districtApi.list();
       const data = res as any[];

@@ -156,10 +156,19 @@ export default function VehicleCreationForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!form.vehicleNo || !form.vehicleType || !form.fuelType) {
-      Swal.fire("Missing Fields", "Required fields missing", "warning");
-      return;
-    }
+     if (!form.vehicleNo || !form.vehicleType || !form.fuelType) {
+    Swal.fire("Missing Fields", "Required fields missing", "warning");
+    return;
+  }
+
+  if (form.driverNo && !/^\d{10}$/.test(form.driverNo)) {
+    Swal.fire(
+      "Invalid Mobile Number",
+      "Driver mobile number must be exactly 10 digits",
+      "warning"
+    );
+    return;
+  }
 
     const payload = {
       vehicle_no: form.vehicleNo,
@@ -230,7 +239,13 @@ export default function VehicleCreationForm() {
           <div><Label>Chassis No</Label><Input value={form.chaseNo} onChange={e=>update("chaseNo",e.target.value)} /></div>
           <div><Label>IMEI No</Label><Input value={form.imeiNo} onChange={e=>update("imeiNo",e.target.value)} /></div>
           <div><Label>Driver Name</Label><Input value={form.driverName} onChange={e=>update("driverName",e.target.value)} /></div>
-          <div><Label>Driver Mobile</Label><Input value={form.driverNo} onChange={e=>update("driverNo",e.target.value)} /></div>
+          <div><Label>Driver Mobile</Label><Input value={form.driverNo} 
+              maxLength={10}
+               pattern="[0-9]*"
+        onChange={(e) => {
+      const val = e.target.value.replace(/\D/g, "");
+      update("driverNo", val);
+    }} /></div>
 
           <ShadcnSelect label="Vehicle Type" value={form.vehicleType} onChange={(v:string)=>update("vehicleType",v)}
             placeholder="Select vehicle type"
