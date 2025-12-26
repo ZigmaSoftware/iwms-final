@@ -51,7 +51,7 @@ export default function ContinentList() {
 
   const fetchContinents = useCallback(async () => {
     try {
-      setLoading(true);
+      // setLoading(true);
       const data = await continentApi.list();
       setContinents(data);
     } catch (error) {
@@ -183,7 +183,7 @@ export default function ContinentList() {
           paginator
           rows={10}
           rowsPerPageOptions={[5, 10, 25, 50]}
-          // loading={loading}
+          loading={loading}
           filters={filters}
           globalFilterFields={["name"]}
           header={header}

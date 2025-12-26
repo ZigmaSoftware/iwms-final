@@ -73,7 +73,7 @@ export default function CityList() {
     `/${encMasters}/${encCities}/${id}/edit`;
 
   const fetchCities = useCallback(async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const data = (await cityApi.list()) as CityRecord[];
       setCities(data);

@@ -79,7 +79,7 @@ export default function WardList() {
   //   Load Data
   // ===========================
   const fetchWards = useCallback(async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const data = (await wardApi.list()) as WardRecord[];
       setWards(data);

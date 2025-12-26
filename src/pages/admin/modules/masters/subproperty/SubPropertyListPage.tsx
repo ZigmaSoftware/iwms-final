@@ -44,7 +44,7 @@ export default function SubPropertyList() {
 
   /* ================= Fetch ================= */
   const fetchSubProperties = async () => {
-    setLoading(true);
+    // setLoading(true);
     try {
       const res = await subPropertiesApi.list();
       setSubProperties(res);
