@@ -30,6 +30,10 @@ type CustomerRecord = CustomerRecordBase & {
   ward_name?: string;
   latitude?: string;
   longitude?: string;
+  lat?: string | number;
+  lng?: string | number;
+  latitude_value?: string | number;
+  longitude_value?: string | number;
   building_no?: string;
   street?: string;
   area?: string;
@@ -44,6 +48,21 @@ interface CustomerLocation {
   zone?: string;
   ward?: string;
 }
+
+const parseCoordinate = (value?: number | string | null) => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(String(value).replace(/,/g, "."));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const pickCoordinate = (record: Record<string, any>, keys: string[]) => {
+  for (const key of keys) {
+    const value = record?.[key];
+    const parsed = parseCoordinate(value);
+    if (parsed !== null) return parsed;
+  }
+  return null;
+};
 
 const WasteCollectionMonitor: React.FC = () => {
   const [fromDate, setFromDate] = useState<string>(
@@ -219,8 +238,19 @@ const WasteCollectionMonitor: React.FC = () => {
 
     const locations = customerData
       .map((customer) => {
-        const lat = parseFloat(customer.latitude ?? "");
-        const lon = parseFloat(customer.longitude ?? "");
+        const lat = pickCoordinate(customer, [
+          "latitude",
+          "lat",
+          "latitude_value",
+          "latitudeValue",
+        ]);
+        const lon = pickCoordinate(customer, [
+          "longitude",
+          "lng",
+          "longitude_value",
+          "longitudeValue",
+        ]);
+        if (lat === null || lon === null) return null;
         return {
           id: resolveId(customer),
           name: customer.customer_name ?? "Unknown",
@@ -229,16 +259,9 @@ const WasteCollectionMonitor: React.FC = () => {
           address: `${customer.building_no || ""} ${customer.street || ""} ${customer.area || ""}`.trim(),
           zone: customer.zone_name,
           ward: customer.ward_name,
-        };
+        } satisfies CustomerLocation;
       })
-      .filter(
-        (loc) =>
-          loc.id &&
-          !Number.isNaN(loc.lat) &&
-          !Number.isNaN(loc.lon) &&
-          typeof loc.lat === "number" &&
-          typeof loc.lon === "number"
-      );
+      .filter((loc): loc is CustomerLocation => Boolean(loc) && Boolean(loc.id));
 
     setCustomerLocations(locations);
     setTotalHouseholdCount(households);
@@ -380,14 +403,44 @@ const WasteCollectionMonitor: React.FC = () => {
         ? "#dc2626"
         : "#2563eb";
 
+    const houseIcon = L.divIcon({
+      className: "",
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
+      popupAnchor: [0, -16],
+      html: `
+        <div
+          style="
+            width:32px;
+            height:32px;
+            border-radius:10px;
+            background:${color};
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            box-shadow:0 6px 12px rgba(0,0,0,.22);
+            border:2px solid #fff;
+          "
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="width:16px;height:16px;"
+          >
+            <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+            <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          </svg>
+        </div>
+      `,
+    });
+
     selectedLocations.forEach((location) => {
-      L.circleMarker([location.lat, location.lon], {
-        radius: 6,
-        color,
-        fillColor: color,
-        fillOpacity: 0.8,
-        weight: 2,
-      })
+      L.marker([location.lat, location.lon], { icon: houseIcon })
         .addTo(dataLayer)
         .bindPopup(
           `<strong>${location.name}</strong><br>${location.address}<br>${location.zone || ""} ${
@@ -438,17 +491,18 @@ const WasteCollectionMonitor: React.FC = () => {
     };
   }, [map, selectedCustomerLocation, selectedCustomerStatusLabel]);
 
+
   return (
-    <div className="p-4 space-y-4">
+    <div className="space-y-3">
      
-        <div className="flex justify-between items-center border-b pb-3">
+        <div className="flex justify-between items-center border-b pb-2">
           <h5 className="text-lg font-semibold flex items-center">
             Waste Collection Monitoring
           </h5>
         </div>
 
         {/* Filters */}
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mt-4">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mt-2">
           <div>
             <label className="block text-sm font-medium mb-1">Date</label>
             <input
@@ -525,39 +579,6 @@ const WasteCollectionMonitor: React.FC = () => {
           </div>
         </div>
 
-        {/* Status Radio Buttons */}
-        <div className="flex flex-wrap gap-3 mt-6">
-          {statusOptions.map((status) => {
-            const isSelected = selectedStatus === status.value;
-            return (
-              <label key={status.value} className="control cursor-pointer">
-                <input
-                  type="radio"
-                  name="status"
-                  value={status.value}
-                  checked={isSelected}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="hidden"
-                />
-                <span
-                  className={`inline-flex items-center px-4 py-2 rounded-full transition ${
-                    isSelected
-                      ? `${status.activeBg} ${status.activeText}`
-                      : "bg-gray-100 text-gray-700"
-                  }`}
-                >
-                  <span
-                    className={`w-4 h-4 mr-2 rounded-full ${
-                      isSelected ? status.activeDot : "bg-gray-300"
-                    }`}
-                  ></span>
-                  {status.label} ({status.count})
-                </span>
-              </label>
-            );
-          })}
-        </div>
-
         <hr className="my-4" />
         <div id="vehicle_id_text" className="font-semibold text-gray-600 mb-2">
           {customerId ? `Vehicle ID: ${customerId}` : ""}
@@ -565,7 +586,25 @@ const WasteCollectionMonitor: React.FC = () => {
 
         {/* Map */}
         <div className="map-wrapper">
-          <div id="map" style={{ height: "600px", width: "100%" }}></div>
+          <div id="map" style={{ height: "calc(100vh - 320px)", width: "100%" }}></div>
+          <div className="map-household-summary">
+            {statusOptions.map((status) => {
+              const isSelected = selectedStatus === status.value;
+              return (
+                <button
+                  key={status.value}
+                  type="button"
+                  className={`summary-pill ${status.value} ${
+                    isSelected ? "is-active" : ""
+                  }`}
+                  onClick={() => setSelectedStatus(status.value)}
+                >
+                  <span className="summary-dot" />
+                  {status.label}: {status.count}
+                </button>
+              );
+            })}
+          </div>
           <div className="map-status-badge">
             {selectedCustomerLocation ? (
               <>

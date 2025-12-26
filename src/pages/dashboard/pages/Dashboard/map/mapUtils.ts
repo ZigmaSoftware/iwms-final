@@ -15,7 +15,7 @@ export type BinPoint = {
   area: string;
 };
 
-export type HouseholdStatus = "collected" | "in_progress" | "not_collected";
+export type HouseholdStatus = "collected" | "not_collected";
 
 export type HouseholdPoint = {
   id: string;
@@ -43,16 +43,16 @@ export const BIN_POINTS: BinPoint[] = [
 
 export const HOUSEHOLD_POINTS: HouseholdPoint[] = [
   { id: "HH-210", name: "House 210", lat: 11.0176, lng: 76.9561, status: "collected", ward: "Ward 23" },
-  { id: "HH-214", name: "House 214", lat: 11.0203, lng: 76.9598, status: "in_progress", ward: "Ward 23" },
+  { id: "HH-214", name: "House 214", lat: 11.0203, lng: 76.9598, status: "not_collected", ward: "Ward 23" },
   { id: "HH-218", name: "House 218", lat: 11.0221, lng: 76.9655, status: "not_collected", ward: "Ward 23" },
   { id: "HH-302", name: "House 302", lat: 11.0132, lng: 76.9492, status: "collected", ward: "Ward 45" },
-  { id: "HH-307", name: "House 307", lat: 11.0101, lng: 76.9526, status: "in_progress", ward: "Ward 45" },
+  { id: "HH-307", name: "House 307", lat: 11.0101, lng: 76.9526, status: "not_collected", ward: "Ward 45" },
   { id: "HH-311", name: "House 311", lat: 11.0085, lng: 76.9579, status: "not_collected", ward: "Ward 45" },
   { id: "HH-319", name: "House 319", lat: 11.0264, lng: 76.9532, status: "collected", ward: "Ward 12" },
-  { id: "HH-325", name: "House 325", lat: 11.0282, lng: 76.9608, status: "in_progress", ward: "Ward 12" },
+  { id: "HH-325", name: "House 325", lat: 11.0282, lng: 76.9608, status: "not_collected", ward: "Ward 12" },
   { id: "HH-331", name: "House 331", lat: 11.0301, lng: 76.9669, status: "not_collected", ward: "Ward 12" },
   { id: "HH-408", name: "House 408", lat: 11.0062, lng: 76.9624, status: "collected", ward: "Ward 31" },
-  { id: "HH-412", name: "House 412", lat: 11.0039, lng: 76.9672, status: "in_progress", ward: "Ward 31" },
+  { id: "HH-412", name: "House 412", lat: 11.0039, lng: 76.9672, status: "not_collected", ward: "Ward 31" },
   { id: "HH-415", name: "House 415", lat: 11.0018, lng: 76.9715, status: "not_collected", ward: "Ward 31" },
 ];
 
@@ -67,7 +67,6 @@ export const HOUSEHOLD_STATUS_META: Record<
   { label: string; color: string; bg: string }
 > = {
   collected: { label: "Collected", color: "#15803d", bg: "rgba(34,197,94,0.18)" },
-  in_progress: { label: "In Progress", color: "#b45309", bg: "rgba(245,158,11,0.2)" },
   not_collected: { label: "Not Collected", color: "#b91c1c", bg: "rgba(239,68,68,0.2)" },
 };
 

@@ -23,6 +23,11 @@
   min-height: 420px;
 }
 
+.map-wrap #map {
+  height: 100%;
+  width: 100%;
+}
+
 /* ================= STATUS FILTER ================= */
 .leaflet-control.vehicle-status-control {
   position: absolute !important;

@@ -6,6 +6,8 @@ import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import ReactDOM from "react-dom/client";
+import QRCode from "react-qr-code";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -23,6 +25,12 @@ type Bin = {
   bin_name: string;
   capacity_liters: number;
   ward_name: string;
+  ward?: string;
+  bin_type?: string;
+  waste_type?: string;
+  bin_status?: string;
+  latitude?: number | string;
+  longitude?: number | string;
   is_active: boolean;
 };
 
@@ -144,6 +152,48 @@ export default function BinList() {
     </div>
   );
 
+  const buildBinQrPayload = (bin: Bin) => ({
+    id: bin.unique_id,
+    name: bin.bin_name,
+    ward: bin.ward_name || bin.ward || "",
+    capacity_liters: bin.capacity_liters,
+    bin_type: bin.bin_type,
+    waste_type: bin.waste_type,
+    bin_status: bin.bin_status,
+    is_active: bin.is_active,
+    status: bin.is_active ? "active" : "inactive",
+    latitude: bin.latitude,
+    longitude: bin.longitude,
+  });
+
+  const openQrPopup = (payload: any) => {
+    Swal.fire({
+      title: "Bin QR",
+      html: `<div id="bin-qr-holder" class="flex justify-center"></div>`,
+      width: 350,
+      didOpen: () => {
+        const div = document.getElementById("bin-qr-holder");
+        if (div) {
+          const root = ReactDOM.createRoot(div);
+          root.render(<QRCode value={JSON.stringify(payload)} size={200} />);
+        }
+      },
+    });
+  };
+
+  const qrTemplate = (bin: Bin) => {
+    const payload = buildBinQrPayload(bin);
+    return (
+      <button
+        className="p-1 border rounded bg-white shadow-sm hover:bg-gray-50"
+        onClick={() => openQrPopup(payload)}
+        title="Show QR"
+      >
+        <QRCode value={JSON.stringify(payload)} size={45} />
+      </button>
+    );
+  };
+
   /* ================= RENDER ================= */
 
   return (
@@ -204,9 +254,12 @@ export default function BinList() {
         <Column
           field="ward_name"
           header="Ward"
+          body={(row: Bin) => row.ward_name || row.ward || "-"}
           sortable
-          style={{ minWidth: "60px" }}
+          style={{ minWidth: "120px" }}
         />
+
+        <Column header="QR" body={qrTemplate} style={{ width: "100px" }} />
 
         <Column
           header="Status"

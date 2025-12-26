@@ -5,24 +5,88 @@ import type { LatLngTuple } from "leaflet";
 import {
   createHouseIcon,
   DEFAULT_CENTER,
-  HOUSEHOLD_POINTS,
   HOUSEHOLD_STATUS_META,
   initBaseMap,
   type HouseholdStatus,
 } from "./mapUtils";
+import { customerCreationApi, wasteCollectionApi } from "@/helpers/admin";
+import {
+  filterActiveCustomers,
+  normalizeCustomerArray,
+  type CustomerRecord as CustomerRecordBase,
+} from "@/utils/customerUtils";
 
 /* ================= TYPES ================= */
-type Household = (typeof HOUSEHOLD_POINTS)[number] & {
-  city?: string;
-  zone?: string;
+type CustomerRecord = CustomerRecordBase & {
+  customer_name?: string;
+  customerName?: string;
+  zone_name?: string;
+  ward_name?: string;
+  city_name?: string;
+  latitude?: string | number;
+  longitude?: string | number;
+  lat?: string | number;
+  lng?: string | number;
+  latitude_value?: string | number;
+  longitude_value?: string | number;
+  building_no?: string;
   street?: string;
+  area?: string;
+  owner_name?: string;
+  mobile_number?: string;
+  phone?: string;
+  house_type?: string;
+  occupancy?: string;
+};
+
+type Household = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  status: HouseholdStatus;
+  ward?: string;
+  zone?: string;
+  city?: string;
+  street?: string;
+  address?: string;
   ownerName?: string;
   mobile?: string;
-  houseType?: "Individual" | "Apartment" | "Commercial";
-  occupancy?: "Occupied" | "Vacant";
+  houseType?: string;
+  occupancy?: string;
   lastCollectedOn?: string;
   assignedVehicle?: string;
   beatWorker?: string;
+};
+
+type CollectionMeta = {
+  lastCollectedOn?: string;
+  lastCollectedAt?: number;
+  assignedVehicle?: string;
+  beatWorker?: string;
+};
+
+const parseCoordinate = (value?: number | string | null) => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(String(value).replace(/,/g, "."));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const pickText = (source: Record<string, any>, keys: string[], fallback = "") => {
+  for (const key of keys) {
+    const value = source?.[key];
+    if (value === undefined || value === null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return fallback;
+};
+
+const formatDateTime = (value?: string) => {
+  if (!value) return undefined;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return parsed.toLocaleString();
 };
 
 /* ================= COMPONENT ================= */
@@ -31,6 +95,12 @@ export function HouseholdMapPanel() {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
 
+  const [households, setHouseholds] = useState<Household[]>([]);
+  const [summaryCounts, setSummaryCounts] = useState({
+    total: 0,
+    collected: 0,
+    not_collected: 0,
+  });
   const [selectedHouse, setSelectedHouse] = useState<Household | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -39,45 +109,155 @@ export function HouseholdMapPanel() {
     Record<HouseholdStatus, boolean>
   >({
     collected: true,
-    in_progress: true,
     not_collected: true,
   });
 
-  /* ================= DATA ================= */
-  const households = useMemo(
-    () =>
-      HOUSEHOLD_POINTS.map((h) => ({
-        ...h,
-        city: "Coimbatore",
-        zone: "North Zone",
-        street: "Gandhi Nagar",
-        ownerName: "Resident",
-        mobile: "9XXXXXXXXX",
-        houseType: "Individual",
-        occupancy: "Occupied",
-        lastCollectedOn: "2025-01-22 09:10",
-        assignedVehicle: "TN-38-BR-4482",
-        beatWorker: "Sanitation Worker",
-      })),
-    []
-  );
+  useEffect(() => {
+    let isMounted = true;
+    const fetchHouseholds = async () => {
+      const today = new Date().toISOString().split("T")[0];
+      try {
+        const [customerResponse, collectionResponse] = await Promise.all([
+          customerCreationApi.list(),
+          wasteCollectionApi.list({ params: { collection_date: today } }),
+        ]);
+
+        const normalized = normalizeCustomerArray(customerResponse) as CustomerRecord[];
+        const activeCustomers = filterActiveCustomers(normalized) as CustomerRecord[];
+
+        const collections = Array.isArray(collectionResponse) ? collectionResponse : [];
+        const collectedIds = new Set<string>();
+        const collectionMeta = new Map<string, CollectionMeta>();
+
+        collections.forEach((entry: Record<string, any>) => {
+          const customerId = String(
+            entry.customer ?? entry.customer_id ?? entry.customer_unique_id ?? ""
+          ).trim();
+          if (!customerId) return;
+          collectedIds.add(customerId);
+
+          const rawDate = pickText(entry, [
+            "collection_date",
+            "collectionDate",
+            "created_at",
+            "createdAt",
+            "date",
+            "timestamp",
+            "collected_at",
+          ]);
+          const vehicle = pickText(entry, [
+            "vehicle_no",
+            "vehicleNo",
+            "vehicle_number",
+            "vehicleNumber",
+            "regNo",
+          ]);
+          const worker = pickText(entry, [
+            "staff",
+            "collector",
+            "driver",
+            "worker",
+            "staff_name",
+            "staffName",
+          ]);
+
+          const nextTimestamp = rawDate ? new Date(rawDate).getTime() : null;
+          const existing = collectionMeta.get(customerId);
+          if (!existing || (nextTimestamp && (!existing.lastCollectedAt || nextTimestamp > existing.lastCollectedAt))) {
+            collectionMeta.set(customerId, {
+              lastCollectedOn: formatDateTime(rawDate),
+              lastCollectedAt: nextTimestamp ?? undefined,
+              assignedVehicle: vehicle || undefined,
+              beatWorker: worker || undefined,
+            });
+          }
+        });
+
+        const mapped = activeCustomers.reduce<Household[]>((acc, customer) => {
+          const id = String(customer.unique_id ?? customer.id ?? "").trim();
+          if (!id) return acc;
+          const lat = parseCoordinate(customer.latitude ?? customer.lat ?? customer.latitude_value);
+          const lng = parseCoordinate(customer.longitude ?? customer.lng ?? customer.longitude_value);
+          if (lat === null || lng === null) return acc;
+
+          const status: HouseholdStatus = collectedIds.has(id)
+            ? "collected"
+            : "not_collected";
+
+          const addressParts = [
+            pickText(customer, ["building_no", "buildingNo"], ""),
+            pickText(customer, ["street", "street_name"], ""),
+            pickText(customer, ["area", "area_name"], ""),
+          ].filter((part) => part);
+
+          const meta = collectionMeta.get(id);
+          const household: Household = {
+            id,
+            name: pickText(customer, ["customer_name", "customerName", "name"], "Unknown"),
+            lat,
+            lng,
+            status,
+            ward: pickText(customer, ["ward_name", "ward"], ""),
+            zone: pickText(customer, ["zone_name", "zone"], ""),
+            city: pickText(customer, ["city_name", "city"], ""),
+            street: pickText(customer, ["street", "street_name"], ""),
+            address: addressParts.length ? addressParts.join(", ") : undefined,
+            ownerName: pickText(customer, ["owner_name", "ownerName", "property_owner"], ""),
+            mobile: pickText(customer, ["mobile_number", "mobile", "phone", "contact_no"], ""),
+            houseType: pickText(customer, ["house_type", "houseType", "property_type"], ""),
+            occupancy: pickText(customer, ["occupancy", "occupancy_status"], ""),
+            lastCollectedOn: meta?.lastCollectedOn,
+            assignedVehicle: meta?.assignedVehicle,
+            beatWorker: meta?.beatWorker,
+          };
+
+          acc.push(household);
+          return acc;
+        }, []);
+
+        if (!isMounted) return;
+        setHouseholds(mapped);
+        const totalCount = activeCustomers.length;
+        const collectedCount = collectedIds.size;
+        setSummaryCounts({
+          total: totalCount,
+          collected: collectedCount,
+          not_collected: Math.max(totalCount - collectedCount, 0),
+        });
+      } catch (error) {
+        console.error("Failed to load household monitoring data:", error);
+        if (!isMounted) return;
+        setHouseholds([]);
+        setSummaryCounts({ total: 0, collected: 0, not_collected: 0 });
+      }
+    };
+
+    fetchHouseholds();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedHouse) return;
+    if (!households.some((house) => house.id === selectedHouse.id)) {
+      setSelectedHouse(null);
+    }
+  }, [households, selectedHouse]);
 
   const filteredHouseholds = useMemo(
     () => households.filter((h) => statusFilter[h.status]),
     [households, statusFilter]
   );
 
-  const summary = useMemo(
-    () =>
-      households.reduce(
-        (acc, h) => {
-          acc[h.status] += 1;
-          return acc;
-        },
-        { collected: 0, in_progress: 0, not_collected: 0 }
-      ),
-    [households]
-  );
+  const totalSelected = statusFilter.collected && statusFilter.not_collected;
+  const totalMeta = {
+    label: "Total Household",
+    color: "#1d4ed8",
+    bg: "rgba(59,130,246,0.16)",
+  };
+
+  const summary = summaryCounts;
 
   /* ================= MAP INIT ================= */
   useEffect(() => {
@@ -149,14 +329,14 @@ export function HouseholdMapPanel() {
       <div ref={mapDivRef} className="absolute inset-0" />
 
       {/* TOP FILTER BAR */}
-      <div className="absolute left-1/2 top-3 z-[600] -translate-x-1/2">
-        <div className="flex gap-2 rounded-lg border bg-white px-3 py-2 shadow text-xs">
+      <div className="absolute left-1/2 top-2 z-[600] -translate-x-1/2">
+        <div className="flex gap-2 rounded-md border border-white/40 bg-white/80 px-4 py-1 text-[10px] text-slate-700 dark:text-slate-200">
           {(Object.keys(statusFilter) as HouseholdStatus[]).map((key) => {
             const meta = HOUSEHOLD_STATUS_META[key];
             return (
               <label
                 key={key}
-                className="flex items-center gap-2 rounded-full px-3 py-1 font-semibold cursor-pointer"
+                className="flex items-center gap-1.5 rounded-full px-2 py-1 font-semibold cursor-pointer"
                 style={{
                   background: meta.bg,
                   color: meta.color,
@@ -182,6 +362,23 @@ export function HouseholdMapPanel() {
               </label>
             );
           })}
+          <button
+            type="button"
+            onClick={() => setStatusFilter({ collected: true, not_collected: true })}
+            className="flex items-center gap-1.5 rounded-full px-2 py-1 font-semibold"
+            style={{
+              background: totalMeta.bg,
+              color: totalMeta.color,
+              opacity: totalSelected ? 1 : 0.5,
+            }}
+          >
+            <span
+              className="h-2 w-2 rounded-full"
+              style={{ background: totalMeta.color }}
+            />
+            {totalMeta.label}
+            <span className="ml-1 text-[11px] font-bold">{summary.total}</span>
+          </button>
         </div>
       </div>
 
@@ -261,7 +458,7 @@ function HouseholdSideDetailsPanel({
               <Section title="Location">
                 <InfoRow label="City" value={house.city} />
                 <InfoRow label="Zone" value={house.zone} />
-                <InfoRow label="Street" value={house.street} />
+                <InfoRow label="Address" value={house.address ?? house.street} />
                 <InfoRow label="Latitude" value={house.lat} />
                 <InfoRow label="Longitude" value={house.lng} />
               </Section>

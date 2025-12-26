@@ -3,27 +3,115 @@ import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 
 import {
-  BIN_POINTS,
   BIN_PRIORITY_META,
   createBinIcon,
-  getBinPriority,
   initBaseMap,
   type BinPriority,
 } from "./mapUtils";
+import { binApi } from "@/helpers/admin";
 
 /* ================= TYPES ================= */
-type Bin = (typeof BIN_POINTS)[number] & {
-  priority: BinPriority;
+type ApiBin = {
+  unique_id: string;
+  bin_name: string;
+  ward_name?: string;
+  ward?: string;
+  bin_type?: string;
+  waste_type?: string;
+  color_code?: string;
+  capacity_liters?: number | string;
+  latitude?: number | string;
+  longitude?: number | string;
+  installation_date?: string;
+  expected_life_years?: number | string;
+  bin_status?: string;
+  is_active?: boolean;
+};
 
-  city?: string;
-  wardNo?: string;
+type Bin = {
+  id: string;
+  name: string;
+  lat: number;
+  lng: number;
+  priority: BinPriority;
+  wardName?: string;
   installedDate?: string;
-  lastCollectedOn?: string;
-  binType?: "Dry" | "Wet" | "Mixed";
-  capacityKg?: number;
-  status?: "Active" | "Inactive" | "Maintenance";
-  assignedVehicle?: string;
-  supervisor?: string;
+  binType?: string;
+  wasteType?: string;
+  capacityLiters?: number;
+  status?: string;
+  colorCode?: string;
+  expectedLifeYears?: number;
+  isActive?: boolean;
+};
+
+const parseCoordinate = (value?: number | string | null) => {
+  if (value === null || value === undefined || value === "") return null;
+  const parsed = Number(String(value).replace(/,/g, "."));
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const toNumberOrUndefined = (value?: number | string | null) => {
+  if (value === null || value === undefined || value === "") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
+const formatLabel = (value?: string) => {
+  if (!value) return undefined;
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+};
+
+const parseHexColor = (value: string) => {
+  let hex = value.trim().toLowerCase();
+  if (!hex) return null;
+  if (hex.startsWith("#")) hex = hex.slice(1);
+  if (hex.length === 3) {
+    hex = hex
+      .split("")
+      .map((c) => c + c)
+      .join("");
+  }
+  if (hex.length !== 6) return null;
+  const r = Number.parseInt(hex.slice(0, 2), 16);
+  const g = Number.parseInt(hex.slice(2, 4), 16);
+  const b = Number.parseInt(hex.slice(4, 6), 16);
+  if ([r, g, b].some((c) => Number.isNaN(c))) return null;
+  return { r, g, b };
+};
+
+const getPriorityFromColor = (
+  colorCode?: string,
+  status?: string
+): BinPriority => {
+  const normalized = String(colorCode ?? "").trim().toLowerCase();
+  if (normalized) {
+    if (normalized.includes("red")) return "high";
+    if (
+      normalized.includes("orange") ||
+      normalized.includes("yellow") ||
+      normalized.includes("amber")
+    ) {
+      return "medium";
+    }
+    if (normalized.includes("green")) return "low";
+    const rgb = parseHexColor(normalized);
+    if (rgb) {
+      if (rgb.r >= 200 && rgb.g < 120) return "high";
+      if (rgb.g >= 170 && rgb.r < 140) return "low";
+      if (rgb.r >= 180 && rgb.g >= 120) return "medium";
+    }
+  }
+
+  const statusValue = String(status ?? "").trim().toLowerCase();
+  if (statusValue === "full") return "high";
+  if (statusValue === "maintenance" || statusValue === "damaged") {
+    return "medium";
+  }
+
+  return "low";
 };
 
 /* ================= COMPONENT ================= */
@@ -34,6 +122,7 @@ export function BinMapPanel() {
 
   const [selectedBin, setSelectedBin] = useState<Bin | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const [binRecords, setBinRecords] = useState<ApiBin[]>([]);
 
   /* ================= FILTER STATE ================= */
   const [priorityFilter, setPriorityFilter] = useState<
@@ -45,24 +134,53 @@ export function BinMapPanel() {
   });
 
   /* ================= DATA ================= */
+  useEffect(() => {
+    let isMounted = true;
+    const fetchBins = async () => {
+      try {
+        const data = await binApi.list();
+        if (!isMounted) return;
+        setBinRecords(Array.isArray(data) ? data : []);
+      } catch {
+        if (!isMounted) return;
+        setBinRecords([]);
+      }
+    };
+
+    fetchBins();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  /* ================= DATA ================= */
   const bins = useMemo(
     () =>
-      BIN_POINTS.map((bin) => ({
-        ...bin,
-        priority: getBinPriority(bin.fill),
-
-        // demo enrichment (replace with API)
-        city: "Coimbatore",
-        wardNo: "W-12",
-        installedDate: "2024-03-12",
-        lastCollectedOn: "2025-01-22 08:30",
-        binType: "Mixed",
-        capacityKg: 120,
-        status: "Active",
-        assignedVehicle: "TN-38-AQ-2190",
-        supervisor: "Zone Inspector",
-      })),
-    []
+      binRecords
+        .filter((bin) => bin.is_active !== false)
+        .map((bin) => {
+          const lat = parseCoordinate(bin.latitude);
+          const lng = parseCoordinate(bin.longitude);
+          if (lat === null || lng === null) return null;
+          return {
+            id: String(bin.unique_id ?? ""),
+            name: bin.bin_name || bin.unique_id || "Unnamed Bin",
+            lat,
+            lng,
+            priority: getPriorityFromColor(bin.color_code, bin.bin_status),
+            wardName: bin.ward_name || bin.ward || undefined,
+            installedDate: bin.installation_date || undefined,
+            binType: formatLabel(bin.bin_type),
+            wasteType: formatLabel(bin.waste_type),
+            capacityLiters: toNumberOrUndefined(bin.capacity_liters),
+            status: formatLabel(bin.bin_status),
+            colorCode: bin.color_code || undefined,
+            expectedLifeYears: toNumberOrUndefined(bin.expected_life_years),
+            isActive: bin.is_active,
+          } satisfies Bin;
+        })
+        .filter((bin): bin is Bin => Boolean(bin)),
+    [binRecords]
   );
 
   const filteredBins = useMemo(
@@ -125,8 +243,9 @@ export function BinMapPanel() {
 
       marker.bindPopup(
         `<strong>${bin.name}</strong><br/>
-         Fill: ${bin.fill}%<br/>
-         Priority: ${BIN_PRIORITY_META[bin.priority].label}`,
+         Priority: ${BIN_PRIORITY_META[bin.priority].label}<br/>
+         Color: ${bin.colorCode ?? "—"}<br/>
+         Status: ${bin.status ?? "—"}`,
         { closeButton: false, autoClose: false, closeOnClick: false }
       );
 
@@ -152,7 +271,7 @@ export function BinMapPanel() {
 
       {/* TOP FILTER */}
       <div className="absolute left-1/2 top-3 z-[600] -translate-x-1/2">
-        <div className="flex gap-2 rounded-lg border bg-white px-3 py-2 shadow text-xs">
+        <div className="flex gap-2 rounded-lg border border-white/40 bg-white/80 px-3 py-2 shadow text-xs">
           {(Object.keys(priorityFilter) as BinPriority[]).map((key) => {
             const meta = BIN_PRIORITY_META[key];
             return (
@@ -249,7 +368,7 @@ function BinSideDetailsPanel({
               <div>
                 <h3 className="text-sm font-bold">{bin.name}</h3>
                 <p className="text-[11px] text-gray-500">
-                  {meta?.label} · {bin.fill}%
+                  {meta?.label}
                 </p>
               </div>
             </div>
@@ -259,20 +378,20 @@ function BinSideDetailsPanel({
               <Section title="Bin Info">
                 <InfoRow label="Status" value={bin.status} />
                 <InfoRow label="Bin Type" value={bin.binType} />
-                <InfoRow label="Capacity (Kg)" value={bin.capacityKg} />
+                <InfoRow label="Waste Type" value={bin.wasteType} />
+                <InfoRow label="Color Code" value={bin.colorCode} />
+                <InfoRow label="Capacity (L)" value={bin.capacityLiters} />
               </Section>
 
               <Section title="Location">
-                <InfoRow label="City" value={bin.city} />
-                <InfoRow label="Ward No" value={bin.wardNo} />
+                <InfoRow label="Ward" value={bin.wardName} />
                 <InfoRow label="Latitude" value={bin.lat} />
                 <InfoRow label="Longitude" value={bin.lng} />
               </Section>
 
-              <Section title="Operations">
-                <InfoRow label="Last Collected" value={bin.lastCollectedOn} />
-                <InfoRow label="Vehicle" value={bin.assignedVehicle} />
-                <InfoRow label="Supervisor" value={bin.supervisor} />
+              <Section title="Lifecycle">
+                <InfoRow label="Installed On" value={bin.installedDate} />
+                <InfoRow label="Expected Life (Years)" value={bin.expectedLifeYears} />
               </Section>
             </div>
           </>
