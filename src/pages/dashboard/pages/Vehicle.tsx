@@ -10,64 +10,110 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
-const mockVehicles = [
-  {
-    vehicleId: "VH001",
-    id: "V001",
-    registration: "DL-01-AB-1234",
-    type: "Compactor",
-    capacity: "10 Tons",
-    status: "active",
-    driver: "Rajesh Kumar",
-    zone: "Zone A",
-    lastMaintenance: "2025-10-10",
-    fuelEfficiency: "8.5 km/l",
-  },
-  {
-    vehicleId: "VH002",
-    id: "V002",
-    registration: "DL-01-CD-5678",
-    type: "Tipper",
-    capacity: "15 Tons",
-    status: "maintenance",
-    driver: "Amit Singh",
-    zone: "Zone B",
-    lastMaintenance: "2025-10-12",
-    fuelEfficiency: "7.2 km/l",
-  },
-  {
-    vehicleId: "VH003",
-    id: "V003",
-    registration: "DL-01-EF-9012",
-    type: "Compactor",
-    capacity: "10 Tons",
-    status: "active",
-    driver: "Suresh Yadav",
-    zone: "Zone C",
-    lastMaintenance: "2025-10-08",
-    fuelEfficiency: "8.8 km/l",
-  },
-  {
-    vehicleId: "VH004",
-    id: "V004",
-    registration: "DL-01-GH-3456",
-    type: "Hook Loader",
-    capacity: "20 Tons",
-    status: "inactive",
-    driver: "Unassigned",
-    zone: "-",
-    lastMaintenance: "2025-10-05",
-    fuelEfficiency: "6.5 km/l",
-  },
-];
+import { useEffect, useMemo, useState } from "react";
+import { vehicleCreationApi } from "@/helpers/admin";
+
+type VehicleStatus = "active" | "maintenance" | "inactive";
+
+type VehicleCard = {
+  vehicleId: string;
+  registration: string;
+  type: string;
+  capacity: string;
+  status: VehicleStatus;
+  driver: string;
+  zone: string;
+  lastMaintenance: string;
+  fuelEfficiency: string;
+};
+
+const normalizeList = (payload: any) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
+};
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toISOString().split("T")[0];
+};
+
+const resolveStatus = (raw: any, lastMaintenance: string): VehicleStatus => {
+  const isInactive =
+    raw === false || raw === 0 || raw === "0" || raw === "false";
+  if (isInactive) return "inactive";
+  if (!lastMaintenance || lastMaintenance === "-") return "maintenance";
+  return "active";
+};
 
 export default function Vehicle() {
+  const [vehicles, setVehicles] = useState<VehicleCard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [capacityFilter, setCapacityFilter] = useState("all");
   const [maintenanceFilter, setMaintenanceFilter] = useState("all");
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadVehicles = async () => {
+      try {
+        const response = await vehicleCreationApi.list();
+        const rows = normalizeList(response);
+        const deduped = new Map<string, VehicleCard>();
+
+        rows.forEach((row: Record<string, any>, index: number) => {
+          const vehicleNo = row.vehicle_no ?? row.registration ?? "";
+          const key = String(
+            vehicleNo || row.unique_id || row.id || index
+          ).trim();
+          if (!key) return;
+
+          const lastMaintenance = formatDate(
+            row.last_maintenance ?? row.lastMaintenance
+          );
+
+          const card: VehicleCard = {
+            vehicleId: String(
+              row.unique_id ?? vehicleNo ?? row.id ?? key
+            ).trim(),
+            registration: String(vehicleNo || "-"),
+            type: String(row.vehicle_type_name ?? row.vehicle_type ?? "-"),
+            capacity: String(row.capacity ?? "-"),
+            fuelEfficiency: String(row.fuel_efficiency ?? "-"),
+            lastMaintenance,
+            status: resolveStatus(row.is_active, lastMaintenance),
+            driver: String(row.driver_name ?? row.driver ?? "Unassigned"),
+            zone: String(row.zone_name ?? row.zone ?? "-"),
+          };
+
+          deduped.set(key, card);
+        });
+
+        if (isMounted) {
+          setVehicles(Array.from(deduped.values()));
+        }
+      } catch (error) {
+        console.error("Failed to load vehicle data:", error);
+        if (isMounted) {
+          setVehicles([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadVehicles();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const statusGradients: Record<string, string> = {
     active: "from-white via-emerald-50 to-emerald-300 dark:from-slate-900 dark:via-emerald-900/30 dark:to-emerald-800",
@@ -81,7 +127,7 @@ export default function Vehicle() {
     inactive: "bg-rose-100/70 dark:bg-rose-900/40",
   };
 
-  const statusCounts = mockVehicles.reduce(
+  const statusCounts = vehicles.reduce(
     (acc, vehicle) => {
       acc[vehicle.status] = (acc[vehicle.status] || 0) + 1;
       return acc;
@@ -92,7 +138,7 @@ export default function Vehicle() {
   const fleetStats = [
     {
       label: "Total Vehicles",
-      value: mockVehicles.length,
+      value: vehicles.length,
       subtext: "Across all depots",
       accent: "from-white via-sky-50 to-sky-200 dark:from-slate-900 dark:via-sky-950/40 dark:to-slate-900",
       border: "border-sky-200/80 dark:border-sky-500/40",
@@ -153,9 +199,33 @@ export default function Vehicle() {
     },
   ];
 
+  const typeOptions = useMemo(
+    () =>
+      Array.from(new Set(vehicles.map((v) => v.type).filter((v) => v && v !== "-"))).sort(),
+    [vehicles]
+  );
+
+  const capacityOptions = useMemo(
+    () =>
+      Array.from(new Set(vehicles.map((v) => v.capacity).filter((v) => v && v !== "-"))).sort(),
+    [vehicles]
+  );
+
+  const maintenanceOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          vehicles
+            .map((v) => v.lastMaintenance)
+            .filter((v) => v && v !== "-")
+        )
+      ).sort(),
+    [vehicles]
+  );
 
 
-  const filteredVehicles = mockVehicles.filter((vehicle) => {
+
+  const filteredVehicles = vehicles.filter((vehicle) => {
     const matchesSearch =
       vehicle.registration.toLowerCase().includes(searchQuery.toLowerCase()) ||
       vehicle.driver.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -265,9 +335,11 @@ export default function Vehicle() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Compactor">Compactor</SelectItem>
-                <SelectItem value="Tipper">Tipper</SelectItem>
-                <SelectItem value="Hook Loader">Hook Loader</SelectItem>
+                {typeOptions.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -284,9 +356,11 @@ export default function Vehicle() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Capacities</SelectItem>
-                <SelectItem value="10 Tons">10 Tons</SelectItem>
-                <SelectItem value="15 Tons">15 Tons</SelectItem>
-                <SelectItem value="20 Tons">20 Tons</SelectItem>
+                {capacityOptions.map((capacity) => (
+                  <SelectItem key={capacity} value={capacity}>
+                    {capacity}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -305,9 +379,9 @@ export default function Vehicle() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Any Date</SelectItem>
-                {mockVehicles.map((v) => (
-                  <SelectItem key={v.vehicleId} value={v.lastMaintenance}>
-                    {v.lastMaintenance}
+                {maintenanceOptions.map((date) => (
+                  <SelectItem key={date} value={date}>
+                    {date}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -368,6 +442,18 @@ export default function Vehicle() {
             })}
           </div>
 
+          {loading && !vehicles.length ? (
+            <div className="text-sm text-muted-foreground">
+              Loading vehicles...
+            </div>
+          ) : null}
+
+          {!loading && !filteredVehicles.length ? (
+            <div className="text-sm text-muted-foreground">
+              No vehicles found.
+            </div>
+          ) : null}
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 pb-4">
             {filteredVehicles.map((vehicle, cardIndex) => (
               <Card
@@ -390,7 +476,7 @@ export default function Vehicle() {
                 />
                 <CardHeader className="relative z-10">
                   <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-sky-50">
                         <Truck className="h-5 w-5 text-sky-600" />
                       </div>
