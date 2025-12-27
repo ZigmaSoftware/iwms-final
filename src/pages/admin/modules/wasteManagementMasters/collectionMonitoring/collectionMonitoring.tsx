@@ -52,8 +52,16 @@ interface CustomerLocation {
 }
 
 const parseCoordinate = (value?: number | string | null) => {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(String(value).replace(/,/g, "."));
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(/,/g, ".");
+  const match = normalized.match(/-?\d+(\.\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0]);
   return Number.isFinite(parsed) ? parsed : null;
 };
 
@@ -320,6 +328,7 @@ const WasteCollectionMonitor: React.FC = () => {
       const lon = pickCoordinate(customer, [
         "longitude",
         "lng",
+        "lon",
         "longitude_value",
         "longitudeValue",
       ]);
@@ -496,6 +505,8 @@ const WasteCollectionMonitor: React.FC = () => {
             location.ward || ""
           }`
         );
+      marker.on("mouseover", () => marker.openPopup());
+      marker.on("mouseout", () => marker.closePopup());
       marker.on("click", () => setCustomerId(location.id));
     });
 

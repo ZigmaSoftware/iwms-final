@@ -67,9 +67,26 @@ type CollectionMeta = {
 };
 
 const parseCoordinate = (value?: number | string | null) => {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(String(value).replace(/,/g, "."));
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(/,/g, ".");
+  const match = normalized.match(/-?\d+(\.\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0]);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const pickCoordinate = (record: Record<string, any>, keys: string[]) => {
+  for (const key of keys) {
+    const value = record?.[key];
+    const parsed = parseCoordinate(value);
+    if (parsed !== null) return parsed;
+  }
+  return null;
 };
 
 const pickText = (source: Record<string, any>, keys: string[], fallback = "") => {
@@ -177,8 +194,19 @@ export function HouseholdMapPanel() {
         const mapped = activeCustomers.reduce<Household[]>((acc, customer) => {
           const id = String(customer.unique_id ?? customer.id ?? "").trim();
           if (!id) return acc;
-          const lat = parseCoordinate(customer.latitude ?? customer.lat ?? customer.latitude_value);
-          const lng = parseCoordinate(customer.longitude ?? customer.lng ?? customer.longitude_value);
+          const lat = pickCoordinate(customer, [
+            "latitude",
+            "lat",
+            "latitude_value",
+            "latitudeValue",
+          ]);
+          const lng = pickCoordinate(customer, [
+            "longitude",
+            "lng",
+            "lon",
+            "longitude_value",
+            "longitudeValue",
+          ]);
           if (lat === null || lng === null) return acc;
 
           const status: HouseholdStatus = collectedIds.has(id)

@@ -29,6 +29,9 @@ type Vehicles = {
   vehicle_type_name: string;
   fuel_type: number;
   fuel_type_name: string;
+  capacity?: string | null;
+  fuel_efficiency?: string | null;
+  last_maintenance?: string | null;
   zone_id: number;
   zone_name: string;
   ward_id: number;
@@ -214,6 +217,16 @@ export default function VehicleCreation() {
           <Column field="driver_no" header="Driver No" sortable />
           <Column field="vehicle_type_name" header="Vehicle Type" sortable />
           <Column field="fuel_type_name" header="Fuel Type" sortable />
+          <Column field="capacity" header="Capacity" sortable />
+          <Column field="fuel_efficiency" header="Fuel Efficiency" sortable />
+          <Column
+            field="last_maintenance"
+            header="Last Maintenance"
+            body={(row: Vehicles) =>
+              row.last_maintenance ? String(row.last_maintenance).split("T")[0] : "-"
+            }
+            sortable
+          />
           <Column field="zone_name" header="Zone" sortable />
           <Column field="ward_name" header="Ward" sortable />
 

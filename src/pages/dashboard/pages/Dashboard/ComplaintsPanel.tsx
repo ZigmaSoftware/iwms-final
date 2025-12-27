@@ -66,7 +66,16 @@ export function ComplaintsPanel() {
           }
         });
 
+        const priorityRank: Record<ComplaintData["priority"], number> = {
+          High: 0,
+          Medium: 1,
+          Low: 2,
+        };
+
         const sorted = Array.from(deduped.values()).sort((a, b) => {
+          const rankDiff = priorityRank[a.priority] - priorityRank[b.priority];
+          if (rankDiff !== 0) return rankDiff;
+
           const aDate = parseTimeAgo(a.timestamp);
           const bDate = parseTimeAgo(b.timestamp);
           if (!aDate || !bDate) return 0;
@@ -104,6 +113,8 @@ export function ComplaintsPanel() {
 
     return { total, inProgress, resolved };
   }, [complaints]);
+
+  const shouldScroll = complaints.length > 3;
 
   const CARD_STYLE =
     "flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 dark:border-gray-700";
@@ -185,7 +196,11 @@ export function ComplaintsPanel() {
         </div>
       </div>
 
-      <div className="mt-3 space-y-2 max-h-52 overflow-y-auto pr-1">
+      <div
+        className={`mt-3 space-y-2 pr-1 ${
+          shouldScroll ? "max-h-40 overflow-y-auto" : ""
+        }`}
+      >
         {!loading && !complaints.length && (
           <div className="text-xs text-muted-foreground">
             No grievances available.

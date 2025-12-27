@@ -197,11 +197,17 @@ export default function CustomerCreationForm() {
       return;
     }
 
+    const payload = {
+      ...formData,
+      latitude: String(lat),
+      longitude: String(lon),
+    };
+
     try {
       setLoading(true);
       isEdit
-        ? await customerCreationApi.update(id as string, formData)
-        : await customerCreationApi.create(formData);
+        ? await customerCreationApi.update(id as string, payload)
+        : await customerCreationApi.create(payload);
 
       Swal.fire("Success", "Customer saved successfully", "success");
       navigate(ENC_LIST_PATH);

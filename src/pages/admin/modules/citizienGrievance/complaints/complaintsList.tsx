@@ -25,6 +25,7 @@ type Complaint = {
   sub_category?: string | null;
   category?: string;
   details: string;
+  priority?: string | null;
   zone_name: string;
   ward_name: string;
   address: string;
@@ -241,6 +242,7 @@ export default function ComplaintsList() {
             "contact_no",
             "main_category",
             "sub_category",
+            "priority",
             "zone_name",
             "ward_name",
             "address",
@@ -292,6 +294,11 @@ export default function ComplaintsList() {
           />
           <Column field="address" header="Location" />
           <Column field="details" header="Description" />
+          <Column
+            header="Priority"
+            body={(row: Complaint) => row.priority || "-"}
+            style={{ minWidth: "120px" }}
+          />
           <Column header="Image" body={imageTemplate} />
           <Column header="Comp Closure / Status" body={closureTemplate} />
         </DataTable>

@@ -81,6 +81,7 @@ export default function ComplaintAddForm() {
   const [subCategoryId, setSubCategoryId] = useState("");
 
   const [details, setDetails] = useState("");
+  const [priority, setPriority] = useState("MEDIUM");
 
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState("");
@@ -239,6 +240,7 @@ export default function ComplaintAddForm() {
     fd.append("sub_category", subLabel);
     fd.append("category", "OTHER");
     fd.append("details", details);
+    fd.append("priority", priority);
     if (file) fd.append("image", file);
 
     try {
@@ -360,6 +362,20 @@ export default function ComplaintAddForm() {
           <div className="md:col-span-2">
             <Label>Details *</Label>
             <Input value={details} onChange={(e) => setDetails(e.target.value)} />
+          </div>
+
+          <div>
+            <Label>Priority</Label>
+            <Select value={priority} onValueChange={setPriority}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select priority" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="HIGH">High</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="LOW">Low</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div>

@@ -45,6 +45,9 @@ export default function VehicleCreationForm() {
     imeiNo: "",
     driverName: "",
     driverNo: "",
+    capacity: "",
+    fuelEfficiency: "",
+    lastMaintenance: "",
     vehicleType: "",
     fuelType: "",
     state: "",
@@ -88,12 +91,20 @@ export default function VehicleCreationForm() {
     }
 
     vehicleApi.get(id as string).then(async (v) => {
+      const maintenanceRaw = v.last_maintenance ?? "";
+      const maintenance =
+        typeof maintenanceRaw === "string"
+          ? maintenanceRaw.split("T")[0]
+          : "";
       setForm({
         vehicleNo: v.vehicle_no,
         chaseNo: v.chase_no,
         imeiNo: v.imei_no,
         driverName: v.driver_name,
         driverNo: v.driver_no,
+        capacity: v.capacity ?? "",
+        fuelEfficiency: v.fuel_efficiency ?? "",
+        lastMaintenance: maintenance,
         vehicleType: String(v.vehicle_type_id),
         fuelType: String(v.fuel_type_id),
         state: String(v.state_id),
@@ -176,6 +187,9 @@ export default function VehicleCreationForm() {
       imei_no: form.imeiNo,
       driver_name: form.driverName,
       driver_no: form.driverNo,
+      capacity: form.capacity,
+      fuel_efficiency: form.fuelEfficiency,
+      last_maintenance: form.lastMaintenance || null,
       vehicle_type_id: form.vehicleType,
       fuel_type_id: form.fuelType,
       state_id: form.state,
@@ -246,6 +260,10 @@ export default function VehicleCreationForm() {
       const val = e.target.value.replace(/\D/g, "");
       update("driverNo", val);
     }} /></div>
+
+          <div><Label>Capacity</Label><Input value={form.capacity} onChange={e=>update("capacity",e.target.value)} /></div>
+          <div><Label>Fuel Efficiency</Label><Input value={form.fuelEfficiency} onChange={e=>update("fuelEfficiency",e.target.value)} /></div>
+          <div><Label>Last Maintenance</Label><Input type="date" value={form.lastMaintenance} onChange={e=>update("lastMaintenance",e.target.value)} /></div>
 
           <ShadcnSelect label="Vehicle Type" value={form.vehicleType} onChange={(v:string)=>update("vehicleType",v)}
             placeholder="Select vehicle type"
