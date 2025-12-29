@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useUser } from "@/contexts/UserContext";
 import {
   ADMIN_ROLE,
@@ -162,7 +161,7 @@ export default function Auth() {
 
         {/* RIGHT */}
         <div className="p-10 flex flex-col justify-center">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center mb-6">
             <div>
               <h1 className="text-3xl font-semibold text-gray-800">
                 {t("login.title")}
@@ -171,7 +170,6 @@ export default function Auth() {
                 {t("login.subtitle")}
               </p>
             </div>
-            <LanguageSwitcher />
           </div>
 
           <form onSubmit={handleSignIn} className="space-y-6">
@@ -259,7 +257,7 @@ export default function Auth() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 h-11 border-dashed border-[#43A047] text-[#2e7d32]"
+                  className="flex-1 min-h-[2.75rem] h-auto border-dashed border-[#43A047] px-3 py-2 text-xs leading-snug text-center whitespace-normal break-words text-[#2e7d32]"
                   onClick={() => handleRndAccess(DEFAULT_ROLE)}
                 >
                   {t("login.rnd_dashboard")}
@@ -267,7 +265,7 @@ export default function Auth() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 h-11 border-dashed border-orange-500 text-orange-700"
+                  className="flex-1 min-h-[2.75rem] h-auto border-dashed border-orange-500 px-3 py-2 text-xs leading-snug text-center whitespace-normal break-words text-orange-700"
                   onClick={() => handleRndAccess(ADMIN_ROLE)}
                 >
                   {t("login.rnd_admin")}

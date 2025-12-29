@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { binApi } from "@/helpers/admin";
+import { useTranslation } from "react-i18next";
 
 const binMarkerAnimations = `
   @keyframes binPulse {
@@ -50,10 +51,10 @@ type BinRecord = {
   updatedAt?: string;
 };
 
-const priorityConfig: Record<BinPriority, { label: string; color: string; bg: string }> = {
-  high: { label: "High", color: "#b91c1c", bg: "rgba(239,68,68,0.15)" },
-  medium: { label: "Medium", color: "#b45309", bg: "rgba(245,158,11,0.15)" },
-  low: { label: "Low", color: "#15803d", bg: "rgba(34,197,94,0.12)" },
+const priorityConfig: Record<BinPriority, { color: string; bg: string }> = {
+  high: { color: "#b91c1c", bg: "rgba(239,68,68,0.15)" },
+  medium: { color: "#b45309", bg: "rgba(245,158,11,0.15)" },
+  low: { color: "#15803d", bg: "rgba(34,197,94,0.12)" },
 };
 
 const parseCoordinate = (value?: number | string | null) => {
@@ -218,6 +219,7 @@ const createBinIcon = (priority: BinPriority, isFocused = false) => {
 };
 
 export default function BinMonitoring() {
+  const { t } = useTranslation();
   const mapRef = useRef<L.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
@@ -227,6 +229,13 @@ export default function BinMonitoring() {
   const [binRecords, setBinRecords] = useState<ApiBin[]>([]);
   const [selectedBin, setSelectedBin] = useState<BinRecord | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
+  const placeholderNa = t("dashboard.bin_monitoring.placeholder_na");
+
+  const getPriorityLabel = useCallback((priority: BinPriority) => {
+    if (priority === "high") return t("common.priority_high");
+    if (priority === "medium") return t("common.priority_medium");
+    return t("common.priority_low");
+  }, [t]);
 
   useEffect(() => {
     let isMounted = true;
@@ -255,7 +264,7 @@ export default function BinMonitoring() {
       if (lat === null || lng === null) return acc;
       const record: BinRecord = {
         id: String(bin.unique_id ?? ""),
-        name: bin.bin_name ?? bin.unique_id ?? "Unnamed Bin",
+        name: bin.bin_name ?? bin.unique_id ?? t("dashboard.bin_monitoring.unnamed_bin"),
         lat,
         lng,
         priority: getPriorityFromColor(bin.color_code, bin.bin_status),
@@ -268,15 +277,15 @@ export default function BinMonitoring() {
       return acc;
     }, []);
 
-    return records.sort((a, b) => {
-      const order: Record<BinPriority, number> = {
-        high: 3,
-        medium: 2,
-        low: 1,
-      };
-      return order[b.priority] - order[a.priority];
-    });
-  }, [binRecords]);
+      return records.sort((a, b) => {
+        const order: Record<BinPriority, number> = {
+          high: 3,
+          medium: 2,
+          low: 1,
+        };
+        return order[b.priority] - order[a.priority];
+      });
+  }, [binRecords, t]);
 
   const handleSelectBin = (bin: BinRecord) => {
     setSelectedBin(bin);
@@ -337,6 +346,9 @@ export default function BinMonitoring() {
     layer.clearLayers();
     markerLookupRef.current = {};
     const bounds: LatLngTuple[] = [];
+    const priorityLabel = t("dashboard.bin_monitoring.popup_priority");
+    const colorLabel = t("dashboard.bin_monitoring.popup_color");
+    const statusLabel = t("dashboard.bin_monitoring.popup_status");
     prioritized.forEach((bin) => {
       const position: LatLngTuple = [bin.lat, bin.lng];
       bounds.push(position);
@@ -345,7 +357,11 @@ export default function BinMonitoring() {
         title: bin.name,
       });
       marker.bindPopup(
-        `<strong>${bin.name}</strong><br/>Priority: ${priorityConfig[bin.priority].label}<br/>Color: ${bin.colorCode ?? "—"}<br/>Status: ${bin.status ?? "—"}`,
+        `<strong>${bin.name}</strong><br/>${priorityLabel}: ${getPriorityLabel(
+          bin.priority,
+        )}<br/>${colorLabel}: ${bin.colorCode ?? placeholderNa}<br/>${statusLabel}: ${
+          bin.status ?? placeholderNa
+        }`,
       );
       marker.on("click", () => handleSelectBin(bin));
       marker.on("mouseover", () => marker.openPopup());
@@ -356,7 +372,7 @@ export default function BinMonitoring() {
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [40, 40] });
     }
-  }, [prioritized, focusedBin]);
+  }, [prioritized, focusedBin, getPriorityLabel, placeholderNa, t]);
 
   useEffect(() => {
     if (!focusedBin) return;
@@ -373,16 +389,20 @@ export default function BinMonitoring() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-3xl font-bold text-sky-500">Bin Monitoring</h2>
-        <p className="text-muted-foreground">Live bin status and priority alerts</p>
+        <h2 className="text-3xl font-bold text-sky-500">
+          {t("dashboard.bin_monitoring.title")}
+        </h2>
+        <p className="text-muted-foreground">
+          {t("dashboard.bin_monitoring.subtitle")}
+        </p>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card className="h-[760px] overflow-hidden">
             <CardHeader>
-              <CardTitle>Bin Location Map</CardTitle>
-              <CardDescription>Track bins with color-based priorities</CardDescription>
+              <CardTitle>{t("dashboard.bin_monitoring.map_title")}</CardTitle>
+              <CardDescription>{t("dashboard.bin_monitoring.map_subtitle")}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="relative h-[640px] w-full rounded-lg border-2 border-dashed border-border overflow-hidden bg-gradient-to-br from-secondary to-muted">
@@ -401,8 +421,8 @@ export default function BinMonitoring() {
         <div className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>All Bins</CardTitle>
-              <CardDescription>Live status and priority view</CardDescription>
+              <CardTitle>{t("dashboard.bin_monitoring.all_bins_title")}</CardTitle>
+              <CardDescription>{t("dashboard.bin_monitoring.all_bins_subtitle")}</CardDescription>
             </CardHeader>
             <CardContent className="h-[280px] space-y-2 overflow-y-auto pr-1">
               <div>
@@ -410,7 +430,7 @@ export default function BinMonitoring() {
                   type="text"
                   value={allBinSearch}
                   onChange={(event) => setAllBinSearch(event.target.value)}
-                  placeholder="Search bins..."
+                  placeholder={t("dashboard.bin_monitoring.search_placeholder")}
                   className="w-full rounded border border-border/70 px-2 py-1 text-xs outline-none focus:border-sky-500"
                 />
               </div>
@@ -427,22 +447,24 @@ export default function BinMonitoring() {
                       <div>
                         <p className="text-sm font-semibold">{bin.name}</p>
                         <p className="text-[11px] text-muted-foreground">
-                          {bin.ward ?? "Ward N/A"}
+                          {bin.ward ?? t("dashboard.bin_monitoring.ward_na")}
                         </p>
                       </div>
                       <div className="text-right">
                         <span className="text-sm font-semibold" style={{ color: meta.color }}>
-                          {meta.label}
+                          {getPriorityLabel(bin.priority)}
                         </span>
                         <p className="text-[10px] text-muted-foreground">
-                          {bin.colorCode ?? "—"}
+                          {bin.colorCode ?? placeholderNa}
                         </p>
                       </div>
                     </button>
                   );
                 })
               ) : (
-                <p className="text-sm text-muted-foreground">No matching bins.</p>
+                <p className="text-sm text-muted-foreground">
+                  {t("dashboard.bin_monitoring.no_matching_bins")}
+                </p>
               )}
             </CardContent>
           </Card>
@@ -450,22 +472,28 @@ export default function BinMonitoring() {
           <div className="grid gap-3 sm:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Priority Summary</CardTitle>
-                <CardDescription>Bins close to full capacity</CardDescription>
+                <CardTitle>{t("dashboard.bin_monitoring.summary_title")}</CardTitle>
+                <CardDescription>{t("dashboard.bin_monitoring.summary_subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-3">
                 <div className="rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-rose-700">
-                  <p className="text-xs font-semibold uppercase tracking-wide">High Priority</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide">
+                    {t("dashboard.bin_monitoring.high_priority")}
+                  </p>
                   <p className="text-2xl font-bold">{highPriority.length}</p>
                 </div>
                 <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-700">
-                  <p className="text-xs font-semibold uppercase tracking-wide">Medium Priority</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide">
+                    {t("dashboard.bin_monitoring.medium_priority")}
+                  </p>
                   <p className="text-2xl font-bold">
                     {prioritized.filter((bin) => bin.priority === "medium").length}
                   </p>
                 </div>
                 <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-emerald-700">
-                  <p className="text-xs font-semibold uppercase tracking-wide">Low Priority</p>
+                  <p className="text-xs font-semibold uppercase tracking-wide">
+                    {t("dashboard.bin_monitoring.low_priority")}
+                  </p>
                   <p className="text-2xl font-bold">
                     {prioritized.filter((bin) => bin.priority === "low").length}
                   </p>
@@ -475,8 +503,8 @@ export default function BinMonitoring() {
 
             <Card>
               <CardHeader>
-                <CardTitle>High Priority Bins</CardTitle>
-                <CardDescription>Almost full bins to service</CardDescription>
+                <CardTitle>{t("dashboard.bin_monitoring.high_bins_title")}</CardTitle>
+                <CardDescription>{t("dashboard.bin_monitoring.high_bins_subtitle")}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 {highPriority.length ? (
@@ -494,21 +522,25 @@ export default function BinMonitoring() {
                           <div>
                             <p className="text-sm font-semibold">{bin.name}</p>
                             <p className="text-xs text-muted-foreground">
-                              {bin.ward ?? "Ward N/A"}
+                              {bin.ward ?? t("dashboard.bin_monitoring.ward_na")}
                             </p>
                           </div>
                           <span className="text-sm font-semibold" style={{ color: meta.color }}>
-                            {meta.label}
+                            {getPriorityLabel(bin.priority)}
                           </span>
                         </div>
                         <div className="mt-2 text-[11px] text-muted-foreground">
-                          Updated {bin.updatedAt ?? "—"}
+                          {t("dashboard.bin_monitoring.updated_at", {
+                            time: bin.updatedAt ?? placeholderNa,
+                          })}
                         </div>
                       </button>
                     );
                   })
                 ) : (
-                  <p className="text-sm text-muted-foreground">No high priority bins right now.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("dashboard.bin_monitoring.no_high_priority")}
+                  </p>
                 )}
               </CardContent>
             </Card>
@@ -530,8 +562,16 @@ function BinSideDetailsPanel({
   onToggle: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const meta = bin ? priorityConfig[bin.priority] : null;
   const WIDTH = 260;
+  const priorityLabel = bin
+    ? bin.priority === "high"
+      ? t("common.priority_high")
+      : bin.priority === "medium"
+      ? t("common.priority_medium")
+      : t("common.priority_low")
+    : t("dashboard.bin_monitoring.placeholder_na");
 
   return (
     <div
@@ -562,30 +602,32 @@ function BinSideDetailsPanel({
               <AnimatedBinIcon color={meta?.color} bg={meta?.bg} />
               <div>
                 <h3 className="text-sm font-bold">{bin.name}</h3>
-                <p className="text-[11px] text-gray-500">{meta?.label}</p>
+                <p className="text-[11px] text-gray-500">{priorityLabel}</p>
               </div>
             </div>
 
             <div className="space-y-4 p-3 text-xs">
-              <Section title="Bin Info">
-                <InfoRow label="Priority" value={meta?.label} />
-                <InfoRow label="Status" value={bin.status} />
-                <InfoRow label="Color Code" value={bin.colorCode} />
+              <Section title={t("dashboard.bin_monitoring.details.bin_info")}>
+                <InfoRow label={t("dashboard.bin_monitoring.details.priority")} value={priorityLabel} />
+                <InfoRow label={t("dashboard.bin_monitoring.details.status")} value={bin.status} />
+                <InfoRow label={t("dashboard.bin_monitoring.details.color_code")} value={bin.colorCode} />
               </Section>
 
-              <Section title="Location">
-                <InfoRow label="Ward" value={bin.ward} />
-                <InfoRow label="Latitude" value={bin.lat} />
-                <InfoRow label="Longitude" value={bin.lng} />
+              <Section title={t("dashboard.bin_monitoring.details.location")}>
+                <InfoRow label={t("dashboard.bin_monitoring.details.ward")} value={bin.ward} />
+                <InfoRow label={t("dashboard.bin_monitoring.details.latitude")} value={bin.lat} />
+                <InfoRow label={t("dashboard.bin_monitoring.details.longitude")} value={bin.lng} />
               </Section>
 
-              <Section title="Updated">
-                <InfoRow label="Last Update" value={bin.updatedAt} />
+              <Section title={t("dashboard.bin_monitoring.details.updated")}>
+                <InfoRow label={t("dashboard.bin_monitoring.details.last_update")} value={bin.updatedAt} />
               </Section>
             </div>
           </>
         ) : (
-          <div className="p-3 text-xs text-gray-400">Select a bin</div>
+          <div className="p-3 text-xs text-gray-400">
+            {t("dashboard.bin_monitoring.select_bin")}
+          </div>
         )}
       </div>
     </div>
@@ -627,10 +669,13 @@ function AnimatedBinIcon({
 }
 
 function InfoRow({ label, value }: { label: string; value: any }) {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-between border-b pb-1">
       <span className="text-gray-500">{label}</span>
-      <span className="font-semibold">{value ?? "—"}</span>
+      <span className="font-semibold">
+        {value ?? t("dashboard.bin_monitoring.placeholder_na")}
+      </span>
     </div>
   );
 }

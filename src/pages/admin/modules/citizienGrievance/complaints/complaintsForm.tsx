@@ -29,6 +29,7 @@ import {
   wardApi,
   complaintApi,
 } from "@/helpers/admin";
+import { useTranslation } from "react-i18next";
 
 
 /* ================= CONSTANTS ================= */
@@ -57,6 +58,7 @@ const resolveMainCategoryLabel = (m: any) =>
 /* ================= COMPONENT ================= */
 
 export default function ComplaintAddForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { encCitizenGrivence, encComplaint } = getEncryptedRoute();
   const ENC_LIST_PATH = `/${encCitizenGrivence}/${encComplaint}`;
@@ -219,7 +221,11 @@ export default function ComplaintAddForm() {
       !subCategoryId ||
       !details
     ) {
-      Swal.fire("Missing Fields", "Please fill all required fields.", "warning");
+      Swal.fire(
+        t("admin.citizen_grievance.complaints_form.missing_title"),
+        t("admin.citizen_grievance.complaints_form.missing_message"),
+        "warning"
+      );
       return;
     }
 
@@ -247,26 +253,34 @@ export default function ComplaintAddForm() {
       await complaintApi.create(fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      Swal.fire("Saved", "Complaint created successfully", "success");
+      Swal.fire(
+        t("admin.citizen_grievance.complaints_form.saved_title"),
+        t("admin.citizen_grievance.complaints_form.saved_message"),
+        "success"
+      );
       navigate(ENC_LIST_PATH);
     } catch {
-      Swal.fire("Error", "Failed to save complaint", "error");
+      Swal.fire(
+        t("common.error"),
+        t("admin.citizen_grievance.complaints_form.save_failed"),
+        "error"
+      );
     }
   };
 
   /* ---------------- RENDER ---------------- */
 
   return (
-    <ComponentCard title="Add Complaint">
+    <ComponentCard title={t("admin.citizen_grievance.complaints_form.title_add")}>
       <form onSubmit={save}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
           <div>
-            <Label>Customer *</Label>
+            <Label>{t("admin.citizen_grievance.complaints_form.customer")} *</Label>
             <Select value={customer ? String(customer.id) : undefined}
               onValueChange={onCustomerChange}>
               <SelectTrigger>
-                <SelectValue placeholder="Select customer" />
+                <SelectValue placeholder={t("admin.citizen_grievance.complaints_form.customer_placeholder")} />
               </SelectTrigger>
               <SelectContent>
                 {customers.map((c) => (
@@ -279,17 +293,17 @@ export default function ComplaintAddForm() {
           </div>
 
           <div>
-            <Label>Contact</Label>
+            <Label>{t("admin.citizen_grievance.complaints_form.contact")}</Label>
             <Input value={contact} disabled />
           </div>
 
           <div className="md:col-span-2">
-            <Label>Address</Label>
+            <Label>{t("common.address")}</Label>
             <Input value={address} disabled />
           </div>
 
           <div>
-            <Label>Zone *</Label>
+            <Label>{t("common.zone")} *</Label>
             <Select value={zone || undefined}
               onValueChange={(v) => {
                 setZone(v);
@@ -297,7 +311,7 @@ export default function ComplaintAddForm() {
                 loadWards(v);
               }}>
               <SelectTrigger>
-                <SelectValue placeholder="Select zone" />
+                <SelectValue placeholder={t("admin.citizen_grievance.complaints_form.zone_placeholder")} />
               </SelectTrigger>
               <SelectContent>
                 {zones.map((z) => (
@@ -310,10 +324,10 @@ export default function ComplaintAddForm() {
           </div>
 
           <div>
-            <Label>Ward *</Label>
+            <Label>{t("common.ward")} *</Label>
             <Select value={ward || undefined} onValueChange={setWard}>
               <SelectTrigger>
-                <SelectValue placeholder="Select ward" />
+                <SelectValue placeholder={t("admin.citizen_grievance.complaints_form.ward_placeholder")} />
               </SelectTrigger>
               <SelectContent>
                 {wards.map((w) => (
@@ -326,11 +340,11 @@ export default function ComplaintAddForm() {
           </div>
 
           <div>
-            <Label>Main Category *</Label>
+            <Label>{t("admin.citizen_grievance.complaints_form.main_category")} *</Label>
             <Select value={mainCategoryId || undefined}
               onValueChange={setMainCategoryId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select main category" />
+                <SelectValue placeholder={t("admin.citizen_grievance.complaints_form.main_category_placeholder")} />
               </SelectTrigger>
               <SelectContent>
                 {mainCategories.map((m) => (
@@ -343,11 +357,11 @@ export default function ComplaintAddForm() {
           </div>
 
           <div>
-            <Label>Sub Category *</Label>
+            <Label>{t("admin.citizen_grievance.complaints_form.sub_category")} *</Label>
             <Select value={subCategoryId || undefined}
               onValueChange={setSubCategoryId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select sub category" />
+                <SelectValue placeholder={t("admin.citizen_grievance.complaints_form.sub_category_placeholder")} />
               </SelectTrigger>
               <SelectContent>
                 {subCategories.map((s) => (
@@ -360,26 +374,26 @@ export default function ComplaintAddForm() {
           </div>
 
           <div className="md:col-span-2">
-            <Label>Details *</Label>
+            <Label>{t("admin.citizen_grievance.complaints_form.details")} *</Label>
             <Input value={details} onChange={(e) => setDetails(e.target.value)} />
           </div>
 
           <div>
-            <Label>Priority</Label>
+            <Label>{t("common.priority")}</Label>
             <Select value={priority} onValueChange={setPriority}>
               <SelectTrigger>
-                <SelectValue placeholder="Select priority" />
+                <SelectValue placeholder={t("admin.citizen_grievance.complaints_form.priority_placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="HIGH">High</SelectItem>
-                <SelectItem value="MEDIUM">Medium</SelectItem>
-                <SelectItem value="LOW">Low</SelectItem>
+                <SelectItem value="HIGH">{t("common.priority_high")}</SelectItem>
+                <SelectItem value="MEDIUM">{t("common.priority_medium")}</SelectItem>
+                <SelectItem value="LOW">{t("common.priority_low")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div>
-            <Label>Complaint File</Label>
+            <Label>{t("admin.citizen_grievance.complaints_form.complaint_file")}</Label>
             <input type="file" hidden id="uploadBox" onChange={uploadFile} />
             <div
               className="border rounded p-4 cursor-pointer bg-gray-50"
@@ -394,7 +408,7 @@ export default function ComplaintAddForm() {
             {previewUrl && (
               <button type="button" onClick={clearFile}
                 className="text-sm text-red-500 mt-2">
-                Remove
+                {t("common.remove")}
               </button>
             )}
           </div>
@@ -403,12 +417,12 @@ export default function ComplaintAddForm() {
 
         <div className="flex justify-end gap-3 mt-6">
           <button className="bg-green-custom text-white px-4 py-2 rounded">
-            Save
+            {t("common.save")}
           </button>
           <button type="button"
             onClick={() => navigate(ENC_LIST_PATH)}
             className="bg-red-400 text-white px-4 py-2 rounded">
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

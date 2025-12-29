@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
+import { useTranslation } from "react-i18next";
 
 import { continentApi, countryApi, stateApi, districtApi, cityApi } from "@/helpers/admin";
 
@@ -87,6 +88,7 @@ const ENC_LIST_PATH = `/${encMasters}/${encCities}`;
     COMPONENT STARTS
 ========================================================== */
 export default function CityForm() {
+  const { t } = useTranslation();
   /* FIELD STATES */
   const [cityName, setCityName] = useState("");
   const [continentId, setContinentId] = useState("");
@@ -133,7 +135,7 @@ export default function CityForm() {
             }))
         );
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire(t("common.error"), extractError(err), "error");
       }
     })();
   }, []);
@@ -150,7 +152,7 @@ export default function CityForm() {
         }));
         setAllCountries(mapped);
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire(t("common.error"), extractError(err), "error");
       }
     })();
   }, []);
@@ -167,7 +169,7 @@ export default function CityForm() {
         }));
         setAllStates(mapped);
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire(t("common.error"), extractError(err), "error");
       }
     })();
   }, []);
@@ -184,7 +186,7 @@ export default function CityForm() {
         }));
         setAllDistricts(mapped);
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire(t("common.error"), extractError(err), "error");
       }
     })();
   }, []);
@@ -365,7 +367,7 @@ export default function CityForm() {
         setPendingStateId(ste ?? "");
         setPendingDistrictId(dis ?? "");
       } catch (err) {
-        Swal.fire("Error", extractError(err), "error");
+        Swal.fire(t("common.error"), extractError(err), "error");
       }
     })();
   }, [id, isEdit]);
@@ -377,7 +379,7 @@ export default function CityForm() {
     e.preventDefault();
 
     if (!continentId || !countryId || !stateId || !districtId || !cityName.trim()) {
-      Swal.fire("Missing Fields", "All fields are mandatory.", "warning");
+      Swal.fire(t("common.warning"), t("common.all_fields_required"), "warning");
       return;
     }
 
@@ -395,15 +397,15 @@ export default function CityForm() {
 
       if (isEdit && id) {
         await cityApi.update(id, payload);
-        Swal.fire("Success", "Updated successfully!", "success");
+        Swal.fire(t("common.success"), t("common.updated_success"), "success");
       } else {
         await cityApi.create(payload);
-        Swal.fire("Success", "Added successfully!", "success");
+        Swal.fire(t("common.success"), t("common.added_success"), "success");
       }
 
       navigate(ENC_LIST_PATH);
     } catch (err) {
-      Swal.fire("Save failed", extractError(err), "error");
+      Swal.fire(t("common.save_failed"), extractError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -413,13 +415,19 @@ export default function CityForm() {
       JSX
   ========================================================== */
   return (
-    <ComponentCard title={isEdit ? "Edit City" : "Add City"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.city") })
+          : t("common.add_item", { item: t("admin.nav.city") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Continent */}
           <div>
-            <Label>Continent *</Label>
+            <Label>{t("admin.nav.continent")} *</Label>
             <Select
               value={continentId}
               onValueChange={(val) => {
@@ -434,7 +442,11 @@ export default function CityForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Continent" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.continent"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {continents.map((c) => (
@@ -448,7 +460,7 @@ export default function CityForm() {
 
           {/* Country */}
           <div>
-            <Label>Country *</Label>
+            <Label>{t("admin.nav.country")} *</Label>
             <Select
               value={countryId}
               onValueChange={(val) => {
@@ -462,14 +474,22 @@ export default function CityForm() {
               disabled={!continentId}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Country" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.country"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredCountries.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
                     {continentId
-                      ? "No countries available"
-                      : "Select a continent first"}
+                      ? t("common.no_items_found", {
+                          item: t("admin.nav.country"),
+                        })
+                      : t("common.select_item_first", {
+                          item: t("admin.nav.continent"),
+                        })}
                   </div>
                 ) : (
                   filteredCountries.map((opt) => (
@@ -484,7 +504,7 @@ export default function CityForm() {
 
           {/* State */}
           <div>
-            <Label>State *</Label>
+            <Label>{t("admin.nav.state")} *</Label>
             <Select
               value={stateId}
               onValueChange={(val) => {
@@ -495,12 +515,22 @@ export default function CityForm() {
               disabled={!countryId}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select State" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.state"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredStates.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
-                    {countryId ? "No states available" : "Select a country first"}
+                    {countryId
+                      ? t("common.no_items_found", {
+                          item: t("admin.nav.state"),
+                        })
+                      : t("common.select_item_first", {
+                          item: t("admin.nav.country"),
+                        })}
                   </div>
                 ) : (
                   filteredStates.map((opt) => (
@@ -515,19 +545,29 @@ export default function CityForm() {
 
           {/* District */}
           <div>
-            <Label>District *</Label>
+            <Label>{t("admin.nav.district")} *</Label>
             <Select
               value={districtId}
               onValueChange={(val) => setDistrictId(val)}
               disabled={!stateId}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select District" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.district"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredDistricts.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
-                    {stateId ? "No districts available" : "Select a state first"}
+                    {stateId
+                      ? t("common.no_items_found", {
+                          item: t("admin.nav.district"),
+                        })
+                      : t("common.select_item_first", {
+                          item: t("admin.nav.state"),
+                        })}
                   </div>
                 ) : (
                   filteredDistricts.map((opt) => (
@@ -542,11 +582,15 @@ export default function CityForm() {
 
           {/* City */}
           <div>
-            <Label>City Name *</Label>
+            <Label>
+              {t("common.item_name", { item: t("admin.nav.city") })} *
+            </Label>
             <Input
               value={cityName}
               onChange={(e) => setCityName(e.target.value)}
-              placeholder="Enter city name"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.city"),
+              })}
               className="input-validate w-full"
               required
             />
@@ -554,17 +598,17 @@ export default function CityForm() {
 
           {/* Status */}
           <div>
-            <Label>Active Status *</Label>
+            <Label>{t("common.status")} *</Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(v) => setIsActive(v === "true")}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -576,11 +620,11 @@ export default function CityForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-              ? "Update"
-              : "Save"}
+              ? t("common.update")
+              : t("common.save")}
           </Button>
 
           <Button
@@ -588,7 +632,7 @@ export default function CityForm() {
             variant="destructive"
             onClick={() => navigate(ENC_LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

@@ -16,6 +16,7 @@ import { PencilIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 import { Switch } from "@/components/ui/switch";
+import { useTranslation } from "react-i18next";
 
 type WasteCollection = {
   unique_id: string;
@@ -47,6 +48,7 @@ type WasteCollection = {
 };
 
 export default function WasteCollectedDataList() {
+  const { t } = useTranslation();
   const [wasteCollectedDatas, setWasteCollectedDatas] =
     useState<WasteCollection[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +100,7 @@ export default function WasteCollectedDataList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search waste data..."
+          placeholder={t("admin.waste_collected_data.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -126,7 +128,7 @@ export default function WasteCollectedDataList() {
       <button
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
-        title="Edit"
+        title={t("common.edit")}
       >
         <PencilIcon className="size-5" />
       </button>
@@ -137,7 +139,13 @@ export default function WasteCollectedDataList() {
   const indexTemplate = (_: WasteCollection, { rowIndex }: any) =>
     rowIndex + 1;
 
-  if (loading) return <div className="p-6">Loading Waste Collected Data...</div>;
+  if (loading) {
+    return (
+      <div className="p-6">
+        {t("admin.waste_collected_data.loading")}
+      </div>
+    );
+  }
 
   return (
     <div className="p-3">
@@ -146,15 +154,15 @@ export default function WasteCollectedDataList() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Waste Collected Data
+              {t("admin.waste_collected_data.title")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage all waste collection records
+              {t("admin.waste_collected_data.subtitle")}
             </p>
           </div>
 
           <Button
-            label="Add New"
+            label={t("admin.waste_collected_data.add_new")}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -175,14 +183,14 @@ export default function WasteCollectedDataList() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No waste collection records found."
+          emptyMessage={t("admin.waste_collected_data.empty_message")}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
             field="customer"
-            header="Customer ID"
+            header={t("admin.waste_collected_data.customer_id")}
             sortable
             body={(r: WasteCollection) =>
               r.customer ||
@@ -192,22 +200,34 @@ export default function WasteCollectedDataList() {
           />
           <Column
             field="customer_name"
-            header="Customer Name"
+            header={t("admin.waste_collected_data.customer_name")}
             body={(r: WasteCollection) => cap(r.customer_name)}
             sortable
           />
-          <Column field="dry_waste" header="Dry Waste" sortable />
-          <Column field="wet_waste" header="Wet Waste" sortable />
-          <Column field="total_quantity" header="Quantity" sortable />
+          <Column
+            field="dry_waste"
+            header={t("admin.waste_collected_data.dry_waste")}
+            sortable
+          />
+          <Column
+            field="wet_waste"
+            header={t("admin.waste_collected_data.wet_waste")}
+            sortable
+          />
+          <Column
+            field="total_quantity"
+            header={t("admin.waste_collected_data.quantity")}
+            sortable
+          />
           <Column
             field="zone_name"
-            header="Zone"
+            header={t("common.zone")}
             body={(r: WasteCollection) => cap(r.zone_name)}
             sortable
           />
           <Column
             field="city_name"
-            header="City"
+            header={t("common.city")}
             body={(r: WasteCollection) => cap(r.city_name)}
             sortable
           />
@@ -215,13 +235,13 @@ export default function WasteCollectedDataList() {
           {/* 🔥 NEW Switch Toggle */}
           <Column
             field="is_active"
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "150px" }}
           />
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px" }}
           />

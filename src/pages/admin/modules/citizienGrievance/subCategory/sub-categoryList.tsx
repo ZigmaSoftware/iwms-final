@@ -13,12 +13,14 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { Switch } from "@/components/ui/switch";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 export default function SubComplaintCategoryList() {
+  const { t } = useTranslation();
   const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,11 +55,11 @@ export default function SubComplaintCategoryList() {
 
   const handleDelete = async (id: string) => {
     const confirmation = await Swal.fire({
-      title: "Confirm Deletion",
-      text: "This record will be permanently removed.",
+      title: t("admin.citizen_grievance.sub_category.confirm_title"),
+      text: t("admin.citizen_grievance.sub_category.confirm_message"),
       icon: "warning",
       showCancelButton: true,
-      confirmButtonText: "Delete",
+      confirmButtonText: t("admin.citizen_grievance.sub_category.confirm_button"),
       confirmButtonColor: "#d33"
     });
 
@@ -67,7 +69,7 @@ export default function SubComplaintCategoryList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted Successfully",
+      title: t("admin.citizen_grievance.sub_category.deleted"),
       timer: 1500,
       showConfirmButton: false
     });
@@ -122,7 +124,7 @@ export default function SubComplaintCategoryList() {
           <InputText
             value={globalFilterValue}
             onChange={onGlobalFilterChange}
-            placeholder="Search..."
+            placeholder={t("admin.citizen_grievance.sub_category.search_placeholder")}
             className="p-inputtext-sm !border-0 !shadow-none"
           />
         </div>
@@ -137,14 +139,16 @@ export default function SubComplaintCategoryList() {
         {/* PAGE TITLE */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Sub Categories</h1>
+            <h1 className="text-3xl font-bold text-gray-800">
+              {t("admin.citizen_grievance.sub_category.title")}
+            </h1>
             <p className="text-gray-500 text-sm">
-              Manage all sub complaint category records
+              {t("admin.citizen_grievance.sub_category.subtitle")}
             </p>
           </div>
 
           <Button
-            label="Add New"
+            label={t("common.add_new")}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(NEW_PATH)}
@@ -163,20 +167,32 @@ export default function SubComplaintCategoryList() {
           rowsPerPageOptions={[5, 10, 25, 50]}
           stripedRows
           showGridlines
-          emptyMessage="No records found."
+          emptyMessage={t("admin.citizen_grievance.sub_category.empty_message")}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
-          <Column field="name" header="Sub Category" sortable />
-          <Column field="mainCategory_name" header="Main Category" sortable />
+          <Column
+            header={t("admin.citizen_grievance.sub_category.columns.s_no")}
+            body={indexTemplate}
+            style={{ width: "80px" }}
+          />
+          <Column
+            field="name"
+            header={t("admin.citizen_grievance.sub_category.columns.sub_category")}
+            sortable
+          />
+          <Column
+            field="mainCategory_name"
+            header={t("admin.citizen_grievance.sub_category.columns.main_category")}
+            sortable
+          />
           <Column
             field="is_active"
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "150px" }}
           />
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px" }}
           />

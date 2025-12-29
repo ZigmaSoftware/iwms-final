@@ -10,6 +10,7 @@ import {
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
 import type { CustomerRecord as CustomerRecordBase } from "@/utils/customerUtils";
+import { useTranslation } from "react-i18next";
 
 interface Vehicle {
   id: string;
@@ -139,6 +140,7 @@ const pickCoordinate = (record: Record<string, any>, keys: string[]) => {
 };
 
 const WasteCollectionMonitor: React.FC = () => {
+  const { t } = useTranslation();
   const [fromDate, setFromDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
@@ -161,9 +163,23 @@ const WasteCollectionMonitor: React.FC = () => {
   const [map, setMap] = useState<L.Map | null>(null);
   const [focusedVehicleId, setFocusedVehicleId] = useState("");
   const vehicleMarkerLookupRef = useRef<Record<string, L.Marker>>({});
+  const getVehicleStatusLabel = (status: VehicleStatus) => {
+    switch (status) {
+      case "Running":
+        return t("dashboard.live_map.status_running");
+      case "Idle":
+        return t("dashboard.live_map.status_idle");
+      case "Parked":
+        return t("dashboard.live_map.status_parked");
+      case "No Data":
+        return t("dashboard.live_map.status_no_data");
+      default:
+        return status;
+    }
+  };
   const statusOptions = [
     {
-      label: "Not Collected",
+      label: t("common.not_collected"),
       value: "not_collected",
       count: notCollectedCount,
       activeBg: "bg-red-100",
@@ -171,7 +187,7 @@ const WasteCollectionMonitor: React.FC = () => {
       activeDot: "bg-red-500",
     },
     {
-      label: "Collected",
+      label: t("common.collected"),
       value: "collected",
       count: collectedCount,
       activeBg: "bg-green-100",
@@ -179,7 +195,7 @@ const WasteCollectionMonitor: React.FC = () => {
       activeDot: "bg-green-500",
     },
     {
-      label: "Total Household",
+      label: t("admin.collection_monitoring.total_household"),
       value: "total_household",
       count: totalHouseholdCount,
       activeBg: "bg-blue-100",
@@ -243,14 +259,19 @@ const WasteCollectionMonitor: React.FC = () => {
     return customerLocations.find((location) => location.id === customerId) ?? null;
   }, [customerLocations, hasSelectedCustomer, customerId]);
 
-  const selectedCustomerStatusLabel = hasSelectedCustomer
+  const selectedCustomerStatus = hasSelectedCustomer
     ? collectedCustomerIds.includes(customerId)
-      ? "Collected"
-      : "Not Collected"
+      ? "collected"
+      : "not_collected"
+    : null;
+  const selectedCustomerStatusLabel = selectedCustomerStatus
+    ? selectedCustomerStatus === "collected"
+      ? t("common.collected")
+      : t("common.not_collected")
     : null;
 
   // Fetch vehicle data from Vamosys
-  const fetchVamosysData = async () => {
+  const fetchVamosysData = useCallback(async () => {
     try {
       const response = await fetch(
         "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM",
@@ -273,7 +294,7 @@ const WasteCollectionMonitor: React.FC = () => {
       const parsedData: Vehicle[] =
         data?.data?.map((v: any, index: number) => {
           const number =
-            v.vehicleNumber || v.vehicleNo || v.vehicle_number || v.regNo || "Unknown";
+            v.vehicleNumber || v.vehicleNo || v.vehicle_number || v.regNo || t("common.unknown");
           const resolvedId =
             number && number !== "Unknown" ? String(number) : String(index);
           return {
@@ -284,7 +305,7 @@ const WasteCollectionMonitor: React.FC = () => {
             status: v.status || "Idle",
             speed: v.speed || 0,
             ignition: v.ignitionStatus === "ON",
-            location: v.location || "Unknown Area",
+            location: v.location || t("common.location_unavailable"),
             distance: v.distance || 0,
             updatedAt: v.updatedAt || new Date().toISOString(),
           };
@@ -294,14 +315,14 @@ const WasteCollectionMonitor: React.FC = () => {
     } catch (error) {
       console.error("Error fetching vehicle data:", error);
     }
-  };
+  }, [t]);
 
   
 
   // Load vehicle data once
   useEffect(() => {
     fetchVamosysData();
-  }, []);
+  }, [fetchVamosysData]);
 
   const fetchSummaryCounts = useCallback(async () => {
     let households = 0;
@@ -337,7 +358,7 @@ const WasteCollectionMonitor: React.FC = () => {
       if (!id) return acc;
       acc.push({
         id,
-        name: customer.customer_name ?? "Unknown",
+        name: customer.customer_name ?? t("common.unknown"),
         lat,
         lon,
         address: `${customer.building_no || ""} ${customer.street || ""} ${customer.area || ""}`.trim(),
@@ -381,7 +402,7 @@ const WasteCollectionMonitor: React.FC = () => {
     setCollectedCustomerIds(collectedIds);
     setCollectedCount(collectedIds.length);
     setNotCollectedCount(Math.max(households - collectedIds.length, 0));
-  }, [fromDate]);
+  }, [fromDate, t]);
 
   useEffect(() => {
     fetchSummaryCounts();
@@ -449,7 +470,11 @@ const WasteCollectionMonitor: React.FC = () => {
       })
         .addTo(vehicleLayer)
         .bindPopup(
-          `<b>${v.number}</b><br>Status: ${v.status}<br>Speed: ${v.speed} km/h<br>${v.location}`
+          `<b>${v.number}</b><br>${t("dashboard.live_map.popup_status")}: ${getVehicleStatusLabel(
+            v.status
+          )}<br>${t("dashboard.live_map.popup_speed")}: ${v.speed} ${t(
+            "dashboard.live_map.units.kmh"
+          )}<br>${v.location}`
         );
       marker.on("mouseover", () => marker.openPopup());
       marker.on("mouseout", () => marker.closePopup());
@@ -529,7 +554,7 @@ const WasteCollectionMonitor: React.FC = () => {
 
     if (selectedCustomerLocation) {
       const highlightColor =
-        selectedCustomerStatusLabel === "Collected" ? "#16a34a" : "#dc2626";
+        selectedCustomerStatus === "collected" ? "#16a34a" : "#dc2626";
 
       L.circleMarker([selectedCustomerLocation.lat, selectedCustomerLocation.lon], {
         radius: 10,
@@ -551,7 +576,7 @@ const WasteCollectionMonitor: React.FC = () => {
     return () => {
       highlightLayer.remove();
     };
-  }, [map, selectedCustomerLocation, selectedCustomerStatusLabel]);
+  }, [map, selectedCustomerLocation, selectedCustomerStatusLabel, selectedCustomerStatus]);
 
 
   return (
@@ -559,14 +584,14 @@ const WasteCollectionMonitor: React.FC = () => {
      
         <div className="flex justify-between items-center border-b pb-2">
           <h5 className="text-lg font-semibold flex items-center">
-            Waste Collection Monitoring
+            {t("admin.collection_monitoring.title")}
           </h5>
         </div>
 
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mt-2">
           <div>
-            <label className="block text-sm font-medium mb-1">Date</label>
+            <label className="block text-sm font-medium mb-1">{t("common.date")}</label>
             <input
               ref={datepickerRef}
               type="text"
@@ -577,7 +602,7 @@ const WasteCollectionMonitor: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Zone</label>
+            <label className="block text-sm font-medium mb-1">{t("common.zone")}</label>
             <select
               className="form-select w-full border rounded-md p-2"
               value={zone}
@@ -587,7 +612,9 @@ const WasteCollectionMonitor: React.FC = () => {
                 setCustomerId("");
               }}
             >
-              <option value="">Select the Zone</option>
+              <option value="">
+                {t("common.select_item_placeholder", { item: t("common.zone") })}
+              </option>
               {zoneOptions.map((z) => (
                 <option key={z.value} value={z.value}>
                   {z.label}
@@ -596,7 +623,7 @@ const WasteCollectionMonitor: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Ward</label>
+            <label className="block text-sm font-medium mb-1">{t("common.ward")}</label>
             <select
               className="form-select w-full border rounded-md p-2"
               value={ward}
@@ -605,7 +632,9 @@ const WasteCollectionMonitor: React.FC = () => {
                 setCustomerId("");
               }}
             >
-              <option value="">Select the Ward</option>
+              <option value="">
+                {t("common.select_item_placeholder", { item: t("common.ward") })}
+              </option>
               {wardOptions.map((w) => (
                 <option key={w.value} value={w.value}>
                   {w.label}
@@ -615,13 +644,17 @@ const WasteCollectionMonitor: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Customer</label>
+            <label className="block text-sm font-medium mb-1">
+              {t("common.customer")}
+            </label>
             <select
               className="form-select w-full border rounded-md p-2"
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
             >
-              <option value="">Select Customer</option>
+              <option value="">
+                {t("common.select_item_placeholder", { item: t("common.customer") })}
+              </option>
               {customerOptions.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
@@ -636,14 +669,16 @@ const WasteCollectionMonitor: React.FC = () => {
               onClick={fetchSummaryCounts}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
-              Go
+              {t("common.go")}
             </button>
           </div>
         </div>
 
         <hr className="my-4" />
         <div id="vehicle_id_text" className="font-semibold text-gray-600 mb-2">
-          {customerId ? `Vehicle ID: ${customerId}` : ""}
+          {customerId
+            ? `${t("admin.collection_monitoring.vehicle_id_label")}: ${customerId}`
+            : ""}
         </div>
 
         {/* Map */}
@@ -675,7 +710,7 @@ const WasteCollectionMonitor: React.FC = () => {
                 </span>
                 <span
                   className={`map-status-pill ${
-                    selectedCustomerStatusLabel === "Collected"
+                    selectedCustomerStatus === "collected"
                       ? "collected"
                       : "not-collected"
                   }`}
@@ -685,7 +720,7 @@ const WasteCollectionMonitor: React.FC = () => {
               </>
             ) : (
               <span className="map-status-badge__hint">
-                Select a customer to view location
+                {t("admin.collection_monitoring.select_customer_hint")}
               </span>
             )}
           </div>

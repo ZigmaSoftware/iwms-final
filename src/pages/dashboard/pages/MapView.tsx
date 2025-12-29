@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Navigation, Search, ChevronDown } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 type RawRecord = Record<string, unknown>;
 type StatusKey = "running" | "idle" | "stopped" | "no_data";
@@ -16,7 +17,7 @@ type StatusBadge = { bg: string; color: string };
 const STATUS_META: Record<
   StatusFilterKey,
   {
-    label: string;
+    labelKey: string;
     accent: string;
     textLight: string;
     textDark: string;
@@ -27,7 +28,7 @@ const STATUS_META: Record<
   }
 > = {
   all: {
-    label: "All Vehicles",
+    labelKey: "dashboard.live_map.status_all",
     accent: "#6366f1",
     textLight: "#312e81",
     textDark: "#c7d2fe",
@@ -37,7 +38,7 @@ const STATUS_META: Record<
     badgeDark: { bg: "rgba(79,70,229,0.75)", color: "#e0e7ff" },
   },
   running: {
-    label: "Running",
+    labelKey: "dashboard.live_map.status_running",
     accent: "#16a34a",
     textLight: "#14532d",
     textDark: "#4ade80",
@@ -47,7 +48,7 @@ const STATUS_META: Record<
     badgeDark: { bg: "#22c55e", color: "#052e16" },
   },
   idle: {
-    label: "Idle",
+    labelKey: "dashboard.live_map.status_idle",
     accent: "#f59e0b",
     textLight: "#92400e",
     textDark: "#fde68a",
@@ -57,7 +58,7 @@ const STATUS_META: Record<
     badgeDark: { bg: "#b45309", color: "#fff7ed" },
   },
   stopped: {
-    label: "Stopped",
+    labelKey: "dashboard.live_map.status_stopped",
     accent: "#ef4444",
     textLight: "#991b1b",
     textDark: "#fecaca",
@@ -67,7 +68,7 @@ const STATUS_META: Record<
     badgeDark: { bg: "#b91c1c", color: "#fee2e2" },
   },
   no_data: {
-    label: "No Data",
+    labelKey: "dashboard.live_map.status_no_data",
     accent: "#9ca3af",
     textLight: "#374151",
     textDark: "#d1d5db",
@@ -78,11 +79,11 @@ const STATUS_META: Record<
   },
 };
 
-const STATUS_FILTERS: { key: StatusFilterKey; label: string }[] = [
-  { key: "all", label: "All" },
-  { key: "running", label: "Running" },
-  { key: "idle", label: "Idle" },
-  { key: "stopped", label: "Stopped" },
+const STATUS_FILTERS: { key: StatusFilterKey; labelKey: string }[] = [
+  { key: "all", labelKey: "dashboard.live_map.filters.all" },
+  { key: "running", labelKey: "dashboard.live_map.filters.running" },
+  { key: "idle", labelKey: "dashboard.live_map.filters.idle" },
+  { key: "stopped", labelKey: "dashboard.live_map.filters.stopped" },
 ];
 
 const VEHICLE_ICON_EMOJI = "🚚";
@@ -274,6 +275,7 @@ function normalizeVehicle(record: RawRecord): LiveVehicle | null {
 
 export default function MapView() {
   const { theme, palette } = useTheme();
+  const { t, i18n } = useTranslation();
   const isDarkMode = theme === "dark";
   const preferredVehicleId = "UP16KT1737";
   const [vehicleId, setVehicleId] = useState(preferredVehicleId);
@@ -313,6 +315,13 @@ export default function MapView() {
   const searchDropdownVehicles = liveVehicles.slice(0, 12).filter((vehicle) =>
     vehicle.label.toLowerCase().includes(searchTerm.trim().toLowerCase()),
   );
+  const locale = i18n.language || "en-US";
+  const formatStatusLabel = useCallback(
+    (status: StatusFilterKey) =>
+      t(STATUS_META[status]?.labelKey ?? "dashboard.live_map.status_unknown"),
+    [t],
+  );
+  const speedUnit = t("dashboard.live_map.units.kmh");
 
   useEffect(() => {
     if (!isDropdownOpen) return;
@@ -381,9 +390,11 @@ export default function MapView() {
       });
       marker
         .bindPopup(
-          `<strong>${vehicle.label}</strong><br/>Status: ${statusMeta.label}<br/>Speed: ${vehicle.speed.toFixed(
-            1,
-          )} km/h`,
+          `<strong>${vehicle.label}</strong><br/>${t(
+            "dashboard.live_map.popup_status",
+          )}: ${formatStatusLabel(vehicle.status)}<br/>${t(
+            "dashboard.live_map.popup_speed",
+          )}: ${vehicle.speed.toFixed(1)} ${speedUnit}`,
         )
         .addTo(layer);
       marker.on("mouseover", () => marker.openPopup());
@@ -393,7 +404,7 @@ export default function MapView() {
     if (bounds.length) {
       map.fitBounds(bounds, { padding: [32, 32] });
     }
-  }, [filteredVehicles, focusedVehicleId]);
+  }, [filteredVehicles, focusedVehicleId, formatStatusLabel, speedUnit, t]);
 
   useEffect(() => {
     if (!mapRef.current) return;
@@ -453,12 +464,12 @@ export default function MapView() {
           setLiveError("");
           setLastUpdatedAt(new Date());
         } else {
-          setLiveError("No live vehicles available.");
+          setLiveError("dashboard.live_map.error_no_vehicles");
         }
       } catch (err) {
         console.error("Live vehicle fetch failed:", err);
         if (!isMounted) return;
-        setLiveError("Unable to load live positions.");
+        setLiveError("dashboard.live_map.error_load_failed");
       } finally {
         if (isMounted) {
           setLoadingLive(false);
@@ -493,7 +504,7 @@ export default function MapView() {
     setPanelOpen(true);
   };
 
-  const lastUpdatedLabel = lastUpdatedAt.toLocaleTimeString("en-US", {
+  const lastUpdatedLabel = lastUpdatedAt.toLocaleTimeString(locale, {
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
@@ -504,8 +515,12 @@ export default function MapView() {
   return (
     <div className="space-y-3">
       <div>
-        <h2 className="text-3xl font-bold text-sky-500">Live Map View</h2>
-        <p className="text-muted-foreground">Real-time GPS tracking of all vehicles</p>
+        <h2 className="text-3xl font-bold text-sky-500">
+          {t("dashboard.live_map.title")}
+        </h2>
+        <p className="text-muted-foreground">
+          {t("dashboard.live_map.subtitle")}
+        </p>
       </div>
 
       <div className="grid gap-5 lg:grid-cols-3 -mt-2">
@@ -531,7 +546,7 @@ export default function MapView() {
                 >
                   <span className="flex items-center gap-2 text-[13px]">
                     <Search className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>{searchTerm || "All Vehicles"}</span>
+                    <span>{searchTerm || t("dashboard.live_map.all_vehicles")}</span>
                   </span>
                   <ChevronDown className="h-4 w-4 text-muted-foreground" />
                 </button>
@@ -541,7 +556,7 @@ export default function MapView() {
                     className="absolute left-0 top-full z-[1000] mt-2 w-[240px] rounded-lg border border-border bg-card text-card-foreground text-[13px] shadow-xl dark:shadow-slate-900/50"
                   >
                     <div className="border-b border-border px-3 py-2 text-xs uppercase text-muted-foreground tracking-wide">
-                      Search vehicle ID
+                      {t("dashboard.live_map.search_title")}
                     </div>
                     <div className="px-3 py-2">
                       <input
@@ -549,7 +564,7 @@ export default function MapView() {
                         type="text"
                         value={searchTerm}
                         onChange={(event) => setSearchTerm(event.target.value)}
-                        placeholder="Type to filter..."
+                        placeholder={t("dashboard.live_map.search_placeholder")}
                         className="w-full rounded border border-border/70 px-2 py-1 text-xs outline-none focus:border-primary"
                       />
                       {searchTerm && (
@@ -558,7 +573,7 @@ export default function MapView() {
                           className="mt-2 w-full rounded border border-border/70 px-2 py-1 text-[10px] font-semibold text-muted-foreground transition hover:text-foreground"
                           onClick={() => setSearchTerm("")}
                         >
-                          Clear search
+                          {t("dashboard.live_map.search_clear")}
                         </button>
                       )}
                     </div>
@@ -572,9 +587,11 @@ export default function MapView() {
                           setIsDropdownOpen(false);
                         }}
                       >
-                        <span>All Vehicles</span>
+                        <span>{t("dashboard.live_map.all_vehicles")}</span>
                         <span className="text-[10px] text-muted-foreground">
-                          {`Showing ${liveVehicles.length}`}
+                          {t("dashboard.live_map.showing_count", {
+                            count: liveVehicles.length,
+                          })}
                         </span>
                       </button>
                       {searchDropdownVehicles.length ? (
@@ -591,11 +608,15 @@ export default function MapView() {
                             }}
                           >
                             <span>{vehicle.label}</span>
-                            <span className="text-[10px] text-muted-foreground">{STATUS_META[vehicle.status]?.label}</span>
+                            <span className="text-[10px] text-muted-foreground">
+                              {formatStatusLabel(vehicle.status)}
+                            </span>
                           </button>
                         ))
                       ) : (
-                        <div className="px-3 py-2 text-muted-foreground">No matching vehicles</div>
+                        <div className="px-3 py-2 text-muted-foreground">
+                          {t("dashboard.live_map.no_matching")}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -613,17 +634,23 @@ export default function MapView() {
                   isDarkMode={isDarkMode}
                 />
                 <div className="absolute left-3 bottom-3 rounded-md bg-background/80 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow">
-                  <div>{`Live vehicles: ${liveVehicles.length}`}</div>
-                  <div>{`Updated ${lastUpdatedLabel}`}</div>
+                  <div>
+                    {t("dashboard.live_map.live_vehicles", {
+                      count: liveVehicles.length,
+                    })}
+                  </div>
+                  <div>
+                    {t("dashboard.live_map.updated", { time: lastUpdatedLabel })}
+                  </div>
                 </div>
                 {loadingLive && (
                   <div className="absolute right-3 top-3 rounded-md bg-background/90 px-2 py-1 text-[11px] font-medium text-muted-foreground">
-                    Refreshing live data…
+                    {t("dashboard.live_map.refreshing")}
                   </div>
                 )}
                 {liveError && (
                   <div className="absolute left-3 top-3 rounded-md bg-error/90 px-2 py-1 text-[11px] font-medium text-white">
-                    {liveError}
+                    {t(liveError)}
                   </div>
                 )}
               </div>
@@ -640,7 +667,9 @@ export default function MapView() {
             }}
           >
             <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-              <CardTitle className="text-lg font-semibold">Vehicle Status</CardTitle>
+              <CardTitle className="text-lg font-semibold">
+                {t("dashboard.live_map.vehicle_status_title")}
+              </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-2">
@@ -671,7 +700,7 @@ export default function MapView() {
                           {count}
                         </span>
                         <span className="text-[11px]" style={{ color: labelColor }}>
-                          {filter.label}
+                          {t(filter.labelKey)}
                         </span>
                       </button>
                     );
@@ -690,7 +719,7 @@ export default function MapView() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Navigation className="h-5 w-5" />
-                  Active Vehicles
+                {t("dashboard.live_map.active_vehicles_title")}
                 </CardTitle>
               </CardHeader>
             <CardContent className="space-y-3 max-h-[495px] overflow-y-auto pr-1">
@@ -719,23 +748,25 @@ export default function MapView() {
                           color: badge.color,
                         }}
                       >
-                        {statusMeta?.label ?? "Unknown"}
+                        {formatStatusLabel(vehicle.status)}
                       </span>
                     </div>
                     <div className="space-y-1 text-xs text-muted-foreground">
                       <div className="flex items-center gap-1">
-                        <span className="font-medium">Speed:</span>
-                        <span>{vehicle.speed.toFixed(1)} km/h</span>
+                        <span className="font-medium">{t("dashboard.live_map.labels.speed")}:</span>
+                        <span>
+                          {vehicle.speed.toFixed(1)} {speedUnit}
+                        </span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <span className="font-medium">Coords:</span>
+                        <span className="font-medium">{t("dashboard.live_map.labels.coords")}:</span>
                         <span>
                           {vehicle.lat.toFixed(4)}, {vehicle.lng.toFixed(4)}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
-                        <span className="font-medium">Updated:</span>
-                        <span>{new Date(vehicle.lastUpdate).toLocaleTimeString("en-US")}</span>
+                        <span className="font-medium">{t("dashboard.live_map.labels.updated")}:</span>
+                        <span>{new Date(vehicle.lastUpdate).toLocaleTimeString(locale)}</span>
                       </div>
                     </div>
                   </div>
@@ -762,15 +793,20 @@ function VehicleSidePanel({
   onClose: () => void;
   isDarkMode: boolean;
 }) {
+  const { t, i18n } = useTranslation();
   const [infoOpen, setInfoOpen] = useState(true);
   const meta = vehicle ? STATUS_META[vehicle.status] : null;
   const surface = meta ? (isDarkMode ? meta.surfaceDark : meta.surfaceLight) : null;
   const WIDTH = 280;
-  const locationLabel = vehicle?.location?.trim() ? vehicle.location : "Location unavailable";
-  const driverLabel = vehicle?.driver?.trim() ? vehicle.driver : "-";
+  const locationLabel = vehicle?.location?.trim()
+    ? vehicle.location
+    : t("dashboard.live_map.location_unavailable");
+  const driverLabel = vehicle?.driver?.trim()
+    ? vehicle.driver
+    : t("dashboard.live_map.placeholder_dash");
   const lastUpdatedLabel = vehicle
-    ? new Date(vehicle.lastUpdate).toLocaleString("en-US")
-    : "—";
+    ? new Date(vehicle.lastUpdate).toLocaleString(i18n.language || "en-US")
+    : t("dashboard.live_map.placeholder_na");
 
   return (
     <div
@@ -808,7 +844,7 @@ function VehicleSidePanel({
             <div className="flex items-start justify-between border-b border-border px-3 py-3">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-                  Vehicle
+                  {t("dashboard.live_map.labels.vehicle")}
                 </div>
                 <div className="text-base font-semibold">{vehicle.label}</div>
               </div>
@@ -825,7 +861,7 @@ function VehicleSidePanel({
                 🚚
               </div>
               <div className="text-xs leading-relaxed">
-                <div className="font-semibold">Live Vehicle</div>
+                <div className="font-semibold">{t("dashboard.live_map.live_vehicle")}</div>
                 <div className="text-muted-foreground">{locationLabel}</div>
               </div>
             </div>
@@ -833,29 +869,33 @@ function VehicleSidePanel({
             <div className="space-y-3 px-3 pt-3 text-xs">
               <div className="space-y-1">
                 <div>
-                  <span className="font-semibold">Status:</span>{" "}
-                  <span className="text-muted-foreground">{meta?.label ?? "Unknown"}</span>
+                  <span className="font-semibold">{t("dashboard.live_map.labels.status")}:</span>{" "}
+                  <span className="text-muted-foreground">
+                    {meta ? t(meta.labelKey) : t("dashboard.live_map.status_unknown")}
+                  </span>
                 </div>
                 <div>
-                  <span className="font-semibold">Driver:</span>{" "}
+                  <span className="font-semibold">{t("dashboard.live_map.labels.driver")}:</span>{" "}
                   <span className="text-muted-foreground">{driverLabel}</span>
                 </div>
                 <div>
-                  <span className="font-semibold">Speed:</span>{" "}
-                  <span className="text-muted-foreground">{vehicle.speed.toFixed(1)} km/h</span>
+                  <span className="font-semibold">{t("dashboard.live_map.labels.speed")}:</span>{" "}
+                  <span className="text-muted-foreground">
+                    {vehicle.speed.toFixed(1)} {t("dashboard.live_map.units.kmh")}
+                  </span>
                 </div>
                 <div>
-                  <span className="font-semibold">Coordinates:</span>{" "}
+                  <span className="font-semibold">{t("dashboard.live_map.labels.coordinates")}:</span>{" "}
                   <span className="text-muted-foreground">
                     {vehicle.lat.toFixed(5)}, {vehicle.lng.toFixed(5)}
                   </span>
                 </div>
                 <div>
-                  <span className="font-semibold">Location:</span>{" "}
+                  <span className="font-semibold">{t("dashboard.live_map.labels.location")}:</span>{" "}
                   <span className="text-muted-foreground">{locationLabel}</span>
                 </div>
                 <div>
-                  <span className="font-semibold">Last Updated:</span>{" "}
+                  <span className="font-semibold">{t("dashboard.live_map.labels.last_updated")}:</span>{" "}
                   <span className="text-muted-foreground">{lastUpdatedLabel}</span>
                 </div>
               </div>
@@ -866,23 +906,28 @@ function VehicleSidePanel({
                   onClick={() => setInfoOpen((prev) => !prev)}
                   className="flex w-full items-center justify-between text-xs font-semibold"
                 >
-                  <span>Vehicle Information</span>
+                  <span>{t("dashboard.live_map.vehicle_information")}</span>
                   <span className="text-base">{infoOpen ? "−" : "+"}</span>
                 </button>
                 {infoOpen && (
                   <div className="mt-2 space-y-1 rounded-md border border-border/60 bg-background/60 p-2">
-                    <InfoRow label="Vehicle No" value={vehicle.label} />
-                    <InfoRow label="Status" value={meta?.label ?? "Unknown"} />
-                    <InfoRow label="Driver" value={driverLabel} />
-                    <InfoRow label="Speed" value={`${vehicle.speed.toFixed(1)} km/h`} />
-                    <InfoRow label="Last Updated" value={lastUpdatedLabel} />
+                    <InfoRow label={t("dashboard.live_map.info.vehicle_no")} value={vehicle.label} />
+                    <InfoRow label={t("dashboard.live_map.labels.status")} value={meta ? t(meta.labelKey) : t("dashboard.live_map.status_unknown")} />
+                    <InfoRow label={t("dashboard.live_map.labels.driver")} value={driverLabel} />
+                    <InfoRow
+                      label={t("dashboard.live_map.labels.speed")}
+                      value={`${vehicle.speed.toFixed(1)} ${t("dashboard.live_map.units.kmh")}`}
+                    />
+                    <InfoRow label={t("dashboard.live_map.labels.last_updated")} value={lastUpdatedLabel} />
                   </div>
                 )}
               </div>
             </div>
           </>
         ) : (
-          <div className="p-3 text-xs text-muted-foreground">Select a vehicle</div>
+          <div className="p-3 text-xs text-muted-foreground">
+            {t("dashboard.live_map.select_vehicle")}
+          </div>
         )}
       </div>
     </div>
@@ -890,10 +935,13 @@ function VehicleSidePanel({
 }
 
 function InfoRow({ label, value }: { label: string; value?: string | number | null }) {
+  const { t } = useTranslation();
   return (
     <div className="flex justify-between border-b border-border/60 pb-1">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold">{value ?? "—"}</span>
+      <span className="font-semibold">
+        {value ?? t("dashboard.live_map.placeholder_na")}
+      </span>
     </div>
   );
 }

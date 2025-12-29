@@ -15,6 +15,7 @@ import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 import { complaintApi } from "@/helpers/admin";
+import { useTranslation } from "react-i18next";
 
 type Complaint = {
   id: number;
@@ -38,6 +39,7 @@ type Complaint = {
 };
 
 export default function ComplaintsList() {
+  const { t } = useTranslation();
   const [complaints, setComplaints] = useState<Complaint[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalImage, setModalImage] = useState<string | null>(null);
@@ -65,7 +67,11 @@ export default function ComplaintsList() {
       const res = await complaintApi.list();
       setComplaints(res);
     } catch {
-      Swal.fire("Error", "Unable to load complaints", "error");
+      Swal.fire(
+        t("common.error"),
+        t("admin.citizen_grievance.complaints.error_load"),
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -140,7 +146,7 @@ export default function ComplaintsList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search complaints..."
+          placeholder={t("admin.citizen_grievance.complaints.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -150,7 +156,9 @@ export default function ComplaintsList() {
   const rowExpansionTemplate = (data: Complaint) => (
     <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-3">
       <div className="flex flex-col gap-2 md:flex-row">
-        <div className="w-full md:w-1/4 font-semibold">Close Image :</div>
+        <div className="w-full md:w-1/4 font-semibold">
+          {t("admin.citizen_grievance.complaints.close_image")}
+        </div>
         <div className="space-y-2">
           {data.close_image_url ? (
             <button onClick={() => openFile(data.close_image_url!)}>
@@ -170,13 +178,17 @@ export default function ComplaintsList() {
       </div>
 
       <div className="flex flex-col gap-2 md:flex-row">
-        <div className="w-full md:w-1/4 font-semibold">Action Remarks :</div>
+        <div className="w-full md:w-1/4 font-semibold">
+          {t("admin.citizen_grievance.complaints.action_remarks")}
+        </div>
         <div>{data.action_remarks || "-"}</div>
       </div>
 
       {data.status !== "CLOSED" && (
         <div className="flex justify-start">
-          <div className="w-full md:w-1/4 font-semibold">Action :</div>
+          <div className="w-full md:w-1/4 font-semibold">
+            {t("admin.citizen_grievance.complaints.action")}
+          </div>
           <button
             className="text-blue-600 flex items-center gap-2 border px-4 py-1 rounded"
             onClick={() => navigate(ENC_EDIT_PATH(data.unique_id))}
@@ -213,18 +225,20 @@ export default function ComplaintsList() {
     </div>
   );
 
-  if (loading) return <div className="p-6">Loading...</div>;
+  if (loading) return <div className="p-6">{t("common.loading")}</div>;
 
   return (
     <div className="px-2 py-3">
       <div className="flex justify-between mb-4">
-        <h1 className="text-xl font-bold">Complaints</h1>
+        <h1 className="text-xl font-bold">
+          {t("admin.citizen_grievance.complaints.title")}
+        </h1>
 
         <button
           className="bg-green-custom text-white px-3 py-2 rounded"
           onClick={() => navigate(ENC_NEW_PATH)}
         >
-          + Add Complaint
+          {t("admin.citizen_grievance.complaints.add")}
         </button>
       </div>
 
@@ -249,7 +263,7 @@ export default function ComplaintsList() {
             "status",
           ]}
           header={tableHeader}
-          emptyMessage="No complaints found."
+          emptyMessage={t("admin.citizen_grievance.complaints.empty_message")}
           responsiveLayout="scroll"
           className="p-datatable-sm"
           expandedRows={expandedRows}
@@ -259,48 +273,64 @@ export default function ComplaintsList() {
           stripedRows
         >
           <Column expander style={{ width: "3rem" }} />
-          <Column header="S.No" body={indexTemplate} style={{ width: "90px" }} />
           <Column
-            header="Comp Created"
+            header={t("admin.citizen_grievance.complaints.columns.s_no")}
+            body={indexTemplate}
+            style={{ width: "90px" }}
+          />
+          <Column
+            header={t("admin.citizen_grievance.complaints.columns.created")}
             body={(row: Complaint) => formatDT(row.created)}
             style={{ minWidth: "160px" }}
           />
           <Column
             field="unique_id"
-            header="CG No"
+            header={t("admin.citizen_grievance.complaints.columns.cg_no")}
             sortable
             style={{ minWidth: "140px" }}
           />
           <Column
             field="contact_no"
-            header="Comp Ph No"
+            header={t("admin.citizen_grievance.complaints.columns.phone")}
             sortable
             style={{ minWidth: "140px" }}
           />
           <Column
-            header="Main Category"
+            header={t("admin.citizen_grievance.complaints.columns.main_category")}
             body={(row: Complaint) => row.main_category || "-"}
             style={{ minWidth: "160px" }}
           />
           <Column
-            header="Sub Category"
+            header={t("admin.citizen_grievance.complaints.columns.sub_category")}
             body={(row: Complaint) => row.sub_category || "-"}
             style={{ minWidth: "160px" }}
           />
           <Column
-            header="Zone / Ward"
+            header={t("admin.citizen_grievance.complaints.columns.zone_ward")}
             body={(row: Complaint) => `${row.zone_name}/${row.ward_name}`}
             style={{ minWidth: "140px" }}
           />
-          <Column field="address" header="Location" />
-          <Column field="details" header="Description" />
           <Column
-            header="Priority"
+            field="address"
+            header={t("admin.citizen_grievance.complaints.columns.location")}
+          />
+          <Column
+            field="details"
+            header={t("admin.citizen_grievance.complaints.columns.description")}
+          />
+          <Column
+            header={t("admin.citizen_grievance.complaints.columns.priority")}
             body={(row: Complaint) => row.priority || "-"}
             style={{ minWidth: "120px" }}
           />
-          <Column header="Image" body={imageTemplate} />
-          <Column header="Comp Closure / Status" body={closureTemplate} />
+          <Column
+            header={t("admin.citizen_grievance.complaints.columns.image")}
+            body={imageTemplate}
+          />
+          <Column
+            header={t("admin.citizen_grievance.complaints.columns.closure_status")}
+            body={closureTemplate}
+          />
         </DataTable>
      
 

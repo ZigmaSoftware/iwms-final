@@ -2,16 +2,18 @@ import { Trash2, UserCheck, Package, Scale, ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useModule } from "@/contexts/ModuleContext";
 import type { ModuleType } from "@/types";
-
-const quickModules = [
-  { id: 'collection' as ModuleType, name: 'Door-to-Door', icon: Trash2, color: '#43A047' },
-  { id: 'attendance' as ModuleType, name: 'Attendance', icon: UserCheck, color: '#00ACC1' },
-  { id: 'asset' as ModuleType, name: 'Asset', icon: Package, color: '#5E35B1' },
-  { id: 'weighbridge' as ModuleType, name: 'Weighbridge', icon: Scale, color: '#8E24AA' },
-];
+import { useTranslation } from "react-i18next";
 
 export function QuickModuleSlider() {
+  const { t } = useTranslation();
   const { setActiveModule, setActiveView } = useModule();
+
+  const quickModules = [
+    { id: 'collection' as ModuleType, name: t("dashboard.home.quick_module_d2d"), icon: Trash2, color: '#43A047' },
+    { id: 'attendance' as ModuleType, name: t("dashboard.home.quick_module_attendance"), icon: UserCheck, color: '#00ACC1' },
+    { id: 'asset' as ModuleType, name: t("dashboard.home.quick_module_asset"), icon: Package, color: '#5E35B1' },
+    { id: 'weighbridge' as ModuleType, name: t("dashboard.home.quick_module_weighbridge"), icon: Scale, color: '#8E24AA' },
+  ];
 
   const handleQuickAccess = (moduleId: ModuleType) => {
     setActiveModule(moduleId);

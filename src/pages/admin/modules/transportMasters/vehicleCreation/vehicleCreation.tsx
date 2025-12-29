@@ -17,6 +17,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 
 import { Switch } from "@/components/ui/switch";
 import { adminApi } from "@/helpers/admin/registry";
+import { useTranslation } from "react-i18next";
 
 const vehicleApi = adminApi.vehicleCreation;
 
@@ -40,6 +41,7 @@ type Vehicles = {
 };
 
 export default function VehicleCreation() {
+  const { t } = useTranslation();
   const [vehicles, setVehicles] = useState<Vehicles[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -76,8 +78,8 @@ export default function VehicleCreation() {
 
   const handleDelete = async (id: string) => {
     const confirmDelete = await Swal.fire({
-      title: "Are you sure?",
-      text: "This vehicle will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -90,7 +92,7 @@ export default function VehicleCreation() {
       await vehicleApi.remove(id);
       Swal.fire({
         icon: "success",
-        title: "Deleted successfully!",
+        title: t("common.deleted_success"),
         timer: 1500,
         showConfirmButton: false,
       });
@@ -167,7 +169,7 @@ export default function VehicleCreation() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search vehicles..."
+          placeholder={t("admin.vehicle_creation.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -181,15 +183,15 @@ export default function VehicleCreation() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Vehicle Management
+              {t("admin.vehicle_creation.title")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage all vehicle records
+              {t("admin.vehicle_creation.subtitle")}
             </p>
           </div>
 
           <Button
-            label="Add Vehicle"
+            label={t("admin.vehicle_creation.add")}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -208,31 +210,72 @@ export default function VehicleCreation() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No vehicle records found."
+          emptyMessage={t("admin.vehicle_creation.empty_message")}
         >
-          <Column header="S.No" body={(_, { rowIndex }) => rowIndex + 1} style={{ width: "80px" }} />
+          <Column
+            header={t("common.s_no")}
+            body={(_, { rowIndex }) => rowIndex + 1}
+            style={{ width: "80px" }}
+          />
 
-          <Column field="vehicle_no" header="Vehicle No" sortable />
-          <Column field="driver_name" header="Driver Name" sortable />
-          <Column field="driver_no" header="Driver No" sortable />
-          <Column field="vehicle_type_name" header="Vehicle Type" sortable />
-          <Column field="fuel_type_name" header="Fuel Type" sortable />
-          <Column field="capacity" header="Capacity" sortable />
-          <Column field="fuel_efficiency" header="Fuel Efficiency" sortable />
+          <Column
+            field="vehicle_no"
+            header={t("admin.vehicle_creation.vehicle_no")}
+            sortable
+          />
+          <Column
+            field="driver_name"
+            header={t("admin.vehicle_creation.driver_name")}
+            sortable
+          />
+          <Column
+            field="driver_no"
+            header={t("admin.vehicle_creation.driver_no")}
+            sortable
+          />
+          <Column
+            field="vehicle_type_name"
+            header={t("admin.vehicle_creation.vehicle_type")}
+            sortable
+          />
+          <Column
+            field="fuel_type_name"
+            header={t("admin.vehicle_creation.fuel_type")}
+            sortable
+          />
+          <Column
+            field="capacity"
+            header={t("admin.vehicle_creation.capacity")}
+            sortable
+          />
+          <Column
+            field="fuel_efficiency"
+            header={t("admin.vehicle_creation.fuel_efficiency")}
+            sortable
+          />
           <Column
             field="last_maintenance"
-            header="Last Maintenance"
+            header={t("admin.vehicle_creation.last_maintenance")}
             body={(row: Vehicles) =>
               row.last_maintenance ? String(row.last_maintenance).split("T")[0] : "-"
             }
             sortable
           />
-          <Column field="zone_name" header="Zone" sortable />
-          <Column field="ward_name" header="Ward" sortable />
+          <Column field="zone_name" header={t("common.zone")} sortable />
+          <Column field="ward_name" header={t("common.ward")} sortable />
 
-          <Column field="is_active" header="Status" body={statusTemplate} style={{ width: "150px" }} />
+          <Column
+            field="is_active"
+            header={t("common.status")}
+            body={statusTemplate}
+            style={{ width: "150px" }}
+          />
 
-          <Column header="Actions" body={actionTemplate} style={{ width: "150px" }} />
+          <Column
+            header={t("common.actions")}
+            body={actionTemplate}
+            style={{ width: "150px" }}
+          />
         </DataTable>
 
     </div>

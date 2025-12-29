@@ -1,12 +1,36 @@
 import { DataCard } from "@/components/ui/DataCard";
 import type { ActivityData } from "@/types";
 import { CheckCircle, AlertTriangle, Info, XCircle } from 'lucide-react';
+import { useTranslation } from "react-i18next";
 
 export function RecentActivityTimeline() {
+  const { t, i18n } = useTranslation();
+  const rtf = new Intl.RelativeTimeFormat(i18n.language, { numeric: "auto" });
+  const formatRelative = (value: number, unit: Intl.RelativeTimeFormatUnit) =>
+    rtf.format(value, unit);
+
   const activities: ActivityData[] = [
-    { id: '1', action: 'Route completed', user: 'Driver #45', timestamp: '10m ago', type: 'success' },
-    { id: '2', action: 'Delay reported', user: 'Supervisor', timestamp: '25m ago', type: 'warning' },
-    { id: '3', action: 'Weighbridge entry', user: 'Operator #12', timestamp: '1h ago', type: 'info' }
+    {
+      id: "1",
+      action: t("dashboard.home.activity_route_completed"),
+      user: t("dashboard.home.activity_user_driver", { id: 45 }),
+      timestamp: formatRelative(-10, "minute"),
+      type: "success",
+    },
+    {
+      id: "2",
+      action: t("dashboard.home.activity_delay_reported"),
+      user: t("dashboard.home.activity_user_supervisor"),
+      timestamp: formatRelative(-25, "minute"),
+      type: "warning",
+    },
+    {
+      id: "3",
+      action: t("dashboard.home.activity_weighbridge_entry"),
+      user: t("dashboard.home.activity_user_operator", { id: 12 }),
+      timestamp: formatRelative(-1, "hour"),
+      type: "info",
+    },
   ];
 
   const getIcon = (type: string) => {
@@ -23,7 +47,7 @@ export function RecentActivityTimeline() {
   };
 
   return (
-    <DataCard title="Alerts" compact className="h-[190px]">
+    <DataCard title={t("dashboard.home.activity_title")} compact className="h-[190px]">
       <div className="space-y-2 max-h-60 overflow-y-auto">
         {activities.map((activity, idx) => (
           <div key={activity.id} className="flex gap-2">

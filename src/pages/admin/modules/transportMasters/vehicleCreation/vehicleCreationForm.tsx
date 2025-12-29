@@ -17,6 +17,7 @@ import {
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { filterActiveRecords } from "@/utils/customerUtils";
 import { adminApi } from "@/helpers/admin/registry";
+import { useTranslation } from "react-i18next";
 
 const vehicleTypeApi = adminApi.vehicleTypes;
 const fuelTypeApi = adminApi.fuels;
@@ -28,6 +29,7 @@ const wardApi = adminApi.wards;
 const vehicleApi = adminApi.vehicleCreation;
 
 export default function VehicleCreationForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -168,14 +170,18 @@ export default function VehicleCreationForm() {
     e.preventDefault();
 
      if (!form.vehicleNo || !form.vehicleType || !form.fuelType) {
-    Swal.fire("Missing Fields", "Required fields missing", "warning");
+    Swal.fire(
+      t("admin.vehicle_creation.missing_fields_title"),
+      t("admin.vehicle_creation.missing_fields_desc"),
+      "warning"
+    );
     return;
   }
 
   if (form.driverNo && !/^\d{10}$/.test(form.driverNo)) {
     Swal.fire(
-      "Invalid Mobile Number",
-      "Driver mobile number must be exactly 10 digits",
+      t("admin.vehicle_creation.invalid_mobile_title"),
+      t("admin.vehicle_creation.invalid_mobile_desc"),
       "warning"
     );
     return;
@@ -207,10 +213,14 @@ export default function VehicleCreationForm() {
         ? await vehicleApi.update(id as string, payload)
         : await vehicleApi.create(payload);
 
-      Swal.fire("Success", "Saved successfully", "success");
+      Swal.fire(
+        t("common.success"),
+        t("admin.vehicle_creation.save_success"),
+        "success"
+      );
       navigate(ENC_LIST_PATH);
     } catch (err: any) {
-      Swal.fire("Error", "Save failed", "error");
+      Swal.fire(t("common.save_failed"), t("common.save_failed_desc"), "error");
     } finally {
       setLoading(false);
     }
@@ -245,15 +255,21 @@ export default function VehicleCreationForm() {
   );
 
   return (
-    <ComponentCard title={isEdit ? "Edit Vehicle" : "Add Vehicle"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("admin.vehicle_creation.title_edit")
+          : t("admin.vehicle_creation.title_add")
+      }
+    >
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-          <div><Label>Vehicle No</Label><Input value={form.vehicleNo} onChange={e=>update("vehicleNo",e.target.value)} /></div>
-          <div><Label>Chassis No</Label><Input value={form.chaseNo} onChange={e=>update("chaseNo",e.target.value)} /></div>
-          <div><Label>IMEI No</Label><Input value={form.imeiNo} onChange={e=>update("imeiNo",e.target.value)} /></div>
-          <div><Label>Driver Name</Label><Input value={form.driverName} onChange={e=>update("driverName",e.target.value)} /></div>
-          <div><Label>Driver Mobile</Label><Input value={form.driverNo} 
+          <div><Label>{t("admin.vehicle_creation.vehicle_no")}</Label><Input value={form.vehicleNo} onChange={e=>update("vehicleNo",e.target.value)} /></div>
+          <div><Label>{t("admin.vehicle_creation.chassis_no")}</Label><Input value={form.chaseNo} onChange={e=>update("chaseNo",e.target.value)} /></div>
+          <div><Label>{t("admin.vehicle_creation.imei_no")}</Label><Input value={form.imeiNo} onChange={e=>update("imeiNo",e.target.value)} /></div>
+          <div><Label>{t("admin.vehicle_creation.driver_name")}</Label><Input value={form.driverName} onChange={e=>update("driverName",e.target.value)} /></div>
+          <div><Label>{t("admin.vehicle_creation.driver_mobile")}</Label><Input value={form.driverNo} 
               maxLength={10}
                pattern="[0-9]*"
         onChange={(e) => {
@@ -261,53 +277,53 @@ export default function VehicleCreationForm() {
       update("driverNo", val);
     }} /></div>
 
-          <div><Label>Capacity</Label><Input value={form.capacity} onChange={e=>update("capacity",e.target.value)} /></div>
-          <div><Label>Fuel Efficiency</Label><Input value={form.fuelEfficiency} onChange={e=>update("fuelEfficiency",e.target.value)} /></div>
-          <div><Label>Last Maintenance</Label><Input type="date" value={form.lastMaintenance} onChange={e=>update("lastMaintenance",e.target.value)} /></div>
+          <div><Label>{t("admin.vehicle_creation.capacity")}</Label><Input value={form.capacity} onChange={e=>update("capacity",e.target.value)} /></div>
+          <div><Label>{t("admin.vehicle_creation.fuel_efficiency")}</Label><Input value={form.fuelEfficiency} onChange={e=>update("fuelEfficiency",e.target.value)} /></div>
+          <div><Label>{t("admin.vehicle_creation.last_maintenance")}</Label><Input type="date" value={form.lastMaintenance} onChange={e=>update("lastMaintenance",e.target.value)} /></div>
 
-          <ShadcnSelect label="Vehicle Type" value={form.vehicleType} onChange={(v:string)=>update("vehicleType",v)}
-            placeholder="Select vehicle type"
+          <ShadcnSelect label={t("admin.vehicle_creation.vehicle_type")} value={form.vehicleType} onChange={(v:string)=>update("vehicleType",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("admin.vehicle_creation.vehicle_type") })}
             options={vt.map(v=>({value:resolveId(v),label:v.vehicleType}))} />
 
-          <ShadcnSelect label="Fuel Type" value={form.fuelType} onChange={(v:string)=>update("fuelType",v)}
-            placeholder="Select fuel type"
+          <ShadcnSelect label={t("admin.vehicle_creation.fuel_type")} value={form.fuelType} onChange={(v:string)=>update("fuelType",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("admin.vehicle_creation.fuel_type") })}
             options={ft.map(f=>({value:resolveId(f),label:f.fuel_type}))} />
 
-          <ShadcnSelect label="State" value={form.state} onChange={(v:string)=>update("state",v)}
-            placeholder="Select state"
+          <ShadcnSelect label={t("common.state")} value={form.state} onChange={(v:string)=>update("state",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.state") })}
             options={states.map(s=>({value:resolveId(s),label:s.name}))} />
 
-          <ShadcnSelect label="District" value={form.district} onChange={(v:string)=>update("district",v)}
-            placeholder="Select district"
+          <ShadcnSelect label={t("common.district")} value={form.district} onChange={(v:string)=>update("district",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.district") })}
             options={districts.map(d=>({value:resolveId(d),label:d.name}))} />
 
-          <ShadcnSelect label="City" value={form.city} onChange={(v:string)=>update("city",v)}
-            placeholder="Select city"
+          <ShadcnSelect label={t("common.city")} value={form.city} onChange={(v:string)=>update("city",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.city") })}
             options={cities.map(c=>({value:resolveId(c),label:c.name}))} />
 
-          <ShadcnSelect label="Zone" value={form.zone} onChange={(v:string)=>update("zone",v)}
-            placeholder="Select zone"
+          <ShadcnSelect label={t("common.zone")} value={form.zone} onChange={(v:string)=>update("zone",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.zone") })}
             options={zones.map(z=>({value:resolveId(z),label:z.name}))} />
 
-          <ShadcnSelect label="Ward" value={form.ward} onChange={(v:string)=>update("ward",v)}
-            placeholder="Select ward"
+          <ShadcnSelect label={t("common.ward")} value={form.ward} onChange={(v:string)=>update("ward",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.ward") })}
             options={wards.map(w=>({value:resolveId(w),label:w.name}))} />
 
-          <ShadcnSelect label="Status" value={form.isActive} onChange={(v:string)=>update("isActive",v)}
-            placeholder="Select status"
+          <ShadcnSelect label={t("common.status")} value={form.isActive} onChange={(v:string)=>update("isActive",v)}
+            placeholder={t("common.select_status")}
             options={[
-              { value: "true", label: "Active" },
-              { value: "false", label: "Inactive" },
+              { value: "true", label: t("common.active") },
+              { value: "false", label: t("common.inactive") },
             ]} />
 
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
           <button type="submit" disabled={loading} className="bg-green-custom text-white px-4 py-2 rounded">
-            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+            {loading ? t("common.saving") : isEdit ? t("common.update") : t("common.save")}
           </button>
           <button type="button" onClick={()=>navigate(ENC_LIST_PATH)} className="bg-red-400 text-white px-4 py-2 rounded">
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

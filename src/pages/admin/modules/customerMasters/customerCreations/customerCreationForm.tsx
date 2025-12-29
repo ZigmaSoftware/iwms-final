@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 
 /* ===============================
    TYPES
@@ -34,6 +35,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 type Option = { value: string; label: string };
 
 export default function CustomerCreationForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -141,7 +143,11 @@ export default function CustomerCreationForm() {
         .get(id)
         .then((res) => setFormData(res as any))
         .catch(() =>
-          Swal.fire("Error", "Failed to load customer", "error")
+          Swal.fire(
+            t("common.error"),
+            t("admin.customer_creation.load_failed"),
+            "error"
+          )
         );
     }
   }, [id]);
@@ -175,25 +181,41 @@ export default function CustomerCreationForm() {
 
     for (const k of required) {
       if (!(formData as any)[k]) {
-        Swal.fire("Missing Fields", "Please fill all mandatory fields", "warning");
+        Swal.fire(
+          t("common.warning"),
+          t("admin.customer_creation.missing_fields"),
+          "warning"
+        );
         return;
       }
     }
 
     if (!/^\d{10}$/.test(formData.contact_no)) {
-      Swal.fire("Invalid Contact", "Contact must be 10 digits", "warning");
+      Swal.fire(
+        t("admin.customer_creation.invalid_contact_title"),
+        t("admin.customer_creation.invalid_contact_desc"),
+        "warning"
+      );
       return;
     }
 
     if (!/^\d{6}$/.test(formData.pincode)) {
-      Swal.fire("Invalid Pincode", "Pincode must be 6 digits", "warning");
+      Swal.fire(
+        t("admin.customer_creation.invalid_pincode_title"),
+        t("admin.customer_creation.invalid_pincode_desc"),
+        "warning"
+      );
       return;
     }
 
     const lat = parseFloat(formData.latitude);
     const lon = parseFloat(formData.longitude);
     if (isNaN(lat) || isNaN(lon)) {
-      Swal.fire("Invalid Coordinates", "Latitude / Longitude invalid", "warning");
+      Swal.fire(
+        t("admin.customer_creation.invalid_coordinates_title"),
+        t("admin.customer_creation.invalid_coordinates_desc"),
+        "warning"
+      );
       return;
     }
 
@@ -209,10 +231,14 @@ export default function CustomerCreationForm() {
         ? await customerCreationApi.update(id as string, payload)
         : await customerCreationApi.create(payload);
 
-      Swal.fire("Success", "Customer saved successfully", "success");
+      Swal.fire(
+        t("common.success"),
+        t("admin.customer_creation.save_success"),
+        "success"
+      );
       navigate(ENC_LIST_PATH);
     } catch (err) {
-      Swal.fire("Error", "Save failed", "error");
+      Swal.fire(t("common.save_failed"), t("common.save_failed_desc"), "error");
     } finally {
       setLoading(false);
     }
@@ -255,63 +281,69 @@ export default function CustomerCreationForm() {
      RENDER
   ================================ */
   return (
-    <ComponentCard title={isEdit ? "Edit Customer" : "Add Customer"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("admin.customer_creation.title_edit")
+          : t("admin.customer_creation.title_add")
+      }
+    >
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-          <div><Label>Customer Name</Label><Input value={formData.customer_name} onChange={e=>update("customer_name",e.target.value)} /></div>
-          <div><Label>Contact No</Label><Input value={formData.contact_no} onChange={e=>update("contact_no",e.target.value)} /></div>
-          <div><Label>Building No</Label><Input value={formData.building_no} onChange={e=>update("building_no",e.target.value)} /></div>
-          <div><Label>Street</Label><Input value={formData.street} onChange={e=>update("street",e.target.value)} /></div>
-          <div><Label>Area</Label><Input value={formData.area} onChange={e=>update("area",e.target.value)} /></div>
-          <div><Label>Pincode</Label><Input value={formData.pincode} onChange={e=>update("pincode",e.target.value)} /></div>
-          <div><Label>Latitude</Label><Input value={formData.latitude} onChange={e=>update("latitude",e.target.value)} /></div>
-          <div><Label>Longitude</Label><Input value={formData.longitude} onChange={e=>update("longitude",e.target.value)} /></div>
+          <div><Label>{t("admin.customer_creation.customer_name")}</Label><Input value={formData.customer_name} onChange={e=>update("customer_name",e.target.value)} /></div>
+          <div><Label>{t("admin.customer_creation.contact_no")}</Label><Input value={formData.contact_no} onChange={e=>update("contact_no",e.target.value)} /></div>
+          <div><Label>{t("common.building_no")}</Label><Input value={formData.building_no} onChange={e=>update("building_no",e.target.value)} /></div>
+          <div><Label>{t("common.street")}</Label><Input value={formData.street} onChange={e=>update("street",e.target.value)} /></div>
+          <div><Label>{t("common.area")}</Label><Input value={formData.area} onChange={e=>update("area",e.target.value)} /></div>
+          <div><Label>{t("common.pincode")}</Label><Input value={formData.pincode} onChange={e=>update("pincode",e.target.value)} /></div>
+          <div><Label>{t("common.latitude")}</Label><Input value={formData.latitude} onChange={e=>update("latitude",e.target.value)} /></div>
+          <div><Label>{t("common.longitude")}</Label><Input value={formData.longitude} onChange={e=>update("longitude",e.target.value)} /></div>
 
-          <ShadcnSelect label="ID Proof Type" value={formData.id_proof_type}
+          <ShadcnSelect label={t("admin.customer_creation.id_proof_type")} value={formData.id_proof_type}
             onChange={(v)=>update("id_proof_type",v)}
-            placeholder="Select ID Proof"
+            placeholder={t("admin.customer_creation.id_proof_placeholder")}
             options={[
-              { value: "AADHAAR", label: "Aadhaar" },
-              { value: "VOTER_ID", label: "Voter ID" },
-              { value: "PAN_CARD", label: "PAN Card" },
-              { value: "DL", label: "Driving License" },
-              { value: "PASSPORT", label: "Passport" },
+              { value: "AADHAAR", label: t("admin.customer_creation.id_proof_aadhaar") },
+              { value: "VOTER_ID", label: t("admin.customer_creation.id_proof_voter") },
+              { value: "PAN_CARD", label: t("admin.customer_creation.id_proof_pan") },
+              { value: "DL", label: t("admin.customer_creation.id_proof_dl") },
+              { value: "PASSPORT", label: t("admin.customer_creation.id_proof_passport") },
             ]}
           />
 
-          <div><Label>ID Number</Label><Input value={formData.id_no} onChange={e=>update("id_no",e.target.value)} /></div>
+          <div><Label>{t("admin.customer_creation.id_no")}</Label><Input value={formData.id_no} onChange={e=>update("id_no",e.target.value)} /></div>
 
-          <ShadcnSelect label="Ward" value={formData.ward_id} onChange={(v)=>update("ward_id",v)}
-            placeholder="Select ward"
+          <ShadcnSelect label={t("common.ward")} value={formData.ward_id} onChange={(v)=>update("ward_id",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.ward") })}
             options={dropdowns.wards.map(w=>({value:resolveId(w),label:w.name}))} />
 
-          <ShadcnSelect label="Zone" value={formData.zone_id} onChange={(v)=>update("zone_id",v)}
-            placeholder="Select zone"
+          <ShadcnSelect label={t("common.zone")} value={formData.zone_id} onChange={(v)=>update("zone_id",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.zone") })}
             options={dropdowns.zones.map(z=>({value:resolveId(z),label:z.name}))} />
 
-          <ShadcnSelect label="City" value={formData.city_id} onChange={(v)=>update("city_id",v)}
-            placeholder="Select city"
+          <ShadcnSelect label={t("common.city")} value={formData.city_id} onChange={(v)=>update("city_id",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.city") })}
             options={dropdowns.cities.map(c=>({value:resolveId(c),label:c.name}))} />
 
-          <ShadcnSelect label="District" value={formData.district_id} onChange={(v)=>update("district_id",v)}
-            placeholder="Select district"
+          <ShadcnSelect label={t("common.district")} value={formData.district_id} onChange={(v)=>update("district_id",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.district") })}
             options={dropdowns.districts.map(d=>({value:resolveId(d),label:d.name}))} />
 
-          <ShadcnSelect label="State" value={formData.state_id} onChange={(v)=>update("state_id",v)}
-            placeholder="Select state"
+          <ShadcnSelect label={t("common.state")} value={formData.state_id} onChange={(v)=>update("state_id",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.state") })}
             options={dropdowns.states.map(s=>({value:resolveId(s),label:s.name}))} />
 
-          <ShadcnSelect label="Country" value={formData.country_id} onChange={(v)=>update("country_id",v)}
-            placeholder="Select country"
+          <ShadcnSelect label={t("common.country")} value={formData.country_id} onChange={(v)=>update("country_id",v)}
+            placeholder={t("common.select_item_placeholder", { item: t("common.country") })}
             options={dropdowns.countries.map(c=>({value:resolveId(c),label:c.name}))} />
 
-          <ShadcnSelect label="Property" value={formData.property_id} onChange={(v)=>update("property_id",v)}
-            placeholder="Select property"
+          <ShadcnSelect label={t("admin.customer_creation.property")} value={formData.property_id} onChange={(v)=>update("property_id",v)}
+            placeholder={t("admin.customer_creation.property_placeholder")}
             options={dropdowns.properties.map(p=>({value:resolveId(p),label:p.property_name}))} />
 
-          <ShadcnSelect label="Sub Property" value={formData.sub_property_id} onChange={(v)=>update("sub_property_id",v)}
-            placeholder="Select sub property"
+          <ShadcnSelect label={t("admin.customer_creation.sub_property")} value={formData.sub_property_id} onChange={(v)=>update("sub_property_id",v)}
+            placeholder={t("admin.customer_creation.sub_property_placeholder")}
             options={dropdowns.subProperties.map(sp=>({value:resolveId(sp),label:sp.sub_property_name}))} />
 
         </div>
@@ -319,11 +351,11 @@ export default function CustomerCreationForm() {
         <div className="flex justify-end gap-3 mt-6">
           <button type="submit" disabled={loading}
             className="bg-green-custom text-white px-4 py-2 rounded">
-            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+            {loading ? t("common.saving") : isEdit ? t("common.update") : t("common.save")}
           </button>
           <button type="button" onClick={()=>navigate(ENC_LIST_PATH)}
             className="bg-red-400 text-white px-4 py-2 rounded">
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

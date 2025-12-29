@@ -13,6 +13,9 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+  max-width: calc(100% - 24px);
+  justify-content: center;
   background: rgba(255, 255, 255, 0.92);
   padding: 6px 10px;
   border-radius: 999px;
@@ -32,6 +35,9 @@
   border: none;
   cursor: pointer;
   font-weight: 600;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .map-household-summary .summary-pill .summary-dot {
@@ -94,6 +100,9 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .map-status-pill.collected {

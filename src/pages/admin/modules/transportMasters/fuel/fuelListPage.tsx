@@ -17,6 +17,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 
 import { Switch } from "@/components/ui/switch";
 import { adminApi } from "@/helpers/admin/registry";
+import { useTranslation } from "react-i18next";
 
 type Fuel = {
   unique_id: string;
@@ -28,6 +29,7 @@ type Fuel = {
 const fuelApi = adminApi.fuels;
 
 export default function FuelList() {
+  const { t } = useTranslation();
   const [fuels, setFuels] = useState<Fuel[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -61,8 +63,8 @@ export default function FuelList() {
 
   const handleDelete = async (id: string) => {
     const confirmDelete = await Swal.fire({
-      title: "Are you sure?",
-      text: "This fuel record will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -75,7 +77,7 @@ export default function FuelList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -117,7 +119,7 @@ export default function FuelList() {
   const actionTemplate = (row: Fuel) => (
     <div className="flex gap-2 justify-center">
       <button
-        title="Edit"
+        title={t("common.edit")}
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
         onClick={() => navigate(ENC_EDIT_PATH(resolveId(row)))}
       >
@@ -144,7 +146,7 @@ export default function FuelList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search fuels..."
+          placeholder={t("admin.fuel.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -158,15 +160,15 @@ export default function FuelList() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Fuel Types
+              {t("admin.fuel.title")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage your fuel type records
+              {t("admin.fuel.subtitle")}
             </p>
           </div>
 
           <Button
-            label="Add Fuel"
+            label={t("admin.fuel.add")}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -183,16 +185,16 @@ export default function FuelList() {
           rowsPerPageOptions={[5, 10, 25, 50]}
           globalFilterFields={["fuel_type"]}
           header={header}
-          emptyMessage="No fuel records found."
+          emptyMessage={t("admin.fuel.empty_message")}
           stripedRows
           showGridlines
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
             field="fuel_type"
-            header="Fuel Type"
+            header={t("admin.fuel.fuel_type")}
             sortable
             body={(row: Fuel) => cap(row.fuel_type)}
             style={{ minWidth: "200px" }}
@@ -201,13 +203,13 @@ export default function FuelList() {
           {/* 🔥 NEW — Toggle Status */}
           <Column
             field="is_active"
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "150px" }}
           />
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px" }}
           />

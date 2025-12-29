@@ -13,6 +13,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 
 import { encryptSegment } from "@/utils/routeCrypto";
 
@@ -37,6 +38,7 @@ type Option = {
 };
 
 export default function UserScreenPermissionForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   // Only staffTypeId in route now
@@ -104,7 +106,7 @@ export default function UserScreenPermissionForm() {
           ac.map((x: any) => ({ value: x.unique_id, label: x.action_name }))
         );
       } catch {
-        Swal.fire("Error", "Failed to load dropdown values", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
       } finally {
         setLoadingData(false);
       }
@@ -165,7 +167,7 @@ export default function UserScreenPermissionForm() {
         setScreenMatrix(matrix);
       } catch (err) {
         console.error("Permission Load Failed:", err);
-        Swal.fire("Error", "Failed to load permission matrix", "error");
+        Swal.fire(t("common.error"), t("admin.user_screen_permission.load_matrix_failed"), "error");
       }
     };
 
@@ -223,8 +225,8 @@ export default function UserScreenPermissionForm() {
 
     if (!staffUserTypeId || !mainScreenId) {
       Swal.fire(
-        "Missing Fields",
-        "Select staff user type & main screen",
+        t("common.warning"),
+        t("admin.user_screen_permission.missing_fields"),
         "warning"
       );
       return;
@@ -246,10 +248,14 @@ export default function UserScreenPermissionForm() {
         payload
       );
 
-      Swal.fire("Success", "Permissions saved successfully", "success");
+      Swal.fire(
+        t("common.success"),
+        t("admin.user_screen_permission.save_success"),
+        "success"
+      );
       navigate(ENC_LIST_PATH);
     } catch {
-      Swal.fire("Error", "Failed to save", "error");
+      Swal.fire(t("common.error"), t("common.save_failed_desc"), "error");
     } finally {
       setLoading(false);
     }
@@ -260,20 +266,30 @@ export default function UserScreenPermissionForm() {
   ----------------------------------------------------------- */
   if (loadingData) {
     return (
-      <ComponentCard title="Loading...">
+      <ComponentCard title={t("common.loading")}>
         <div className="flex justify-center items-center py-12 text-gray-500">
-          Loading permission data...
+          {t("admin.user_screen_permission.loading_message")}
         </div>
       </ComponentCard>
     );
   }
 
   return (
-    <ComponentCard title={isEdit ? "Edit Permission" : "Add Permission"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", {
+              item: t("admin.user_screen_permission.permission_label"),
+            })
+          : t("common.add_item", {
+              item: t("admin.user_screen_permission.permission_label"),
+            })
+      }
+    >
       <form onSubmit={handleSubmit}>
         <div className="grid md:grid-cols-2 gap-6">
           <div>
-            <Label>Staff User Type *</Label>
+            <Label>{t("admin.nav.staff_user_type")} *</Label>
 
             <Select
               value={staffUserTypeId}
@@ -282,8 +298,8 @@ export default function UserScreenPermissionForm() {
 
                 if (selected?.alreadyAssigned && !isEdit) {
                   Swal.fire(
-                    "Permission Exists",
-                    "This staff user type already has permissions. Redirecting to Edit.",
+                    t("admin.user_screen_permission.permission_exists_title"),
+                    t("admin.user_screen_permission.permission_exists_body"),
                     "info"
                   );
                   navigate(
@@ -297,7 +313,11 @@ export default function UserScreenPermissionForm() {
               disabled={isEdit}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Select Staff User Type" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.staff_user_type"),
+                  })}
+                />
               </SelectTrigger>
 
               <SelectContent>
@@ -311,10 +331,14 @@ export default function UserScreenPermissionForm() {
           </div>
 
           <div>
-            <Label>Main Screen *</Label>
+            <Label>{t("admin.nav.main_screen")} *</Label>
             <Select value={mainScreenId} onValueChange={setMainScreenId}>
               <SelectTrigger>
-                <SelectValue placeholder="Select Main Screen" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.main_screen"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {mainScreens.map((opt) => (
@@ -334,13 +358,13 @@ export default function UserScreenPermissionForm() {
               <thead className="bg-gray-50 border-b">
                 <tr>
                   <th className="px-4 py-3 text-left text-sm font-semibold">
-                    #
+                    {t("common.s_no")}
                   </th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">
-                    Screen
+                    {t("admin.nav.user_screen")}
                   </th>
                   <th className="px-4 py-3 text-center text-sm font-semibold">
-                    All
+                    {t("admin.user_screen_permission.all")}
                   </th>
 
                   {actions.map((act) => (
@@ -405,17 +429,17 @@ export default function UserScreenPermissionForm() {
 
         {screenMatrix.length === 0 && mainScreenId && (
           <div className="mt-6 p-8 border rounded-lg bg-gray-50 text-center text-gray-500">
-            No screens found for this main screen.
+            {t("admin.user_screen_permission.no_screens")}
           </div>
         )}
 
         {mainScreenId && (
           <div className="mt-6">
-            <Label>Description</Label>
+            <Label>{t("common.description")}</Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter description (optional)"
+              placeholder={t("common.description_optional")}
             />
           </div>
         )}
@@ -425,14 +449,18 @@ export default function UserScreenPermissionForm() {
             type="submit"
             disabled={loading || !staffUserTypeId || !mainScreenId}
           >
-            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+            {loading
+              ? t("common.saving")
+              : isEdit
+              ? t("common.update")
+              : t("common.save")}
           </Button>
           <Button
             type="button"
             variant="destructive"
             onClick={() => navigate(ENC_LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>
