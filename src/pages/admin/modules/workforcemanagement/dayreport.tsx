@@ -12,6 +12,7 @@ import "primereact/resources/primereact.min.css";
 import "primeicons/primeicons.css";
 
 import "./dayreport.css";
+import { useTranslation } from "react-i18next";
 
 type ApiRow = {
   Ticket_No: string;
@@ -35,6 +36,7 @@ const formatNumber = (v?: number | null) =>
   v !== null && v !== undefined ? v.toLocaleString() : "-";
 
 export default function DayReport() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const initialFromDate = `${today.getFullYear()}-${String(
@@ -71,7 +73,7 @@ export default function DayReport() {
     <div className="flex justify-between items-center">
       <div className="flex gap-3 items-center">
         <label>
-          From
+          {t("admin.workforce_management.day_report.filters.from")}
           <input
             type="date"
             value={fromDate}
@@ -81,7 +83,7 @@ export default function DayReport() {
         </label>
 
         <label>
-          To
+          {t("admin.workforce_management.day_report.filters.to")}
           <input
             type="date"
             value={toDate}
@@ -91,7 +93,7 @@ export default function DayReport() {
         </label>
 
         <Button
-          label="Go"
+          label={t("common.go")}
           // icon="pi pi-search"
           onClick={fetchData}
         />
@@ -102,7 +104,7 @@ export default function DayReport() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Ticket / Vehicle / Date"
+          placeholder={t("admin.workforce_management.day_report.search_placeholder")}
         />
       </span>
     </div>
@@ -111,7 +113,7 @@ export default function DayReport() {
   /* ================= Fetch ================= */
   async function fetchData() {
     if (new Date(fromDate) > new Date(toDate)) {
-      setError("From Date cannot be greater than To Date");
+      setError("admin.workforce_management.day_report.error_from_after_to");
       return;
     }
 
@@ -125,7 +127,7 @@ export default function DayReport() {
 
       if (!json.data?.length) {
         setRows([]);
-        setError("No data available");
+        setError("admin.workforce_management.day_report.error_no_data");
         return;
       }
 
@@ -151,7 +153,7 @@ export default function DayReport() {
 
       setRows(mapped);
     } catch (e) {
-      setError("API error occurred");
+      setError("admin.workforce_management.day_report.error_load_failed");
       setRows([]);
     }
   }
@@ -168,21 +170,23 @@ export default function DayReport() {
       <div className="bg-white p-6 rounded-lg shadow-lg wf-table-card">
         <div className="flex justify-between items-center mb-4">
           <div>
-            <h1 className="text-2xl font-bold">Day-wise Waste Report</h1>
+            <h1 className="text-2xl font-bold">
+              {t("admin.workforce_management.day_report.title")}
+            </h1>
             <p className="text-gray-500 text-sm">
-              Daily vehicle & waste collection summary
+              {t("admin.workforce_management.day_report.subtitle")}
             </p>
           </div>
 
           <Button
             icon="pi pi-arrow-left"
-            label="Back"
+            label={t("common.back")}
             severity="success"
             onClick={() => navigate(-1)}
           />
         </div>
 
-        {error && <p className="text-red-600 mb-3">{error}</p>}
+        {error && <p className="text-red-600 mb-3">{t(error)}</p>}
 
         <DataTable
           value={rows}
@@ -194,36 +198,55 @@ export default function DayReport() {
           globalFilterFields={["Ticket_No", "Vehicle_No", "date"]}
           stripedRows
           showGridlines
-          emptyMessage="No records found"
+          emptyMessage={t("admin.workforce_management.day_report.empty_message")}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "70px" }} />
-          <Column field="date" header="Date" sortable />
-          <Column field="Start_Time" header="Start Time" />
-          <Column field="Ticket_No" header="Ticket No" sortable />
-          <Column field="Vehicle_No" header="Vehicle No" sortable />
+          <Column
+            header={t("admin.workforce_management.day_report.columns.s_no")}
+            body={indexTemplate}
+            style={{ width: "70px" }}
+          />
+          <Column
+            field="date"
+            header={t("admin.workforce_management.day_report.columns.date")}
+            sortable
+          />
+          <Column
+            field="Start_Time"
+            header={t("admin.workforce_management.day_report.columns.start_time")}
+          />
+          <Column
+            field="Ticket_No"
+            header={t("admin.workforce_management.day_report.columns.ticket_no")}
+            sortable
+          />
+          <Column
+            field="Vehicle_No"
+            header={t("admin.workforce_management.day_report.columns.vehicle_no")}
+            sortable
+          />
           <Column
             field="dry_weight"
-            header="Dry (kg)"
+            header={t("admin.workforce_management.day_report.columns.dry")}
             body={(r) => formatNumber(r.dry_weight)}
           />
           <Column
             field="wet_weight"
-            header="Wet (kg)"
+            header={t("admin.workforce_management.day_report.columns.wet")}
             body={(r) => formatNumber(r.wet_weight)}
           />
           <Column
             field="mix_weight"
-            header="Mixed (kg)"
+            header={t("admin.workforce_management.day_report.columns.mixed")}
             body={(r) => formatNumber(r.mix_weight)}
           />
           <Column
             field="total_net_weight"
-            header="Net (kg)"
+            header={t("admin.workforce_management.day_report.columns.net")}
             body={(r) => formatNumber(r.total_net_weight)}
           />
           <Column
-            header="Avg / Trip"
+            header={t("admin.workforce_management.day_report.columns.avg_trip")}
             body={(r) => r.average_weight_per_trip.toFixed(2)}
           />
         </DataTable>

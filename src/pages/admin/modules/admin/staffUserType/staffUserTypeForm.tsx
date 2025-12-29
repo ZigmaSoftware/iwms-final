@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useTranslation } from "react-i18next";
 
 import { getEncryptedRoute } from "@/utils/routeCache";
 import {
@@ -23,6 +24,7 @@ type UserType = {
 };
 
 export default function StaffUserTypeForm() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
   const [selectedUserType, setSelectedUserType] = useState("");
@@ -47,7 +49,7 @@ export default function StaffUserTypeForm() {
       setUserTypes(list);
       return list;
     } catch (error) {
-      Swal.fire("Error", "Failed to load User Types", "error");
+      Swal.fire(t("common.error"), t("common.load_failed"), "error");
       throw error;
     }
   };
@@ -71,7 +73,7 @@ export default function StaffUserTypeForm() {
       setSelectedUserType(validUserType);
     } catch (error) {
       console.error("Edit Load Failed:", error);
-      Swal.fire("Error", "Failed to load Staff User Type", "error");
+      Swal.fire(t("common.error"), t("common.load_failed"), "error");
       navigate(ENC_LIST_PATH);
     }
   };
@@ -102,7 +104,7 @@ export default function StaffUserTypeForm() {
     e.preventDefault();
 
     if (!selectedUserType || !name) {
-      Swal.fire("Error", "All fields are required", "error");
+      Swal.fire(t("common.error"), t("common.all_fields_required"), "error");
       return;
     }
 
@@ -117,19 +119,19 @@ export default function StaffUserTypeForm() {
     try {
       if (isEdit) {
         await staffUserTypeApi.update(id as string, payload);
-        Swal.fire("Updated", "Staff User Type updated", "success");
+        Swal.fire(t("common.success"), t("common.updated_success"), "success");
       } else {
         await staffUserTypeApi.create(payload);
-        Swal.fire("Created", "Staff User Type created", "success");
+        Swal.fire(t("common.success"), t("common.added_success"), "success");
       }
 
       navigate(ENC_LIST_PATH);
     } catch (error: any) {
       Swal.fire(
-        "Error",
+        t("common.error"),
         error.response?.data?.name?.[0] ??
           error.response?.data?.usertype_id?.[0] ??
-          "Invalid data",
+          t("common.invalid_data"),
         "error"
       );
     } finally {
@@ -150,7 +152,9 @@ export default function StaffUserTypeForm() {
       <div className=" mx-auto bg-white rounded-xl shadow-md border">
         <div className="px-6 py-4 border-b">
           <h2 className="text-xl font-semibold">
-            {isEdit ? "Edit Staff User Type" : "Add Staff User Type"}
+            {isEdit
+              ? t("common.edit_item", { item: t("admin.nav.staff_user_type") })
+              : t("common.add_item", { item: t("admin.nav.staff_user_type") })}
           </h2>
         </div>
 
@@ -160,7 +164,8 @@ export default function StaffUserTypeForm() {
             {/* USER TYPE */}
             <div>
               <label className="block text-sm font-medium mb-1">
-                User Type <span className="text-red-500">*</span>
+                {t("admin.nav.user_type")}{" "}
+                <span className="text-red-500">*</span>
               </label>
 
               <Select
@@ -168,7 +173,11 @@ export default function StaffUserTypeForm() {
                 onValueChange={setSelectedUserType}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select User Type" />
+                  <SelectValue
+                    placeholder={t("common.select_item_placeholder", {
+                      item: t("admin.nav.user_type"),
+                    })}
+                  />
                 </SelectTrigger>
                 <SelectContent>
                   {userTypes.map((u) => (
@@ -183,18 +192,27 @@ export default function StaffUserTypeForm() {
             {/* STAFF ROLE */}
             <div>
               <label className="block text-sm font-medium mb-1">
-                Staff User Role <span className="text-red-500">*</span>
+                {t("admin.staff_user_type.role_label")}{" "}
+                <span className="text-red-500">*</span>
               </label>
 
               <Select value={name} onValueChange={setName}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select Role" />
+                  <SelectValue placeholder={t("common.select_role")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="operator">Operator</SelectItem>
-                  <SelectItem value="driver">Driver</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">
+                    {t("admin.roles.admin")}
+                  </SelectItem>
+                  <SelectItem value="operator">
+                    {t("admin.roles.operator")}
+                  </SelectItem>
+                  <SelectItem value="driver">
+                    {t("admin.roles.driver")}
+                  </SelectItem>
+                  <SelectItem value="user">
+                    {t("admin.roles.user")}
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -203,19 +221,23 @@ export default function StaffUserTypeForm() {
           {/* STATUS */}
           <div className="w-full md:w-1/3">
             <label className="block text-sm font-medium mb-1">
-              Active Status <span className="text-red-500">*</span>
+              {t("common.status")} <span className="text-red-500">*</span>
             </label>
 
             <Select
-              value={isActive ? "Active" : "Inactive"}
-              onValueChange={(v) => setIsActive(v === "Active")}
+              value={isActive ? "true" : "false"}
+              onValueChange={(v) => setIsActive(v === "true")}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Inactive">Inactive</SelectItem>
+                <SelectItem value="true">
+                  {t("common.active")}
+                </SelectItem>
+                <SelectItem value="false">
+                  {t("common.inactive")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -227,7 +249,7 @@ export default function StaffUserTypeForm() {
               disabled={loading}
               className="bg-green-600 text-white px-6 py-2 rounded"
             >
-              {loading ? "Saving..." : "update"}
+              {loading ? t("common.saving") : t("common.update")}
             </button>
 
             <button
@@ -235,7 +257,7 @@ export default function StaffUserTypeForm() {
               onClick={() => navigate(ENC_LIST_PATH)}
               className="bg-red-600 text-white px-6 py-2 rounded"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </form>

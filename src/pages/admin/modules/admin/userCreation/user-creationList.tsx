@@ -9,6 +9,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -28,6 +29,7 @@ const normalizeList = (payload: any) =>
       : payload?.data?.results ?? [];
 
 export default function UserCreationList() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { encAdmins, encUserCreation } = getEncryptedRoute();
 
@@ -105,7 +107,7 @@ export default function UserCreationList() {
 
   const openQRPopup = (data: any) => {
     Swal.fire({
-      title: "Customer QR",
+      title: t("admin.user_creation.qr_title"),
       html: `<div id="qr-holder" class="flex justify-center"></div>`,
       width: 350,
       didOpen: () => {
@@ -121,8 +123,8 @@ export default function UserCreationList() {
   /* ---------------- ACTIONS ---------------- */
   const handleDelete = async (unique_id: string) => {
     const r = await Swal.fire({
-      title: "Are you sure?",
-      text: "This user will be soft-deleted!",
+      title: t("common.confirm_title"),
+      text: t("admin.user_creation.delete_confirm"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -132,10 +134,10 @@ export default function UserCreationList() {
 
     try {
       await userCreationApi.remove(unique_id);
-      Swal.fire("Deleted!", "User removed.", "success");
+      Swal.fire(t("common.deleted_success"), t("admin.user_creation.delete_success"), "success");
       fetchUsers();
     } catch (err) {
-      Swal.fire("Error", "Unable to delete user", "error");
+      Swal.fire(t("common.error"), t("admin.user_creation.delete_failed"), "error");
     }
   };
 
@@ -151,7 +153,7 @@ export default function UserCreationList() {
       fetchUsers();
     } catch (err: any) {
       console.error("Status update error:", err?.response?.data || err);
-      Swal.fire("Update failed", "Unable to change status", "error");
+      Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
     }
   };
 
@@ -172,7 +174,7 @@ export default function UserCreationList() {
         <InputText
           value={globalFilter}
           onChange={onSearch}
-          placeholder="Search..."
+          placeholder={t("common.search_placeholder")}
           className="border-0 shadow-none"
         />
       </div>
@@ -185,12 +187,12 @@ export default function UserCreationList() {
         <div className="p-3">
       <div className="flex justify-between mb-4">
         <div>
-          <h1 className="text-3xl font-bold">User Management</h1>
-          <p className="text-g  ray-500 text-sm">Manage staff & customers</p>
+          <h1 className="text-3xl font-bold">{t("admin.user_creation.title")}</h1>
+          <p className="text-gray-500 text-sm">{t("admin.user_creation.subtitle")}</p>
         </div>
 
         <Button
-          label="Add User"
+          label={t("common.add_item", { item: t("admin.user_creation.user_label") })}
           icon="pi pi-plus"
           className="p-button-success"
           onClick={() => navigate(ENC_NEW)}
@@ -200,10 +202,10 @@ export default function UserCreationList() {
       <Tabs defaultValue="staff">
         <TabsList className="flex gap-3 pb-2">
           <TabsTrigger value="staff" className="px-4 py-2 border rounded">
-            Staff
+            {t("admin.roles.staff")}
           </TabsTrigger>
           <TabsTrigger value="customer" className="px-4 py-2 border rounded">
-            Customer
+            {t("admin.roles.customer")}
           </TabsTrigger>
         </TabsList>
 
@@ -222,17 +224,17 @@ export default function UserCreationList() {
             showGridlines
             className="p-datatable-sm mt-4"
           >
-            <Column header="S.No" body={(_, o) => o.rowIndex + 1} />
-            <Column header="User Type" body={(r) => cap(r.user_type_name)} />
+            <Column header={t("common.s_no")} body={(_, o) => o.rowIndex + 1} />
+            <Column header={t("admin.nav.user_type")} body={(r) => cap(r.user_type_name)} />
             <Column
-              header="Staff User Type"
+              header={t("admin.nav.staff_user_type")}
               body={(r) => cap(r.staffusertype_name)}
             />
-            <Column header="Staff Name" body={(r) => cap(r.staff_name)} />
-            <Column header="Zone" field="zone_name" />
-            <Column header="Ward" field="ward_name" />
+            <Column header={t("admin.user_creation.staff_name")} body={(r) => cap(r.staff_name)} />
+            <Column header={t("common.zone")} field="zone_name" />
+            <Column header={t("common.ward")} field="ward_name" />
             <Column
-              header="Status"
+              header={t("common.status")}
               body={(r) => (
                 <Switch
                   checked={!!r.is_active}
@@ -243,7 +245,7 @@ export default function UserCreationList() {
               )}
             />
             <Column
-              header="Actions"
+              header={t("common.actions")}
               body={(r) => (
                 <div className="flex gap-3">
                   <PencilIcon onClick={() => navigate(ENC_EDIT(r.unique_id))} />
@@ -275,16 +277,16 @@ export default function UserCreationList() {
             showGridlines
             className="p-datatable-sm mt-4"
           >
-            <Column header="S.No" body={(_, o) => o.rowIndex + 1} />
-            <Column header="User Type" body={(r) => cap(r.user_type_name)} />
-            <Column header="Customer Name" body={(r) => cap(r.customer?.customer_name)} />
-            <Column header="Mobile" body={(r) => r.customer?.contact_no} />
-            <Column header="Ward" body={(r) => cap(r.customer?.ward_name)} />
-            <Column header="Zone" body={(r) => cap(r.customer?.zone_name)} />
-            <Column header="City" body={(r) => cap(r.customer?.city_name)} />
-            <Column header="State" body={(r) => cap(r.customer?.state_name)} />
+            <Column header={t("common.s_no")} body={(_, o) => o.rowIndex + 1} />
+            <Column header={t("admin.nav.user_type")} body={(r) => cap(r.user_type_name)} />
+            <Column header={t("admin.user_creation.customer_name")} body={(r) => cap(r.customer?.customer_name)} />
+            <Column header={t("common.mobile")} body={(r) => r.customer?.contact_no} />
+            <Column header={t("common.ward")} body={(r) => cap(r.customer?.ward_name)} />
+            <Column header={t("common.zone")} body={(r) => cap(r.customer?.zone_name)} />
+            <Column header={t("common.city")} body={(r) => cap(r.customer?.city_name)} />
+            <Column header={t("common.state")} body={(r) => cap(r.customer?.state_name)} />
             <Column
-              header="QR"
+              header={t("admin.user_creation.qr_label")}
               body={(r) => {
                 const payload = buildCustomerQrPayload(r.customer);
                 return payload ? (
@@ -295,12 +297,12 @@ export default function UserCreationList() {
                     <QRCode value={JSON.stringify(payload)} size={48} />
                   </button>
                 ) : (
-                  "—"
+                  t("common.not_available")
                 );
               }}
             />
             <Column
-              header="Status"
+              header={t("common.status")}
               body={(r) => (
                 <Switch
                   checked={!!r.is_active}
@@ -311,7 +313,7 @@ export default function UserCreationList() {
               )}
             />
             <Column
-              header="Actions"
+              header={t("common.actions")}
               body={(r) => (
                 <div className="flex gap-3">
                   <PencilIcon 

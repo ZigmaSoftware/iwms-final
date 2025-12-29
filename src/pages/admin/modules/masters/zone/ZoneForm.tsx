@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
+import { useTranslation } from "react-i18next";
 
 import { continentApi, countryApi, stateApi, districtApi, cityApi, zoneApi } from "@/helpers/admin";
 
@@ -79,12 +80,6 @@ const normalizeNullable = (v: any): string | null => {
   return String(v);
 };
 
-const extractErr = (e: any): string => {
-  if (e?.response?.data) return String(e.response.data);
-  if (e?.message) return e.message;
-  return "Unexpected error";
-};
-
 /* ------------------------------
   ROUTES
 ------------------------------ */
@@ -97,6 +92,7 @@ const ENC_LIST_PATH = `/${encMasters}/${encZones}`;
       COMPONENT
 ========================================================== */
 export default function ZoneForm() {
+  const { t } = useTranslation();
   /* FORM FIELDS */
   const [zoneName, setZoneName] = useState("");
   const [continentId, setContinentId] = useState("");
@@ -134,6 +130,12 @@ export default function ZoneForm() {
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
 
+  const extractErr = (e: any): string => {
+    if (e?.response?.data) return String(e.response.data);
+    if (e?.message) return e.message;
+    return t("common.unexpected_error");
+  };
+
   /* ==========================================================
       LOAD MASTER DATA
   ========================================================== */
@@ -150,7 +152,7 @@ export default function ZoneForm() {
             }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   useEffect(() => {
@@ -166,7 +168,7 @@ export default function ZoneForm() {
           }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   useEffect(() => {
@@ -182,7 +184,7 @@ export default function ZoneForm() {
           }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   useEffect(() => {
@@ -198,7 +200,7 @@ export default function ZoneForm() {
           }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   useEffect(() => {
@@ -320,7 +322,7 @@ export default function ZoneForm() {
 
       })
       .catch((err) =>
-        Swal.fire("Error", extractErr(err), "error")
+        Swal.fire(t("common.error"), extractErr(err), "error")
       );
   }, [id, isEdit]);
 
@@ -398,7 +400,7 @@ export default function ZoneForm() {
     e.preventDefault();
 
     if (!continentId || !countryId || !stateId || !cityId || !zoneName.trim()) {
-      Swal.fire("Missing Fields", "All mandatory fields must be filled.", "warning");
+      Swal.fire(t("common.warning"), t("common.all_fields_required"), "warning");
       return;
     }
 
@@ -418,15 +420,15 @@ export default function ZoneForm() {
 
       if (isEdit && id) {
         await zoneApi.update(id, payload);
-        Swal.fire("Success", "Updated successfully!", "success");
+        Swal.fire(t("common.success"), t("common.updated_success"), "success");
       } else {
         await zoneApi.create(payload);
-        Swal.fire("Success", "Added successfully!", "success");
+        Swal.fire(t("common.success"), t("common.added_success"), "success");
       }
 
       navigate(ENC_LIST_PATH);
     } catch (err) {
-      Swal.fire("Save failed", extractErr(err), "error");
+      Swal.fire(t("common.save_failed"), extractErr(err), "error");
     } finally {
       setLoading(false);
     }
@@ -436,13 +438,19 @@ export default function ZoneForm() {
         JSX
   ========================================================== */
   return (
-    <ComponentCard title={isEdit ? "Edit Zone" : "Add Zone"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.zone") })
+          : t("common.add_item", { item: t("admin.nav.zone") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Continent */}
           <div>
-            <Label>Continent *</Label>
+            <Label>{t("admin.nav.continent")} *</Label>
             <Select
               value={continentId}
               onValueChange={(val) => {
@@ -459,7 +467,11 @@ export default function ZoneForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Continent" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.continent"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {continents.map((c) => (
@@ -473,7 +485,7 @@ export default function ZoneForm() {
 
           {/* Country */}
           <div>
-            <Label>Country *</Label>
+            <Label>{t("admin.nav.country")} *</Label>
             <Select
               value={countryId}
               onValueChange={(val) => {
@@ -488,7 +500,11 @@ export default function ZoneForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Country" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.country"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredCountries.map((opt) => (
@@ -502,7 +518,7 @@ export default function ZoneForm() {
 
           {/* State */}
           <div>
-            <Label>State *</Label>
+            <Label>{t("admin.nav.state")} *</Label>
             <Select
               value={stateId}
               onValueChange={(val) => {
@@ -514,7 +530,11 @@ export default function ZoneForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select State" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.state"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredStates.map((opt) => (
@@ -528,7 +548,7 @@ export default function ZoneForm() {
 
           {/* District */}
           <div>
-            <Label>District</Label>
+            <Label>{t("admin.nav.district")}</Label>
             <Select
               value={districtId}
               onValueChange={(val) => {
@@ -538,7 +558,11 @@ export default function ZoneForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select District" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.district"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredDistricts.map((opt) => (
@@ -552,13 +576,17 @@ export default function ZoneForm() {
 
           {/* City */}
           <div>
-            <Label>City *</Label>
+            <Label>{t("admin.nav.city")} *</Label>
             <Select
               value={cityId}
               onValueChange={(val) => setCityId(val)}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select City" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.city"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredCities.map((opt) => (
@@ -572,39 +600,43 @@ export default function ZoneForm() {
 
           {/* Zone Name */}
           <div>
-            <Label>Zone Name *</Label>
+            <Label>
+              {t("common.item_name", { item: t("admin.nav.zone") })} *
+            </Label>
             <Input
               value={zoneName}
               onChange={(e) => setZoneName(e.target.value)}
-              placeholder="Enter zone name"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.zone"),
+              })}
               required
             />
           </div>
 
           {/* Active Status */}
           <div>
-            <Label>Active Status *</Label>
+            <Label>{t("common.status")} *</Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(v) => setIsActive(v === "true")}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Description */}
           <div className="md:col-span-2">
-            <Label>Description</Label>
+            <Label>{t("common.description")}</Label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description"
+              placeholder={t("common.description_optional")}
               className="w-full border rounded-md p-2 focus:ring focus:ring-green-200 outline-none"
               rows={3}
             />
@@ -617,11 +649,11 @@ export default function ZoneForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-                ? "Update"
-                : "Save"}
+                ? t("common.update")
+                : t("common.save")}
           </Button>
 
           <Button
@@ -629,7 +661,7 @@ export default function ZoneForm() {
             variant="destructive"
             onClick={() => navigate(ENC_LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

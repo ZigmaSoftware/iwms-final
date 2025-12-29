@@ -3,6 +3,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./vehicletracking.css";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 type Status = "Running" | "Idle" | "Parked" | "No Data";
 
@@ -22,22 +23,36 @@ const API_URL =
   "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM";
 
 /* ================= MAP ICON ================= */
-const createVehicleIcon = (status: Status) =>
-  L.divIcon({
+const createVehicleIcon = (status: Status, isFocused: boolean) => {
+  const size = isFocused ? 42 : 34;
+  const statusClass = status.toLowerCase().replace(" ", "");
+  const pulseSize = Math.round(size * 1.2);
+
+  return L.divIcon({
     className: "custom-marker",
-    html: `<div class="vehicle-icon ${status
-      .toLowerCase()
-      .replace(" ", "")}">🚚</div>`,
-    iconSize: [26, 26],
-    iconAnchor: [13, 13],
+    html: `
+      <div class="vehicle-icon ${statusClass} ${isFocused ? "focused" : ""}" style="width:${size}px;height:${size}px;">
+        ${
+          isFocused
+            ? `<span class="vehicle-pulse" style="width:${pulseSize}px;height:${pulseSize}px;"></span>`
+            : ""
+        }
+        <span class="vehicle-emoji">🚚</span>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
   });
+};
 
 export default function VehicleTracking() {
+  const { t, i18n } = useTranslation();
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [search, setSearch] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState("");
+  const [focusedVehicleId, setFocusedVehicleId] = useState("");
   const [filters, setFilters] = useState<Record<Status, boolean>>({
     Running: true,
     Idle: true,
@@ -47,8 +62,27 @@ export default function VehicleTracking() {
 
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
+  const markerLookupRef = useRef<Record<string, L.Marker>>({});
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const carouselRef = useRef<HTMLDivElement | null>(null);
+  const statusControlRef = useRef<HTMLDivElement | null>(null);
+
+  const statusLabels = useMemo(
+    () => ({
+      running: t("dashboard.live_map.status_running"),
+      idle: t("dashboard.live_map.status_idle"),
+      parked: t("dashboard.live_map.status_parked"),
+      no_data: t("dashboard.live_map.status_no_data"),
+    }),
+    [i18n.language, t],
+  );
+
+  const formatStatusLabel = (status: Status) => {
+    const key = status.toLowerCase().replace(" ", "_") as keyof typeof statusLabels;
+    return statusLabels[key] ?? status;
+  };
+
+  const speedUnit = t("dashboard.live_map.units.kmh");
 
   /* ================= FETCH DATA ================= */
   const fetchData = async () => {
@@ -124,13 +158,14 @@ export default function VehicleTracking() {
         );
 
         div.innerHTML = `
-          <label class="running"><input type="checkbox" checked /> Running</label>
-          <label class="idle"><input type="checkbox" checked /> Idle</label>
-          <label class="parked"><input type="checkbox" checked /> Parked</label>
-          <label class="nodata"><input type="checkbox" checked /> No Data</label>
+          <label class="running"><input type="checkbox" checked /> <span data-status="running">${statusLabels.running}</span></label>
+          <label class="idle"><input type="checkbox" checked /> <span data-status="idle">${statusLabels.idle}</span></label>
+          <label class="parked"><input type="checkbox" checked /> <span data-status="parked">${statusLabels.parked}</span></label>
+          <label class="nodata"><input type="checkbox" checked /> <span data-status="no_data">${statusLabels.no_data}</span></label>
         `;
 
         L.DomEvent.disableClickPropagation(div);
+        statusControlRef.current = div;
 
         const statuses: Status[] = ["Running", "Idle", "Parked", "No Data"];
         div.querySelectorAll("input").forEach((input, i) => {
@@ -155,6 +190,15 @@ export default function VehicleTracking() {
     };
   }, []);
 
+  useEffect(() => {
+    const control = statusControlRef.current;
+    if (!control) return;
+    Object.entries(statusLabels).forEach(([key, label]) => {
+      const span = control.querySelector(`span[data-status="${key}"]`);
+      if (span) span.textContent = label;
+    });
+  }, [statusLabels]);
+
   /* ================= FILTER PIPELINE ================= */
   const filteredVehicles = useMemo(() => {
     return vehicles.filter(
@@ -170,24 +214,26 @@ export default function VehicleTracking() {
     if (!layerRef.current || !mapRef.current) return;
 
     layerRef.current.clearLayers();
+    markerLookupRef.current = {};
 
     filteredVehicles.forEach((v) => {
       const popupHtml = `
         <div class="vehicle-popup">
           <div class="popup-title">${v.label}</div>
           <div class="popup-row">
-            <span class="popup-label">Status:</span>
-            <span class="popup-value">${v.status}</span>
+            <span class="popup-label">${t("dashboard.live_map.labels.status")}:</span>
+            <span class="popup-value">${formatStatusLabel(v.status)}</span>
           </div>
           <div class="popup-row">
-            <span class="popup-label">Speed:</span>
-            <span class="popup-value">${v.speed.toFixed(1)} km/h</span>
+            <span class="popup-label">${t("dashboard.live_map.labels.speed")}:</span>
+            <span class="popup-value">${v.speed.toFixed(1)} ${speedUnit}</span>
           </div>
         </div>
       `;
 
-      L.marker([v.lat, v.lng], {
-        icon: createVehicleIcon(v.status),
+      const isFocused = v.id === focusedVehicleId;
+      const marker = L.marker([v.lat, v.lng], {
+        icon: createVehicleIcon(v.status, isFocused),
       })
         .bindPopup(popupHtml, {
           closeButton: true,
@@ -195,8 +241,12 @@ export default function VehicleTracking() {
           offset: [0, -8],
         })
         .addTo(layerRef.current!);
+      marker.on("mouseover", () => marker.openPopup());
+      marker.on("mouseout", () => marker.closePopup());
+      marker.on("click", () => setFocusedVehicleId(v.id));
+      markerLookupRef.current[v.id] = marker;
     });
-  }, [filteredVehicles]);
+  }, [filteredVehicles, focusedVehicleId, formatStatusLabel, speedUnit, t]);
 
   /* ================= AUTO FIT ================= */
   useEffect(() => {
@@ -208,6 +258,20 @@ export default function VehicleTracking() {
 
     mapRef.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
   }, [filteredVehicles]);
+
+  useEffect(() => {
+    if (!mapRef.current || !focusedVehicleId) return;
+    const target = filteredVehicles.find((v) => v.id === focusedVehicleId);
+    if (!target) return;
+    const marker = markerLookupRef.current[focusedVehicleId];
+    if (marker) {
+      marker.openPopup();
+    }
+    const currentZoom = mapRef.current.getZoom();
+    mapRef.current.setView([target.lat, target.lng], Math.max(currentZoom, 15), {
+      animate: true,
+    });
+  }, [focusedVehicleId, filteredVehicles]);
 
   /* ================= SCROLL ================= */
   const scroll = (dir: "left" | "right") => {
@@ -226,12 +290,16 @@ export default function VehicleTracking() {
 
       <div className="carousel-wrap">
         <div className="carousel-header-row">
-          <div className="carousel-header">(12) Vehicles details</div>
+          <div className="carousel-header">
+            {t("admin.vehicle_tracking.carousel_title", {
+              count: Math.min(filteredVehicles.length, 12),
+            })}
+          </div>
 
           <div className="vehicle-search-group">
             <input
               className="vehicle-search"
-              placeholder="Search vehicle..."
+              placeholder={t("admin.vehicle_tracking.search_placeholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -239,9 +307,13 @@ export default function VehicleTracking() {
             <select
               className="vehicle-dropdown"
               value={selectedVehicle}
-              onChange={(e) => setSelectedVehicle(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setSelectedVehicle(value);
+                setFocusedVehicleId(value);
+              }}
             >
-              <option value="">All Vehicles</option>
+              <option value="">{t("admin.vehicle_tracking.all_vehicles")}</option>
               {vehicles.map((v) => (
                 <option key={v.id} value={v.id}>
                   {v.label}
@@ -260,13 +332,21 @@ export default function VehicleTracking() {
             <div key={v.id} className={`vehicle-card ${v.status.toLowerCase()}`}>
               <div className="vehicle-header">
                 <span>{v.label}</span>
-                <span className="status">{v.status}</span>
+                <span className="status">{formatStatusLabel(v.status)}</span>
               </div>
               <div className="vehicle-body">
-                <p>Speed: {v.speed} km/h</p>
-                <p>Ignition: {v.ignition}</p>
-                <p>Distance: {v.distance.toFixed(1)} km</p>
-                <p>Updated: {v.updatedAt}</p>
+                <p>
+                  {t("admin.vehicle_tracking.labels.speed")}: {v.speed} {speedUnit}
+                </p>
+                <p>
+                  {t("admin.vehicle_tracking.labels.ignition")}: {v.ignition}
+                </p>
+                <p>
+                  {t("admin.vehicle_tracking.labels.distance")}: {v.distance.toFixed(1)} km
+                </p>
+                <p>
+                  {t("admin.vehicle_tracking.labels.updated")}: {v.updatedAt}
+                </p>
               </div>
             </div>
           ))}

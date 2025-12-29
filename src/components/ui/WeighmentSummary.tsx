@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { DataCard } from "../ui/DataCard";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 
 const API_BASE =
   "https://zigma.in/d2d/folders/waste_collected_summary_report/test_waste_collected_data_api.php";
@@ -20,6 +21,7 @@ const getMonthParam = (date = new Date()) => {
 };
 
 export function WeighmentSummary() {
+  const { t } = useTranslation();
   const [summary, setSummary] = useState<Summary>({
     trips: 0,
     totalTons: 0,
@@ -76,35 +78,41 @@ export function WeighmentSummary() {
 
   return (
     <DataCard
-      title="Weighment Summary"
+      title={t("dashboard.home.weighment_summary_title")}
       compact
       action={
         <Link
           to={weighbridgePath}
           className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
         >
-          View all
+          {t("common.view_all")}
         </Link>
       }
     >
       {/* Top Stats */}
       <div className="grid grid-cols-3 gap-3 text-center mb-3">
         <div className="p-2 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800">
-          <div className="text-[10px] text-gray-600 dark:text-gray-400">Trips</div>
+          <div className="text-[10px] text-gray-600 dark:text-gray-400">
+            {t("common.trips")}
+          </div>
           <div className="text-lg font-bold text-green-700 dark:text-green-400">
             {tripsValue}
           </div>
         </div>
 
         <div className="p-2 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800">
-          <div className="text-[10px] text-gray-600 dark:text-gray-400">Total (Tons)</div>
+          <div className="text-[10px] text-gray-600 dark:text-gray-400">
+            {t("dashboard.home.weighment_total_tons")}
+          </div>
           <div className="text-lg font-bold text-blue-700 dark:text-blue-400">
             {totalTonsValue}
           </div>
         </div>
 
         <div className="p-2 rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800">
-          <div className="text-[10px] text-gray-600 dark:text-gray-400">Avg Tons/Trip</div>
+          <div className="text-[10px] text-gray-600 dark:text-gray-400">
+            {t("dashboard.home.weighment_avg_tons_per_trip")}
+          </div>
           <div className="text-lg font-bold text-orange-700 dark:text-orange-400">
             {avgTonsValue}
           </div>

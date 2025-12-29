@@ -1,4 +1,5 @@
 import { Moon, Sun } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -10,6 +11,7 @@ interface ThemeToggleButtonProps {
 export function ThemeToggleButton({ className }: ThemeToggleButtonProps) {
   const { theme, toggleTheme } = useTheme();
   const isDark = theme === "dark";
+  const { t } = useTranslation();
 
   return (
     <button
@@ -36,9 +38,9 @@ export function ThemeToggleButton({ className }: ThemeToggleButtonProps) {
       </span>
       <span className="flex flex-col text-left leading-none">
         <span className="text-[10px] uppercase tracking-[0.3em] text-[var(--admin-mutedText)]">
-          Mode
+          {t("common.theme_mode_label")}
         </span>
-        <span>{isDark ? "Dark" : "Light"}</span>
+        <span>{isDark ? t("common.theme_dark") : t("common.theme_light")}</span>
       </span>
     </button>
   );

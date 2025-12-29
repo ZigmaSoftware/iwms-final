@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import {
   ChevronDown,
@@ -68,10 +69,10 @@ const {
 } = getEncryptedRoute();
 
 type NavItem = {
-  name: string;
+  nameKey: string;
   icon: React.ReactNode;
   path?: string;
-  subItems?: { name: string; path: string }[];
+  subItems?: { nameKey: string; path: string }[];
 };
 
 /* =====================
@@ -79,64 +80,64 @@ type NavItem = {
 ===================== */
 
 const navItems: NavItem[] = [
-  { name: "Dashboard", icon: <LayoutGrid size={18} />, path: "/admin" },
+  { nameKey: "admin.nav.dashboard", icon: <LayoutGrid size={18} />, path: "/admin" },
 ];
 
 const adminItems: NavItem[] = [
   {
-    name: "Admin",
+    nameKey: "admin.nav.admin",
     icon: <Settings size={18} />,
     subItems: [
-      { name: "MainScreen Type", path: `/${encAdmins}/${encMainScreenType}` },
-      { name: "UserScreen Action", path: `/${encAdmins}/${encUserScreenAction}` },
-      { name: "MainScreen", path: `/${encAdmins}/${encMainScreen}` },
-      { name: "User Screen", path: `/${encAdmins}/${encUserScreen}` },
+      { nameKey: "admin.nav.main_screen_type", path: `/${encAdmins}/${encMainScreenType}` },
+      { nameKey: "admin.nav.user_screen_action", path: `/${encAdmins}/${encUserScreenAction}` },
+      { nameKey: "admin.nav.main_screen", path: `/${encAdmins}/${encMainScreen}` },
+      { nameKey: "admin.nav.user_screen", path: `/${encAdmins}/${encUserScreen}` },
       {
-        name: "User Screen Permission",
+        nameKey: "admin.nav.user_screen_permission",
         path: `/${encAdmins}/${encUserScreenPermission}`,
       },
-      { name: "User Type", path: `/${encAdmins}/${encUserType}` },
-      { name: "User Creation", path: `/${encAdmins}/${encUserCreation}` },
-      { name: "Staff User Type", path: `/${encAdmins}/${encStaffUserType}` },
+      { nameKey: "admin.nav.user_type", path: `/${encAdmins}/${encUserType}` },
+      { nameKey: "admin.nav.user_creation", path: `/${encAdmins}/${encUserCreation}` },
+      { nameKey: "admin.nav.staff_user_type", path: `/${encAdmins}/${encStaffUserType}` },
     ],
   },
 ];
 
 const masterItems: NavItem[] = [
   {
-    name: "Masters",
+    nameKey: "admin.nav.masters",
     icon: <Layers3 size={18} />,
     subItems: [
-      { name: "Continent", path: `/${encMasters}/${encContinents}` },
-      { name: "Country", path: `/${encMasters}/${encCountries}` },
-      { name: "State", path: `/${encMasters}/${encStates}` },
-      { name: "District", path: `/${encMasters}/${encDistricts}` },
-      { name: "City", path: `/${encMasters}/${encCities}` },
-      { name: "Zone", path: `/${encMasters}/${encZones}` },
-      { name: "Ward", path: `/${encMasters}/${encWards}` },
-      { name: "Property", path: `/${encMasters}/${encProperties}` },
-      { name: "SubProperty", path: `/${encMasters}/${encSubProperties}` },
+      { nameKey: "admin.nav.continent", path: `/${encMasters}/${encContinents}` },
+      { nameKey: "admin.nav.country", path: `/${encMasters}/${encCountries}` },
+      { nameKey: "admin.nav.state", path: `/${encMasters}/${encStates}` },
+      { nameKey: "admin.nav.district", path: `/${encMasters}/${encDistricts}` },
+      { nameKey: "admin.nav.city", path: `/${encMasters}/${encCities}` },
+      { nameKey: "admin.nav.zone", path: `/${encMasters}/${encZones}` },
+      { nameKey: "admin.nav.ward", path: `/${encMasters}/${encWards}` },
+      { nameKey: "admin.nav.property", path: `/${encMasters}/${encProperties}` },
+      { nameKey: "admin.nav.sub_property", path: `/${encMasters}/${encSubProperties}` },
     ],
   },
 ];
 
 const staffCreationItems: NavItem[] = [
   {
-    name: "Staff Master",
+    nameKey: "admin.nav.staff_master",
     icon: <Users size={18} />,
     subItems: [
-      { name: "Staff Creation", path: `/${encMasters}/${encStaffCreation}` },
+      { nameKey: "admin.nav.staff_creation", path: `/${encMasters}/${encStaffCreation}` },
     ],
   },
 ];
 
 const customerMasters: NavItem[] = [
   {
-    name: "Customer Masters",
+    nameKey: "admin.nav.customer_masters",
     icon: <UserCircle size={18} />,
     subItems: [
       {
-        name: "Customer Creation",
+        nameKey: "admin.nav.customer_creation",
         path: `/${encCustomerMaster}/${encCustomerCreation}`,
       },
     ],
@@ -145,16 +146,16 @@ const customerMasters: NavItem[] = [
 
 const transportMasters: NavItem[] = [
   {
-    name: "Transport Masters",
+    nameKey: "admin.nav.transport_masters",
     icon: <Truck size={18} />,
     subItems: [
-      { name: "Fuel", path: `/${encTransportMaster}/${encFuel}` },
+      { nameKey: "admin.nav.fuel", path: `/${encTransportMaster}/${encFuel}` },
       {
-        name: "Vehicle Type",
+        nameKey: "admin.nav.vehicle_type",
         path: `/${encTransportMaster}/${encVehicleType}`,
       },
       {
-        name: "Vehicle Creation",
+        nameKey: "admin.nav.vehicle_creation",
         path: `/${encTransportMaster}/${encVehicleCreation}`,
       },
     ],
@@ -163,15 +164,15 @@ const transportMasters: NavItem[] = [
 
 const vehicleTrackingItems: NavItem[] = [
   {
-    name: "Vehicle Tracking",
+    nameKey: "admin.nav.vehicle_tracking",
     icon: <Navigation size={18} />,
     subItems: [
       {
-        name: "Vehicle Tracking",
+        nameKey: "admin.nav.vehicle_tracking",
         path: `/${encVehicleTracking}/${encVehicleTrack}`,
       },
       {
-        name: "Vehicle History",
+        nameKey: "admin.nav.vehicle_history",
         path: `/${encVehicleTracking}/${encVehicleHistory}`,
       },
     ],
@@ -180,23 +181,23 @@ const vehicleTrackingItems: NavItem[] = [
 
 const binItems: NavItem[] = [
   {
-    name: "Bin Master",
+    nameKey: "admin.nav.bin_master",
     icon: <Archive size={18} />,
-    subItems: [{ name: "Bin Creation", path: `/${encMasters}/${encBins}` }],
+    subItems: [{ nameKey: "admin.nav.bin_creation", path: `/${encMasters}/${encBins}` }],
   },
 ];
 
 const wasteManagementMasters: NavItem[] = [
   {
-    name: "Waste Management",
+    nameKey: "admin.nav.waste_management",
     icon: <Recycle size={18} />,
     subItems: [
       {
-        name: "WasteCollectedData",
+        nameKey: "admin.nav.waste_collected_data",
         path: `/${encWasteManagementMaster}/${encWasteCollectedData}`,
       },
       {
-        name: "CollectionMonitoring",
+        nameKey: "admin.nav.collection_monitoring",
         path: `/${encWasteManagementMaster}/${encCollectionMonitoring}`,
       },
     ],
@@ -205,30 +206,30 @@ const wasteManagementMasters: NavItem[] = [
 
 const citizenGrievanceItems: NavItem[] = [
   {
-    name: "Citizen Grievance",
+    nameKey: "admin.nav.citizen_grievance",
     icon: <AlertTriangle size={18} />,
     subItems: [
-      { name: "Complaints", path: `/${encCitizenGrivence}/${encComplaint}` },
+      { nameKey: "admin.nav.complaints", path: `/${encCitizenGrivence}/${encComplaint}` },
       {
-        name: "Main Category",
+        nameKey: "admin.nav.main_category",
         path: `/${encCitizenGrivence}/${encMainComplaintCategory}`,
       },
       {
-        name: "Sub Category",
+        nameKey: "admin.nav.sub_category",
         path: `/${encCitizenGrivence}/${encSubComplaintCategory}`,
       },
-      { name: "Feedback", path: `/${encCitizenGrivence}/${encFeedback}` },
+      { nameKey: "admin.nav.feedback", path: `/${encCitizenGrivence}/${encFeedback}` },
     ],
   },
 ];
 
 const workforceManagements: NavItem[] = [
   {
-    name: "Workforce Management",
+    nameKey: "admin.nav.workforce_management",
     icon: <Building2 size={18} />,
     subItems: [
       {
-        name: "WorkForce Management",
+        nameKey: "admin.nav.workforce_management",
         path: `/${encWorkforceManagement}/${encWorkforceManagement}`,
       },
     ],
@@ -237,13 +238,13 @@ const workforceManagements: NavItem[] = [
 
 const reportItems: NavItem[] = [
   {
-    name: "Reports",
+    nameKey: "admin.nav.reports",
     icon: <BarChart3 size={18} />,
     subItems: [
-      { name: "Trip Summary", path: `/${encReport}/${encTripSummary}` },
-      { name: "Monthly Distance", path: `/${encReport}/${encMonthlyDistance}` },
+      { nameKey: "admin.nav.trip_summary", path: `/${encReport}/${encTripSummary}` },
+      { nameKey: "admin.nav.monthly_distance", path: `/${encReport}/${encMonthlyDistance}` },
       {
-        name: "Waste Collected Summary",
+        nameKey: "admin.nav.waste_collected_summary",
         path: `/${encReport}/${encWasteCollectedSummary}`,
       },
     ],
@@ -256,6 +257,7 @@ const menuButtonBase =
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen } = useSidebar();
   const location = useLocation();
+  const { t } = useTranslation();
   const showFullSidebar = isExpanded || isMobileOpen;
 
   const [openSubmenu, setOpenSubmenu] = useState<{
@@ -372,7 +374,7 @@ const AppSidebar: React.FC = () => {
   const renderMenuItems = (items: NavItem[], type: any) => (
     <ul className="flex flex-col gap-2">
       {items.map((nav, index) => (
-        <li key={nav.name}>
+        <li key={nav.path ?? nav.nameKey}>
           {nav.subItems ? (
             <button
               onClick={() => handleSubmenuToggle(index, type)}
@@ -390,7 +392,7 @@ const AppSidebar: React.FC = () => {
 
               {showFullSidebar && (
                 <>
-                  <span className="text-sm font-semibold">{nav.name}</span>
+                  <span className="text-sm font-semibold">{t(nav.nameKey)}</span>
                   <ChevronDown
                     className={`ml-auto h-5 w-5 transition-transform ${
                       openSubmenu?.type === type && openSubmenu?.index === index
@@ -417,7 +419,7 @@ const AppSidebar: React.FC = () => {
                   {nav.icon}
                 </span>
                 {showFullSidebar && (
-                  <span className="text-sm font-semibold">{nav.name}</span>
+                  <span className="text-sm font-semibold">{t(nav.nameKey)}</span>
                 )}
               </Link>
             )
@@ -438,7 +440,7 @@ const AppSidebar: React.FC = () => {
             >
               <ul className="mt-2 ml-5 space-y-1 rounded-xl border-l-2 border-[var(--admin-border)]/70 pl-3">
                 {nav.subItems.map((subItem) => (
-                  <li key={subItem.name}>
+                  <li key={subItem.path}>
                     <Link
                       to={subItem.path}
                       className={`block rounded-xl px-3 py-1.5 text-sm font-medium transition ${
@@ -447,7 +449,7 @@ const AppSidebar: React.FC = () => {
                           : "text-[var(--admin-mutedText)] hover:bg-[var(--admin-primarySoft)] hover:text-[var(--admin-primary)]"
                       }`}
                     >
-                      {subItem.name}
+                      {t(subItem.nameKey)}
                     </Link>
                   </li>
                 ))}

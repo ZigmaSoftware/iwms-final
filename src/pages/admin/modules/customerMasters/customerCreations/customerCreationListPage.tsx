@@ -18,6 +18,7 @@ import "primeicons/primeicons.css";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Switch } from "@/components/ui/switch";
+import { useTranslation } from "react-i18next";
 
 type Customer = {
   unique_id: string;
@@ -43,6 +44,7 @@ type Customer = {
 const customerApi = adminApi.customerCreations;
 
 export default function CustomerCreationList() {
+  const { t } = useTranslation();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -74,8 +76,8 @@ export default function CustomerCreationList() {
 
   const handleDelete = async (unique_id: string) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This customer will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -87,7 +89,7 @@ export default function CustomerCreationList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -112,7 +114,7 @@ export default function CustomerCreationList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Customer..."
+          placeholder={t("admin.customer_creation.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -132,7 +134,7 @@ export default function CustomerCreationList() {
 
   const openQrPopup = (payload: any) => {
     Swal.fire({
-      title: "Customer QR",
+      title: t("admin.customer_creation.qr_title"),
       html: `<div id="customer-qr-holder" class="flex justify-center"></div>`,
       width: 350,
       didOpen: () => {
@@ -173,7 +175,7 @@ export default function CustomerCreationList() {
   const actionTemplate = (c: Customer) => (
     <div className="flex gap-3 justify-center">
       <button
-        title="Edit"
+        title={t("common.edit")}
         onClick={() => navigate(ENC_EDIT_PATH(c.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
@@ -198,13 +200,15 @@ export default function CustomerCreationList() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Customer Creation
+              {t("admin.customer_creation.title")}
             </h1>
-            <p className="text-gray-500 text-sm">Manage customer records</p>
+            <p className="text-gray-500 text-sm">
+              {t("admin.customer_creation.subtitle")}
+            </p>
           </div>
 
           <Button
-            label="Add Customer"
+            label={t("admin.customer_creation.add")}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -227,56 +231,56 @@ export default function CustomerCreationList() {
             "city_name",
           ]}
           header={header}
-          emptyMessage="No customers found."
+          emptyMessage={t("admin.customer_creation.empty_message")}
           stripedRows
           showGridlines
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
             field="customer_name"
-            header="Customer"
+            header={t("admin.customer_creation.customer")}
             body={(row: Customer) => cap(row.customer_name)}
             sortable
           />
-          <Column field="contact_no" header="Mobile" sortable />
+          <Column field="contact_no" header={t("common.mobile")} sortable />
           <Column
             field="ward_name"
-            header="Ward"
+            header={t("common.ward")}
             body={(row: Customer) => cap(row.ward_name)}
             sortable
           />
           <Column
             field="zone_name"
-            header="Zone"
+            header={t("common.zone")}
             body={(row: Customer) => cap(row.zone_name)}
             sortable
           />
           <Column
             field="city_name"
-            header="City"
+            header={t("common.city")}
             body={(row: Customer) => cap(row.city_name)}
             sortable
           />
           <Column
             field="state_name"
-            header="State"
+            header={t("common.state")}
             body={(row: Customer) => cap(row.state_name)}
             sortable
           />
 
-          <Column header="QR" body={qrTemplate} style={{ width: "100px" }} />
+          <Column header={t("admin.customer_creation.qr_label")} body={qrTemplate} style={{ width: "100px" }} />
 
           <Column
             field="is_active"
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "120px" }}
           />
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "140px", textAlign: "center" }}
           />

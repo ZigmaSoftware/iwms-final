@@ -32,10 +32,12 @@ import { fetchGrievances } from "@/features/grievances/api";
 import { AttachmentPreview } from "@/features/grievances/components/AttachmentPreview";
 import { InfoField } from "@/features/grievances/components/InfoField";
 import type { Grievance } from "@/features/grievances/types";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 
 export default function Grievances() {
+  const { t, i18n } = useTranslation();
   const [complaints, setComplaints] = useState<Grievance[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,14 +59,14 @@ export default function Grievances() {
       } catch (err) {
         if (signal?.aborted) return;
         console.error("Unable to load complaints", err);
-        setError("Unable to load complaints. Please try again.");
+        setError(t("dashboard.grievances.error_load_failed"));
       } finally {
         if (!signal?.aborted) {
           setLoading(false);
         }
       }
     },
-    [],
+    [t],
   );
 
   useEffect(() => {
@@ -97,7 +99,7 @@ export default function Grievances() {
 
   const formatDateForSearch = (value?: string) =>
     value
-      ? new Date(value).toLocaleDateString("en-GB").replace(/\//g, "-")
+      ? new Date(value).toLocaleDateString(i18n.language).replace(/\//g, "-")
       : "";
 
   // SEARCH
@@ -236,6 +238,28 @@ export default function Grievances() {
   const getStatusStyles = (status?: string) =>
     statusTokens[status?.toLowerCase() ?? ""] ?? statusTokens.default;
 
+  const statusLabels: Record<string, string> = {
+    open: t("common.status_open"),
+    processing: t("common.status_in_progress"),
+    progressing: t("common.status_in_progress"),
+    "in-progress": t("common.status_in_progress"),
+    resolved: t("common.status_resolved"),
+    closed: t("dashboard.grievances.status_closed"),
+  };
+
+  const tabLabels: Record<string, string> = {
+    all: t("dashboard.grievances.tabs.all"),
+    new: t("dashboard.grievances.tabs.new"),
+    open: t("dashboard.grievances.tabs.open"),
+    resolved: t("dashboard.grievances.tabs.resolved"),
+  };
+
+  const formatStatusLabel = (status?: string) => {
+    if (!status) return t("dashboard.grievances.status_unknown");
+    const normalized = status.toLowerCase();
+    return statusLabels[normalized] ?? status;
+  };
+
   const handleRefresh = () => loadComplaints();
 
   const { theme } = useTheme();
@@ -269,9 +293,9 @@ export default function Grievances() {
 
   const summaryCards = [
     {
-      label: "Total Grievances",
+      label: t("dashboard.grievances.summary_total"),
       value: complaints.length,
-      subtext: "All records",
+      subtext: t("dashboard.grievances.summary_total_subtext"),
       gradient: "bg-gradient-to-br from-white via-sky-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900/30 dark:to-slate-900",
       border: "border-sky-200/80 dark:border-sky-500/40",
       iconColor: "text-sky-600 dark:text-sky-200",
@@ -279,9 +303,9 @@ export default function Grievances() {
       Icon: MessageSquare,
     },
     {
-      label: "Open Items",
+      label: t("dashboard.grievances.summary_open"),
       value: openCount,
-      subtext: "Awaiting action",
+      subtext: t("dashboard.grievances.summary_open_subtext"),
       gradient: "bg-gradient-to-br from-white via-rose-50 to-rose-100 dark:from-slate-950 dark:via-rose-950/20 dark:to-slate-900",
       border: "border-rose-200/80 dark:border-rose-500/40",
       iconColor: "text-rose-600 dark:text-rose-200",
@@ -289,9 +313,9 @@ export default function Grievances() {
       Icon: ShieldAlert,
     },
     {
-      label: "New Today",
+      label: t("dashboard.grievances.summary_new"),
       value: todayNewCount,
-      subtext: "Filed today",
+      subtext: t("dashboard.grievances.summary_new_subtext"),
       gradient: "bg-gradient-to-br from-white via-blue-50 to-blue-100 dark:from-slate-950 dark:via-blue-950/20 dark:to-slate-900",
       border: "border-blue-200/80 dark:border-blue-500/40",
       iconColor: "text-blue-600 dark:text-blue-200",
@@ -299,9 +323,9 @@ export default function Grievances() {
       Icon: Sparkles,
     },
     {
-      label: "In Progress",
+      label: t("dashboard.grievances.summary_in_progress"),
       value: inProgressCount,
-      subtext: "Being worked on",
+      subtext: t("dashboard.grievances.summary_in_progress_subtext"),
       gradient: "bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:from-slate-950 dark:via-amber-950/20 dark:to-slate-900",
       border: "border-amber-200/80 dark:border-amber-500/40",
       iconColor: "text-amber-600 dark:text-amber-200",
@@ -309,9 +333,9 @@ export default function Grievances() {
       Icon: Clock,
     },
     {
-      label: "Resolved",
+      label: t("dashboard.grievances.summary_resolved"),
       value: resolvedCount,
-      subtext: "Successfully closed",
+      subtext: t("dashboard.grievances.summary_resolved_subtext"),
       gradient: "bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-900",
       border: "border-emerald-200/80 dark:border-emerald-500/40",
       iconColor: "text-emerald-600 dark:text-emerald-200",
@@ -327,9 +351,9 @@ export default function Grievances() {
         <div className={heroPanelClass}>
           <div>
             <h2 className="text-3xl font-bold bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
-              Grievance Management
+              {t("dashboard.grievances.title")}
             </h2>
-            <p className="text-muted-foreground">Track and resolve complaints</p>
+            <p className="text-muted-foreground">{t("dashboard.grievances.subtitle")}</p>
           </div>
           <Button
             variant="outline"
@@ -337,7 +361,7 @@ export default function Grievances() {
             disabled={loading}
             className="border-sky-200 text-sky-600 hover:bg-sky-50 dark:border-slate-700 dark:text-slate-100 dark:hover:bg-slate-900/70"
           >
-            Refresh Data
+            {t("dashboard.grievances.refresh")}
           </Button>
         </div>
 
@@ -380,7 +404,7 @@ export default function Grievances() {
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
-              placeholder="Search grievances..."
+              placeholder={t("dashboard.grievances.search_placeholder")}
               className={cn(
                 "pl-10",
                 isDarkMode ? "bg-slate-900/60 border-slate-800" : "bg-white/90"
@@ -395,7 +419,7 @@ export default function Grievances() {
             disabled={loading}
             className="w-full lg:w-auto bg-gradient-to-r from-sky-400 to-indigo-500 text-white hover:from-sky-500 hover:to-indigo-600"
           >
-            Reload
+            {t("dashboard.grievances.reload")}
           </Button>
         </Card>
 
@@ -415,7 +439,7 @@ export default function Grievances() {
                 value={tab}
                 className="text-sm font-semibold rounded-lg data-[state=active]:bg-white data-[state=active]:text-slate-900 dark:data-[state=active]:bg-slate-950/70 dark:data-[state=active]:text-slate-100 transition"
               >
-                {cap(tab)}
+                {tabLabels[tab] ?? cap(tab)}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -427,7 +451,7 @@ export default function Grievances() {
                 {tabItems.length === 0 ? (
                   <Card className={cn(surfaceCardClass, "border-dashed text-center text-sm text-muted-foreground")}>
                     <CardContent className="py-6">
-                      No grievances found for this filter.
+                      {t("dashboard.grievances.empty")}
                     </CardContent>
                   </Card>
                 ) : (
@@ -446,19 +470,19 @@ export default function Grievances() {
                         >
                           <div className={cn("pointer-events-none absolute inset-x-6 top-2 h-1 rounded-full opacity-60", statusStyles.glow)} />
                           <div className="relative grid gap-4 text-sm md:grid-cols-5">
-                            <InfoField label="ID" value={g.unique_id} />
+                            <InfoField label={t("dashboard.grievances.fields.id")} value={g.unique_id} />
                             <InfoField
-                              label="Category"
+                              label={t("dashboard.grievances.fields.category")}
                               value={`${cap(g.main_category)} / ${cap(g.sub_category)}`}
                             />
 
-                            <InfoField label="Zone" value={cap(g.zone_name)} />
-                            <InfoField label="Ward" value={cap(g.ward_name)} />
+                            <InfoField label={t("dashboard.grievances.fields.zone")} value={cap(g.zone_name)} />
+                            <InfoField label={t("dashboard.grievances.fields.ward")} value={cap(g.ward_name)} />
 
                             <div>
-                              <p className="text-xs text-muted-foreground">Status</p>
+                              <p className="text-xs text-muted-foreground">{t("dashboard.grievances.fields.status")}</p>
                               <Badge className={cn("mt-1", statusStyles.badge)}>
-                                {g.status ?? "Unknown"}
+                                {formatStatusLabel(g.status)}
                               </Badge>
                             </div>
                           </div>
@@ -472,7 +496,7 @@ export default function Grievances() {
                             variant="outline"
                             className="mt-4"
                           >
-                            View Details
+                            {t("dashboard.grievances.view_details")}
                           </Button>
                         </Card>
                       );
@@ -493,48 +517,48 @@ export default function Grievances() {
           <div className="overflow-y-auto h-full p-8">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold">
-                Complaint Details
+                {t("dashboard.grievances.dialog_title")}
               </DialogTitle>
-              <DialogDescription>Full complaint information</DialogDescription>
+              <DialogDescription>{t("dashboard.grievances.dialog_subtitle")}</DialogDescription>
             </DialogHeader>
 
             {selectedComplaint && (
               <div className="space-y-8 pt-4">
                 <div className="grid md:grid-cols-2 gap-8">
                   <div className="space-y-6">
-                    <InfoField label="Complaint No" value={selectedComplaint.unique_id} />
-                    <InfoField label="Zone" value={cap(selectedComplaint.zone_name)} />
-                    <InfoField label="Contact" value={selectedComplaint.contact_no} />
-                    <InfoField label="Closed At" value={formatDateTime(selectedComplaint.complaint_closed_at)} />
-                    <InfoField label="Address" value={selectedComplaint.address} />
+                    <InfoField label={t("dashboard.grievances.detail.complaint_no")} value={selectedComplaint.unique_id} />
+                    <InfoField label={t("dashboard.grievances.fields.zone")} value={cap(selectedComplaint.zone_name)} />
+                    <InfoField label={t("dashboard.grievances.detail.contact")} value={selectedComplaint.contact_no} />
+                    <InfoField label={t("dashboard.grievances.detail.closed_at")} value={formatDateTime(selectedComplaint.complaint_closed_at)} />
+                    <InfoField label={t("dashboard.grievances.detail.address")} value={selectedComplaint.address} />
                   </div>
 
                   <div className="space-y-6">
-                    <InfoField label="Category" value={cap(selectedComplaint.category)} />
-                    <InfoField label="Ward" value={cap(selectedComplaint.ward_name)} />
-                    <InfoField label="Created" value={formatDateTime(selectedComplaint.created)} />
+                    <InfoField label={t("dashboard.grievances.fields.category")} value={cap(selectedComplaint.category)} />
+                    <InfoField label={t("dashboard.grievances.fields.ward")} value={cap(selectedComplaint.ward_name)} />
+                    <InfoField label={t("dashboard.grievances.detail.created")} value={formatDateTime(selectedComplaint.created)} />
 
                     <div>
-                      <p className="text-xs text-muted-foreground">Status</p>
+                      <p className="text-xs text-muted-foreground">{t("dashboard.grievances.fields.status")}</p>
                       <Badge className={cn("px-3 py-1", getStatusStyles(selectedComplaint.status).badge)}>
-                        {selectedComplaint.status ?? "Unknown"}
+                        {formatStatusLabel(selectedComplaint.status)}
                       </Badge>
                     </div>
 
-                    <InfoField label="Complaint Details" value={selectedComplaint.details} />
+                    <InfoField label={t("dashboard.grievances.detail.details")} value={selectedComplaint.details} />
                   </div>
                 </div>
 
                 <hr />
 
                 <div className="grid md:grid-cols-2 gap-8">
-                  <AttachmentPreview label="Uploaded File" fileUrl={selectedComplaint.image_url} />
-                  <AttachmentPreview label="Close File" fileUrl={selectedComplaint.close_image_url} />
+                  <AttachmentPreview label={t("dashboard.grievances.detail.uploaded_file")} fileUrl={selectedComplaint.image_url} />
+                  <AttachmentPreview label={t("dashboard.grievances.detail.close_file")} fileUrl={selectedComplaint.close_image_url} />
                 </div>
 
                 <hr />
 
-                <InfoField label="Remarks" value={selectedComplaint.action_remarks || "-"} />
+                <InfoField label={t("dashboard.grievances.detail.remarks")} value={selectedComplaint.action_remarks || "-"} />
               </div>
             )}
           </div>

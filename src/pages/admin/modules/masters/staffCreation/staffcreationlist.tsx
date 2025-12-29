@@ -10,6 +10,7 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 import QRCode from "react-qr-code";
+import { useTranslation } from "react-i18next";
 
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { getEncryptedRoute } from "@/utils/routeCache";
@@ -36,6 +37,7 @@ const cap = (val?: string | number | null) => {
 };
 
 export default function StaffCreationList() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [staffs, setStaffs] = useState<Staff[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +79,7 @@ export default function StaffCreationList() {
       setStaffs(data);
       console.log("Fetched staffs:", data);
     } catch (err) {
-      Swal.fire("Error", "Unable to load staff list", "error");
+      Swal.fire(t("common.error"), t("common.load_failed"), "error");
     } finally {
       setLoading(false);
     }
@@ -105,8 +107,8 @@ export default function StaffCreationList() {
 
   const handleDelete = async (id: number) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This staff record will be deleted permanently.",
+      title: t("common.confirm_title"),
+      text: t("admin.staff_creation.delete_confirm"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -116,10 +118,10 @@ export default function StaffCreationList() {
 
     try {
       await staffCreationApi.remove(id);
-      Swal.fire("Deleted!", "Record removed successfully", "success");
+      Swal.fire(t("common.deleted_success"), t("common.record_removed"), "success");
       fetchStaffs(filterParams);
     } catch (err) {
-      Swal.fire("Error", "Failed to delete staff record", "error");
+      Swal.fire(t("common.error"), t("admin.staff_creation.delete_failed"), "error");
     }
   };
 
@@ -138,7 +140,7 @@ export default function StaffCreationList() {
 
         fetchStaffs(filterParams);
       } catch (err) {
-        Swal.fire("Error", "Failed to update status", "error");
+        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
       }
     };
 
@@ -155,13 +157,13 @@ export default function StaffCreationList() {
     name: row.employee_name,
     designation: row.designation || "-",
     site: row.site_name || "-",
-    status: row.active_status ? "Active" : "Inactive",
+    status: row.active_status ? t("common.active") : t("common.inactive"),
     contact: row.contact_mobile || "-",
   });
 
   const openQrPopup = (data: any) => {
     Swal.fire({
-      title: "Staff QR",
+      title: t("admin.staff_creation.qr_title"),
       html: `<div id="staff-qr-holder" class="flex justify-center"></div>`,
       width: 350,
       didOpen: () => {
@@ -180,7 +182,7 @@ export default function StaffCreationList() {
       <button
         className="p-1 border rounded hover:bg-gray-50 flex justify-center"
         onClick={() => openQrPopup(payload)}
-        title="Show QR"
+        title={t("admin.staff_creation.qr_show")}
       >
         <QRCode value={JSON.stringify(payload)} size={48} />
       </button>
@@ -190,7 +192,7 @@ export default function StaffCreationList() {
   const actionTemplate = (row: Staff) => (
     <div className="flex gap-3 justify-center">
       <button
-        title="Edit"
+        title={t("common.edit")}
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
       >
@@ -215,16 +217,16 @@ export default function StaffCreationList() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-gray-800">
-            Master / Staff & Employee Creation List
+            {t("admin.staff_creation.title")}
           </h1>
           <p className="text-sm text-gray-500">
-            Track staff records, export QR codes, and keep workforce updated.
+            {t("admin.staff_creation.subtitle")}
           </p>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button
-            label="+ Create"
+            label={t("admin.staff_creation.create")}
             icon="pi pi-plus"
             className="p-button-success p-button-sm"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -235,52 +237,58 @@ export default function StaffCreationList() {
       {/* Filters Row */}
       <div className="grid gap-3 md:grid-cols-5">
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold">Salary Type</span>
+          <span className="text-xs font-semibold">
+            {t("admin.staff_creation.salary_type")}
+          </span>
           <select
             name="salary_type"
             value={filterParams.salary_type}
             onChange={handleFilterChange}
             className="h-10 rounded-lg border px-3 text-sm"
           >
-            <option value="">All</option>
-            <option value="Monthly">Monthly</option>
-            <option value="Daily">Daily</option>
-            <option value="Contract">Contract</option>
+            <option value="">{t("common.all")}</option>
+            <option value="Monthly">{t("admin.staff_creation.salary_monthly")}</option>
+            <option value="Daily">{t("admin.staff_creation.salary_daily")}</option>
+            <option value="Contract">{t("admin.staff_creation.salary_contract")}</option>
           </select>
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold">Active Status</span>
+          <span className="text-xs font-semibold">{t("common.status")}</span>
           <select
             name="active_status"
             value={filterParams.active_status}
             onChange={handleFilterChange}
             className="h-10 rounded-lg border px-3 text-sm"
           >
-            <option value="">All</option>
-            <option value="1">Active</option>
-            <option value="0">Inactive</option>
+            <option value="">{t("common.all")}</option>
+            <option value="1">{t("common.active")}</option>
+            <option value="0">{t("common.inactive")}</option>
           </select>
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold">Site Name</span>
+          <span className="text-xs font-semibold">
+            {t("admin.staff_creation.site_name")}
+          </span>
           <input
             name="site_name"
             value={filterParams.site_name}
             onChange={handleFilterChange}
-            placeholder="Search site"
+            placeholder={t("admin.staff_creation.site_placeholder")}
             className="h-10 rounded-lg border px-3 text-sm"
           />
         </div>
 
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-semibold">Employee Name</span>
+          <span className="text-xs font-semibold">
+            {t("admin.staff_creation.employee_name")}
+          </span>
           <input
             name="employee_name"
             value={filterParams.employee_name}
             onChange={handleFilterChange}
-            placeholder="Search employee"
+            placeholder={t("admin.staff_creation.employee_placeholder")}
             className="h-10 rounded-lg border px-3 text-sm"
           />
         </div>
@@ -290,7 +298,7 @@ export default function StaffCreationList() {
             onClick={applyFilter}
             className="rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white"
           >
-            Go
+            {t("common.go")}
           </button>
         </div>
       </div>
@@ -302,7 +310,7 @@ export default function StaffCreationList() {
           <InputText
             value={globalFilterValue}
             onChange={onGlobalFilterChange}
-            placeholder="Search staff…"
+            placeholder={t("admin.staff_creation.search_placeholder")}
             className="border-none text-sm"
           />
         </div>
@@ -322,40 +330,42 @@ export default function StaffCreationList() {
             filters={datatableFilters}
             globalFilterFields={globalFilterFields}
             header={header}
-            emptyMessage="No staff found."
+            emptyMessage={t("common.no_items_found", {
+              item: t("admin.staff_creation.staff_label"),
+            })}
             stripedRows
             showGridlines
             className="p-datatable-sm"
           >
-            <Column header="S.No" body={indexTemplate} style={{ width: 70 }} />
-            <Column field="unique_id" header="Zigma ID" sortable
+            <Column header={t("common.s_no")} body={indexTemplate} style={{ width: 70 }} />
+            <Column field="unique_id" header={t("admin.staff_creation.zigma_id")} sortable
               body={(row: Staff) => cap(row.unique_id)}
             
             />
             <Column
               field="employee_name"
-              header="Employee Name"
+              header={t("admin.staff_creation.employee_name")}
               sortable
               body={(row: Staff) => cap(row.employee_name)}
             />
-            <Column field="designation" header="Designation" sortable />
-            <Column field="doj" header="DOJ" sortable />
-            <Column field="site_name" header="Site Name" sortable />
+            <Column field="designation" header={t("admin.staff_creation.designation")} sortable />
+            <Column field="doj" header={t("admin.staff_creation.doj")} sortable />
+            <Column field="site_name" header={t("admin.staff_creation.site_name")} sortable />
             <Column
-              header="Contact"
+              header={t("admin.staff_creation.contact")}
               body={(row: Staff) => row.contact_mobile || "-"}
             />
 
             {/* 🔥 Toggle with FormData */}
             <Column
-              header="Status"
+              header={t("common.status")}
               body={statusTemplate}
               style={{ width: 120 }}
             />
 
-            <Column header="QR" body={qrTemplate} style={{ width: 120 }} />
+            <Column header={t("admin.staff_creation.qr_label")} body={qrTemplate} style={{ width: 120 }} />
 
-            <Column header="Action" body={actionTemplate} style={{ width: 140 }} />
+            <Column header={t("common.actions")} body={actionTemplate} style={{ width: 140 }} />
           </DataTable>
     
       </div>

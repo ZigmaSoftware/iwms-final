@@ -13,6 +13,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 
 type SensorModalProps = {
   open: boolean;
@@ -35,6 +36,8 @@ export function SensorModal({
   setFilters,
   onApply,
 }: SensorModalProps) {
+  const { t } = useTranslation();
+
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-xl">
@@ -44,7 +47,7 @@ export function SensorModal({
 
         <div className="grid grid-cols-2 gap-4 mt-4">
           <div>
-            <p className="text-sm font-semibold mb-1">Zone</p>
+            <p className="text-sm font-semibold mb-1">{t("common.zone")}</p>
             <Select
               value={filters.zone}
               onValueChange={(v) => setFilters({ ...filters, zone: v })}
@@ -59,7 +62,7 @@ export function SensorModal({
           </div>
 
           <div>
-            <p className="text-sm font-semibold mb-1">Ward</p>
+            <p className="text-sm font-semibold mb-1">{t("common.ward")}</p>
             <Select
               value={filters.ward}
               onValueChange={(v) => setFilters({ ...filters, ward: v })}
@@ -75,7 +78,7 @@ export function SensorModal({
         </div>
 
         <div className="flex justify-end mt-5">
-          <Button onClick={onApply}>Apply</Button>
+          <Button onClick={onApply}>{t("common.apply")}</Button>
         </div>
       </DialogContent>
     </Dialog>

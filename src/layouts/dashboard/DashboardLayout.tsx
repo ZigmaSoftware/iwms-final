@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { LogOut, Moon, Sun } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 
 import { HorizontalNav } from "@/layouts/dashboard/components/HorizontalNav";
 import { Button } from "@/components/ui/button";
 import { PageLoader } from "@/components/ui/PageLoader";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useUser } from "@/contexts/UserContext";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +25,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { toast } = useToast();
+  const { t } = useTranslation();
   const { theme, toggleTheme } = useTheme();
   const { setUser } = useUser();
   const [isNavigating, setIsNavigating] = useState(false);
@@ -52,8 +55,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       navigate("/auth", { replace: true });
     } catch (error) {
       toast({
-        title: "Logout Failed",
-        description: "Unable to clear session data.",
+        title: t("common.logout_failed_title"),
+        description: t("common.logout_failed_desc"),
         variant: "destructive",
       });
     }
@@ -103,9 +106,11 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                 onClick={handleSwitchToAdmin}
                 className="rainbow-border"
               >
-                Admin View
+                {t("common.admin_view")}
               </Button>
             )}
+
+            <LanguageSwitcher variant="select" className="w-[140px]" />
 
             {/* THEME TOGGLE */}
             <button
@@ -152,7 +157,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* MAIN CONTENT */}
       <main className="flex-1  p-2 md:p-4 lg:p-6">
         {isNavigating ? (
-          <PageLoader fullHeight message="Loading dashboard..." />
+          <PageLoader fullHeight message={t("common.loading_dashboard")} />
         ) : (
           children
         )}

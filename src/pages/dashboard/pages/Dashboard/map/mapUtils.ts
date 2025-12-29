@@ -2,7 +2,7 @@ import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-export type MapTabKey = "all" | "bins" | "households";
+export type MapTabKey = "vehicle" | "bins" | "households";
 
 export type BinPriority = "high" | "medium" | "low";
 
@@ -26,10 +26,22 @@ export type HouseholdPoint = {
   ward: string;
 };
 
-export const MAP_TABS: { key: MapTabKey; label: string; summary: string }[] = [
-  { key: "all", label: "All", summary: "Fleet, routes, and live coverage." },
-  { key: "bins", label: "Bins", summary: "Smart bin fill levels and priority hotspots." },
-  { key: "households", label: "Households", summary: "Door-to-door collection status by ward." },
+export const MAP_TABS: { key: MapTabKey; labelKey: string; summaryKey: string }[] = [
+  {
+    key: "vehicle",
+    labelKey: "dashboard.home.map_tabs.vehicle",
+    summaryKey: "dashboard.home.map_summaries.vehicle",
+  },
+  {
+    key: "bins",
+    labelKey: "dashboard.home.map_tabs.bins",
+    summaryKey: "dashboard.home.map_summaries.bins",
+  },
+  {
+    key: "households",
+    labelKey: "dashboard.home.map_tabs.households",
+    summaryKey: "dashboard.home.map_summaries.households",
+  },
 ];
 
 export const BIN_POINTS: BinPoint[] = [
@@ -56,18 +68,21 @@ export const HOUSEHOLD_POINTS: HouseholdPoint[] = [
   { id: "HH-415", name: "House 415", lat: 11.0018, lng: 76.9715, status: "not_collected", ward: "Ward 31" },
 ];
 
-export const BIN_PRIORITY_META: Record<BinPriority, { label: string; color: string; bg: string }> = {
-  high: { label: "High", color: "#b91c1c", bg: "rgba(239,68,68,0.15)" },
-  medium: { label: "Medium", color: "#b45309", bg: "rgba(245,158,11,0.15)" },
-  low: { label: "Low", color: "#15803d", bg: "rgba(34,197,94,0.15)" },
+export const BIN_PRIORITY_META: Record<
+  BinPriority,
+  { labelKey: string; color: string; bg: string }
+> = {
+  high: { labelKey: "common.priority_high", color: "#b91c1c", bg: "rgba(239,68,68,0.15)" },
+  medium: { labelKey: "common.priority_medium", color: "#b45309", bg: "rgba(245,158,11,0.15)" },
+  low: { labelKey: "common.priority_low", color: "#15803d", bg: "rgba(34,197,94,0.15)" },
 };
 
 export const HOUSEHOLD_STATUS_META: Record<
   HouseholdStatus,
-  { label: string; color: string; bg: string }
+  { labelKey: string; color: string; bg: string }
 > = {
-  collected: { label: "Collected", color: "#15803d", bg: "rgba(34,197,94,0.18)" },
-  not_collected: { label: "Not Collected", color: "#b91c1c", bg: "rgba(239,68,68,0.2)" },
+  collected: { labelKey: "common.collected", color: "#15803d", bg: "rgba(34,197,94,0.18)" },
+  not_collected: { labelKey: "common.not_collected", color: "#b91c1c", bg: "rgba(239,68,68,0.2)" },
 };
 
 export const DEFAULT_CENTER: LatLngTuple = [11.0168, 76.9572];
@@ -78,24 +93,28 @@ export const getBinPriority = (fill: number): BinPriority => {
   return "low";
 };
 
-export const createBinIcon = (priority: BinPriority) => {
+export const createBinIcon = (priority: BinPriority, isFocused = false) => {
   const meta = BIN_PRIORITY_META[priority];
+  const size = isFocused ? 40 : 34;
+  const shadow = isFocused
+    ? "0 0 0 4px rgba(255,255,255,0.9), 0 8px 18px rgba(0,0,0,.3)"
+    : "0 6px 14px rgba(0,0,0,.25)";
   return L.divIcon({
     className: "",
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
-    popupAnchor: [0, -18],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
     html: `
       <div
         style="
-          width:34px;
-          height:34px;
+          width:${size}px;
+          height:${size}px;
           border-radius:50%;
           background:${meta.color};
           display:flex;
           align-items:center;
           justify-content:center;
-          box-shadow:0 6px 14px rgba(0,0,0,.25);
+          box-shadow:${shadow};
           border:2px solid #fff;
         "
       >
@@ -120,24 +139,28 @@ export const createBinIcon = (priority: BinPriority) => {
   });
 };
 
-export const createHouseIcon = (status: HouseholdStatus) => {
+export const createHouseIcon = (status: HouseholdStatus, isFocused = false) => {
   const meta = HOUSEHOLD_STATUS_META[status];
+  const size = isFocused ? 38 : 32;
+  const shadow = isFocused
+    ? "0 0 0 4px rgba(255,255,255,0.9), 0 8px 16px rgba(0,0,0,.3)"
+    : "0 6px 12px rgba(0,0,0,.22)";
   return L.divIcon({
     className: "",
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-    popupAnchor: [0, -16],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
     html: `
       <div
         style="
-          width:32px;
-          height:32px;
+          width:${size}px;
+          height:${size}px;
           border-radius:10px;
           background:${meta.color};
           display:flex;
           align-items:center;
           justify-content:center;
-          box-shadow:0 6px 12px rgba(0,0,0,.22);
+          box-shadow:${shadow};
           border:2px solid #fff;
         "
       >

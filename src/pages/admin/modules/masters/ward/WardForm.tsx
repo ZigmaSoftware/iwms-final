@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 
 import { encryptSegment } from "@/utils/routeCrypto";
+import { useTranslation } from "react-i18next";
 
 import { continentApi, countryApi, stateApi, districtApi, cityApi, zoneApi, wardApi } from "@/helpers/admin";
 
@@ -87,12 +88,6 @@ const normalizeNullable = (v: any): string | null => {
   return String(v);
 };
 
-const extractErr = (e: any): string => {
-  if (e?.response?.data) return String(e.response.data);
-  if (e?.message) return e.message;
-  return "Unexpected error";
-};
-
 /* ------------------------------
   ROUTES
 ------------------------------ */
@@ -104,6 +99,7 @@ const ENC_LIST_PATH = `/${encMasters}/${encWards}`;
       COMPONENT
 ========================================================== */
 export default function WardForm() {
+  const { t } = useTranslation();
   /* FORM FIELDS */
   const [wardName, setWardName] = useState("");
   const [continentId, setContinentId] = useState("");
@@ -146,6 +142,12 @@ export default function WardForm() {
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
 
+  const extractErr = (e: any): string => {
+    if (e?.response?.data) return String(e.response.data);
+    if (e?.message) return e.message;
+    return t("common.unexpected_error");
+  };
+
   /* ==========================================================
       LOAD MASTER DATA
   ========================================================== */
@@ -162,7 +164,7 @@ export default function WardForm() {
             }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   useEffect(() => {
@@ -178,7 +180,7 @@ export default function WardForm() {
           }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   useEffect(() => {
@@ -194,7 +196,7 @@ export default function WardForm() {
           }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   useEffect(() => {
@@ -210,7 +212,7 @@ export default function WardForm() {
           }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   useEffect(() => {
@@ -226,7 +228,7 @@ export default function WardForm() {
           }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   useEffect(() => {
@@ -242,7 +244,7 @@ export default function WardForm() {
           }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   /* ==========================================================
@@ -365,7 +367,7 @@ export default function WardForm() {
         cty && setPendingCity(cty);
         zne && setPendingZone(zne);
       })
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, [id, isEdit]);
 
   /* ==========================================================
@@ -444,7 +446,7 @@ export default function WardForm() {
     e.preventDefault();
 
     if (!continentId || !countryId || !stateId || !wardName.trim()) {
-      Swal.fire("Missing Fields", "All mandatory fields must be filled.", "warning");
+      Swal.fire(t("common.warning"), t("common.all_fields_required"), "warning");
       return;
     }
 
@@ -465,15 +467,15 @@ export default function WardForm() {
 
       if (isEdit && id) {
         await wardApi.update(id, payload);
-        Swal.fire("Success", "Updated successfully!", "success");
+        Swal.fire(t("common.success"), t("common.updated_success"), "success");
       } else {
         await wardApi.create(payload);
-        Swal.fire("Success", "Added successfully!", "success");
+        Swal.fire(t("common.success"), t("common.added_success"), "success");
       }
 
       navigate(ENC_LIST_PATH);
     } catch (err) {
-      Swal.fire("Save failed", extractErr(err), "error");
+      Swal.fire(t("common.save_failed"), extractErr(err), "error");
     } finally {
       setLoading(false);
     }
@@ -483,12 +485,18 @@ export default function WardForm() {
         JSX
   ========================================================== */
   return (
-    <ComponentCard title={isEdit ? "Edit Ward" : "Add Ward"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.ward") })
+          : t("common.add_item", { item: t("admin.nav.ward") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Continent */}
           <div>
-            <Label>Continent *</Label>
+            <Label>{t("admin.nav.continent")} *</Label>
             <Select
               value={continentId}
               onValueChange={(val) => {
@@ -507,7 +515,11 @@ export default function WardForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Continent" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.continent"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {continents.map((c) => (
@@ -521,7 +533,7 @@ export default function WardForm() {
 
           {/* Country */}
           <div>
-            <Label>Country *</Label>
+            <Label>{t("admin.nav.country")} *</Label>
             <Select
               value={countryId}
               onValueChange={(val) => {
@@ -538,7 +550,11 @@ export default function WardForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Country" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.country"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredCountries.map((opt) => (
@@ -552,7 +568,7 @@ export default function WardForm() {
 
           {/* State */}
           <div>
-            <Label>State *</Label>
+            <Label>{t("admin.nav.state")} *</Label>
             <Select
               value={stateId}
               onValueChange={(val) => {
@@ -567,7 +583,11 @@ export default function WardForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select State" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.state"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredStates.map((opt) => (
@@ -581,7 +601,7 @@ export default function WardForm() {
 
           {/* District */}
           <div>
-            <Label>District</Label>
+            <Label>{t("admin.nav.district")}</Label>
             <Select
               value={districtId}
               onValueChange={(val) => {
@@ -594,7 +614,11 @@ export default function WardForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select District" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.district"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredDistricts.map((opt) => (
@@ -608,7 +632,7 @@ export default function WardForm() {
 
           {/* City */}
           <div>
-            <Label>City</Label>
+            <Label>{t("admin.nav.city")}</Label>
             <Select
               value={cityId}
               onValueChange={(val) => {
@@ -618,7 +642,11 @@ export default function WardForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select City" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.city"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredCities.map((opt) => (
@@ -632,13 +660,17 @@ export default function WardForm() {
 
           {/* Zone */}
           <div>
-            <Label>Zone</Label>
+            <Label>{t("admin.nav.zone")}</Label>
             <Select
               value={zoneId}
               onValueChange={(val) => setZoneId(val)}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Zone" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.zone"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredZones.map((opt) => (
@@ -652,39 +684,43 @@ export default function WardForm() {
 
           {/* Ward Name */}
           <div>
-            <Label>Ward Name *</Label>
+            <Label>
+              {t("common.item_name", { item: t("admin.nav.ward") })} *
+            </Label>
             <Input
               value={wardName}
               onChange={(e) => setWardName(e.target.value)}
-              placeholder="Enter ward name"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.ward"),
+              })}
               required
             />
           </div>
 
           {/* Active Status */}
           <div>
-            <Label>Active Status *</Label>
+            <Label>{t("common.status")} *</Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(v) => setIsActive(v === "true")}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Description */}
           <div className="md:col-span-2">
-            <Label>Description</Label>
+            <Label>{t("common.description")}</Label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Optional description"
+              placeholder={t("common.description_optional")}
               className="w-full border rounded-md p-2 focus:ring focus:ring-green-200 outline-none"
               rows={3}
             />
@@ -696,11 +732,11 @@ export default function WardForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-                ? "Update"
-                : "Save"}
+                ? t("common.update")
+                : t("common.save")}
           </Button>
 
           <Button
@@ -708,7 +744,7 @@ export default function WardForm() {
             variant="destructive"
             onClick={() => navigate(ENC_LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

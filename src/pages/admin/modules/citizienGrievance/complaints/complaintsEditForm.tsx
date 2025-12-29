@@ -13,11 +13,13 @@ import {
   wardApi,
   complaintApi,
 } from "@/helpers/admin";
+import { useTranslation } from "react-i18next";
 
 const FILE_ICON =
   "https://cdn-icons-png.flaticon.com/512/337/337946.png";
 
 export default function ComplaintEditForm() {
+  const { t } = useTranslation();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -102,7 +104,11 @@ export default function ComplaintEditForm() {
       await complaintApi.update(id || "", fd, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      Swal.fire("Updated", "Complaint updated", "success");
+      Swal.fire(
+        t("admin.citizen_grievance.complaints_edit.updated_title"),
+        t("admin.citizen_grievance.complaints_edit.updated_message"),
+        "success"
+      );
       navigate(ENC_LIST_PATH);
     } catch (error: any) {
       console.error("Complaint update failed:", error);
@@ -111,32 +117,38 @@ export default function ComplaintEditForm() {
         typeof error.response.data === "object" &&
         !Array.isArray(error.response.data)
           ? JSON.stringify(error.response.data)
-          : "Failed to update complaint";
-      Swal.fire("Error", message, "error");
+          : t("admin.citizen_grievance.complaints_edit.update_failed");
+      Swal.fire(t("common.error"), message, "error");
     }
   };
 
   // if (!data) return <div>Loading…</div>;
 
   return (
-    <ComponentCard title="Update Complaint">
+    <ComponentCard title={t("admin.citizen_grievance.complaints_edit.title")}>
       <form onSubmit={save}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           <div>
-            <Label>Status</Label>
+            <Label>{t("common.status")}</Label>
             <Select
               value={status}
               onChange={(v) => setStatus(v)}
               options={[
-                { value: "PROGRESSING", label: "Progressing" },
-                { value: "CLOSED", label: "Closed" },
+                {
+                  value: "PROGRESSING",
+                  label: t("admin.citizen_grievance.complaints_edit.status_progressing"),
+                },
+                {
+                  value: "CLOSED",
+                  label: t("admin.citizen_grievance.complaints_edit.status_closed"),
+                },
               ]}
             />
           </div>
 
           <div>
-            <Label>Action Remarks</Label>
+            <Label>{t("admin.citizen_grievance.complaints_edit.action_remarks")}</Label>
             <Input
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
@@ -144,7 +156,7 @@ export default function ComplaintEditForm() {
           </div>
 
           <div className="md:col-span-2">
-            <Label>Close Image / Document</Label>
+            <Label>{t("admin.citizen_grievance.complaints_edit.close_file")}</Label>
 
             <input
               type="file"
@@ -185,7 +197,7 @@ export default function ComplaintEditForm() {
                     className="w-10 h-10 opacity-60"
                   />
                   <p className="text-gray-500 text-sm mt-1 text-center">
-                    Drag & drop or click to upload
+                    {t("admin.citizen_grievance.complaints_edit.upload_hint")}
                   </p>
                 </>
               )}
@@ -212,7 +224,9 @@ export default function ComplaintEditForm() {
                   }}
                   className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
                 >
-                  Preview ({previewName || "File"})
+                  {t("admin.citizen_grievance.complaints_edit.preview", {
+                    name: previewName || t("admin.citizen_grievance.complaints_edit.file"),
+                  })}
                 </button>
 
                 {/* Remove */}
@@ -221,7 +235,7 @@ export default function ComplaintEditForm() {
                   onClick={clearFile}
                   className="bg-red-500 text-white px-3 py-1 rounded text-sm"
                 >
-                  Remove
+                  {t("common.remove")}
                 </button>
 
               </div>
@@ -231,7 +245,7 @@ export default function ComplaintEditForm() {
 
         <div className="flex justify-end gap-3 mt-6">
           <button className="bg-green-custom text-white px-4 py-2 rounded">
-            Update
+            {t("common.update")}
           </button>
 
           <button
@@ -239,7 +253,7 @@ export default function ComplaintEditForm() {
             onClick={() => navigate(ENC_LIST_PATH)}
             className="bg-red-400 text-white px-4 py-2 rounded"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -55,6 +56,7 @@ const extractErrorMessage = (error: unknown) => {
 };
 
 export default function CityList() {
+  const { t } = useTranslation();
   const [cities, setCities] = useState<CityRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -80,7 +82,7 @@ export default function CityList() {
     } catch (error) {
       Swal.fire({
         icon: "error",
-        title: "Unable to load cities",
+        title: t("common.error"),
         text: extractErrorMessage(error),
       });
     } finally {
@@ -94,12 +96,12 @@ export default function CityList() {
 
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This city will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: t("common.confirm_delete_button"),
     });
 
     if (!confirm.isConfirmed) return;
@@ -108,7 +110,7 @@ export default function CityList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -132,7 +134,9 @@ export default function CityList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Cities..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.nav.city"),
+          })}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -181,12 +185,16 @@ export default function CityList() {
    
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Cities</h1>
-            <p className="text-gray-500 text-sm">Manage city records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              {t("admin.nav.city")}
+            </h1>
+            <p className="text-gray-500 text-sm">
+              {t("common.manage_item_records", { item: t("admin.nav.city") })}
+            </p>
           </div>
 
           <Button
-            label="Add City"
+            label={t("common.add_item", { item: t("admin.nav.city") })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -204,7 +212,9 @@ export default function CityList() {
           header={renderHeader()}
           stripedRows
           showGridlines
-          emptyMessage="No cities found."
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.nav.city"),
+          })}
           globalFilterFields={[
             "name",
             "country_name",
@@ -213,33 +223,33 @@ export default function CityList() {
           ]}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "80px" }} />
           <Column
             field="country_name"
-            header="Country"
+            header={t("admin.nav.country")}
             body={(r) => cap(r.country_name)}
             sortable
           />
           <Column
             field="state_name"
-            header="State"
+            header={t("admin.nav.state")}
             body={(r) => cap(r.state_name)}
             sortable
           />
           <Column
             field="district_name"
-            header="District"
+            header={t("admin.nav.district")}
             body={(r) => cap(r.district_name)}
             sortable
           />
           <Column
             field="name"
-            header="City"
+            header={t("admin.nav.city")}
             body={(r) => cap(r.name)}
             sortable
           />
-          <Column header="Status" body={statusTemplate} />
-          <Column header="Actions" body={actionTemplate} />
+          <Column header={t("common.status")} body={statusTemplate} />
+          <Column header={t("common.actions")} body={actionTemplate} />
         </DataTable>
 
     </div>

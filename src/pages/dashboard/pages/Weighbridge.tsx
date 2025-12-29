@@ -26,6 +26,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 /* =========================================================
    API CONFIG (UNCHANGED)
@@ -84,6 +85,7 @@ const statusStyles = {
    COMPONENT
 ========================================================= */
 export default function Weighbridge() {
+  const { t } = useTranslation();
   const formatDate = (date: Date) => date.toISOString().split("T")[0];
   const today = formatDate(new Date());
   const fallbackAppliedRef = useRef(false);
@@ -160,6 +162,14 @@ export default function Weighbridge() {
 
   const totalPages = Math.ceil(filtered.length / rowsPerPage) || 1;
   const pageData = filtered.slice((page - 1) * rowsPerPage, page * rowsPerPage);
+  const tonsLabel = t("common.tons");
+  const statusLabels: Record<WeighbridgeRow["status"], string> = {
+    normal: t("dashboard.weighbridge.status.normal"),
+    warning: t("dashboard.weighbridge.status.warning"),
+    critical: t("dashboard.weighbridge.status.critical"),
+  };
+  const formatStatusLabel = (status: WeighbridgeRow["status"]) =>
+    statusLabels[status] ?? status;
 
   /* ================= RENDER ================= */
   return (
@@ -169,10 +179,10 @@ export default function Weighbridge() {
       <div className="flex items-center justify-between p-6 rounded-2xl border bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-slate-900 dark:to-slate-900 dark:border-slate-800">
         <div>
           <h2 className="text-3xl font-bold text-blue-600 dark:text-blue-400">
-            Weighbridge Log
+            {t("dashboard.weighbridge.title")}
           </h2>
           <p className="text-muted-foreground">
-            Real-time weight tracking and discrepancy monitoring
+            {t("dashboard.weighbridge.subtitle")}
           </p>
         </div>
 
@@ -181,14 +191,14 @@ export default function Weighbridge() {
           className="gap-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white"
         >
           <RefreshCcw className="h-4 w-4" />
-          Refresh
+          {t("dashboard.weighbridge.refresh")}
         </Button>
       </div>
 
       {/* STATS — COLOR ADDED HERE ONLY */}
       <div className="grid md:grid-cols-4 gap-4">
         <Stat
-          title="Total Entries Today"
+          title={t("dashboard.weighbridge.stats.total_entries")}
           value={data.length}
           icon={Scale}
           active={activeStatus === "all"}
@@ -196,7 +206,7 @@ export default function Weighbridge() {
           gradient="from-white to-blue-100 dark:from-slate-900 dark:to-blue-950/40"
         />
         <Stat
-          title="Within Tolerance"
+          title={t("dashboard.weighbridge.stats.within_tolerance")}
           value={data.filter(d => d.status === "normal").length}
           icon={CheckCircle}
           active={activeStatus === "normal"}
@@ -204,7 +214,7 @@ export default function Weighbridge() {
           gradient="from-white to-emerald-100 dark:from-slate-900 dark:to-emerald-950/40"
         />
         <Stat
-          title="Minor Deviations"
+          title={t("dashboard.weighbridge.stats.minor_deviations")}
           value={data.filter(d => d.status === "warning").length}
           icon={Clock}
           active={activeStatus === "warning"}
@@ -212,7 +222,7 @@ export default function Weighbridge() {
           gradient="from-white to-amber-100 dark:from-slate-900 dark:to-amber-950/40"
         />
         <Stat
-          title="Critical Mismatch"
+          title={t("dashboard.weighbridge.stats.critical_mismatch")}
           value={data.filter(d => d.status === "critical").length}
           icon={AlertTriangle}
           active={activeStatus === "critical"}
@@ -225,9 +235,9 @@ export default function Weighbridge() {
       <Card className="rounded-2xl bg-white dark:bg-slate-900 dark:border-slate-800">
         <CardHeader className="flex flex-row justify-between items-start">
           <div>
-            <CardTitle>Weight Entries Log</CardTitle>
+            <CardTitle>{t("dashboard.weighbridge.table_title")}</CardTitle>
             <CardDescription>
-              Real-time weighbridge integration with automatic discrepancy detection
+              {t("dashboard.weighbridge.table_subtitle")}
             </CardDescription>
           </div>
 
@@ -239,7 +249,9 @@ export default function Weighbridge() {
               onChange={e => setFromDate(e.target.value)}
               className="h-9 rounded-md border bg-white dark:bg-slate-950 dark:border-slate-700 px-3 text-sm"
             />
-            <span className="text-sm font-medium dark:text-slate-300">to</span>
+            <span className="text-sm font-medium dark:text-slate-300">
+              {t("dashboard.weighbridge.to")}
+            </span>
             <input
               type="date"
               value={toDate}
@@ -253,14 +265,14 @@ export default function Weighbridge() {
           <Table>
             <TableHeader>
               <TableRow className="bg-slate-100 dark:bg-slate-800">
-                <TableHead>Time</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead>Zone</TableHead>
-                <TableHead>Expected</TableHead>
-                <TableHead>Actual</TableHead>
-                <TableHead>Difference</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Action</TableHead>
+                <TableHead>{t("dashboard.weighbridge.headers.time")}</TableHead>
+                <TableHead>{t("dashboard.weighbridge.headers.vehicle")}</TableHead>
+                <TableHead>{t("dashboard.weighbridge.headers.zone")}</TableHead>
+                <TableHead>{t("dashboard.weighbridge.headers.expected")}</TableHead>
+                <TableHead>{t("dashboard.weighbridge.headers.actual")}</TableHead>
+                <TableHead>{t("dashboard.weighbridge.headers.difference")}</TableHead>
+                <TableHead>{t("dashboard.weighbridge.headers.status")}</TableHead>
+                <TableHead className="text-right">{t("dashboard.weighbridge.headers.action")}</TableHead>
               </TableRow>
             </TableHeader>
 
@@ -272,19 +284,21 @@ export default function Weighbridge() {
                     <TableCell>{row.time}</TableCell>
                     <TableCell>{row.vehicle}</TableCell>
                     <TableCell>{row.zone}</TableCell>
-                    <TableCell>{row.expected} tons</TableCell>
+                    <TableCell>{row.expected} {tonsLabel}</TableCell>
                     <TableCell className="font-semibold">
-                      {row.actual} tons
+                      {row.actual} {tonsLabel}
                     </TableCell>
                     <TableCell className={s.diff}>{row.difference}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={s.badge}>
-                        {row.status.toUpperCase()}
+                        {formatStatusLabel(row.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" className={s.button}>
-                        {row.status === "critical" ? "Investigate" : "View"}
+                        {row.status === "critical"
+                          ? t("dashboard.weighbridge.action_investigate")
+                          : t("dashboard.weighbridge.action_view")}
                       </Button>
                     </TableCell>
                   </TableRow>
@@ -296,7 +310,7 @@ export default function Weighbridge() {
           {/* PAGINATION (UNCHANGED) */}
           <div className="flex justify-between items-center mt-4">
             <div className="flex items-center gap-2 text-sm">
-              Rows per page
+              {t("dashboard.weighbridge.rows_per_page")}
               <select
                 value={rowsPerPage}
                 onChange={e => setRowsPerPage(Number(e.target.value))}
@@ -313,7 +327,7 @@ export default function Weighbridge() {
                 onClick={() => setPage(p => p - 1)}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              Page {page} of {totalPages}
+              {t("dashboard.weighbridge.page_of", { page, totalPages })}
               <Button size="icon" variant="ghost" disabled={page === totalPages}
                 onClick={() => setPage(p => p + 1)}>
                 <ChevronRight className="h-4 w-4" />
@@ -326,15 +340,27 @@ export default function Weighbridge() {
       {/* TOLERANCE (UNCHANGED) */}
       <Card className="rounded-2xl bg-white dark:bg-slate-900 dark:border-slate-800">
         <CardHeader>
-          <CardTitle>Tolerance Settings</CardTitle>
+          <CardTitle>{t("dashboard.weighbridge.tolerance_title")}</CardTitle>
           <CardDescription>
-            Current weighbridge tolerance limits and alert thresholds
+            {t("dashboard.weighbridge.tolerance_subtitle")}
           </CardDescription>
         </CardHeader>
         <CardContent className="grid md:grid-cols-3 gap-4">
-          <ToleranceCard title="Normal Tolerance" value="±5%" description="No alerts generated" />
-          <ToleranceCard title="Warning Threshold" value="±10%" description="Requires verification" />
-          <ToleranceCard title="Critical Threshold" value=">10%" description="Immediate investigation" />
+          <ToleranceCard
+            title={t("dashboard.weighbridge.tolerance_normal_title")}
+            value="±5%"
+            description={t("dashboard.weighbridge.tolerance_normal_desc")}
+          />
+          <ToleranceCard
+            title={t("dashboard.weighbridge.tolerance_warning_title")}
+            value="±10%"
+            description={t("dashboard.weighbridge.tolerance_warning_desc")}
+          />
+          <ToleranceCard
+            title={t("dashboard.weighbridge.tolerance_critical_title")}
+            value=">10%"
+            description={t("dashboard.weighbridge.tolerance_critical_desc")}
+          />
         </CardContent>
       </Card>
     </div>

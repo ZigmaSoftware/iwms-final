@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useTranslation } from "react-i18next";
 
 /* ================= API ================= */
 const VEHICLE_API_URL =
@@ -37,6 +38,13 @@ const STATUS_COLORS: Record<VehicleStatus, string> = {
   Idle: "#facc15",
   Parked: "#3b82f6",
   "No Data": "#ef4444",
+};
+
+const STATUS_LABEL_KEYS: Record<VehicleStatus, string> = {
+  Running: "dashboard.live_map.status_running",
+  Idle: "dashboard.live_map.status_idle",
+  Parked: "dashboard.live_map.status_parked",
+  "No Data": "dashboard.live_map.status_no_data",
 };
 
 /* ================= HELPERS ================= */
@@ -106,29 +114,61 @@ function extractVehicleRows(payload: any): RawRecord[] {
   return [];
 }
 
+const vehicleMarkerAnimations = `
+  @keyframes vehiclePulse {
+    0% { transform: translate(-50%, -50%) scale(0.9); opacity: 0.6; }
+    100% { transform: translate(-50%, -50%) scale(1.35); opacity: 0; }
+  }
+  @keyframes vehicleBounce {
+    0% { transform: scale(0.9); }
+    60% { transform: scale(1.08); }
+    100% { transform: scale(1); }
+  }
+`;
+
 /* ================= VEHICLE ICON ================= */
-function getVehicleIcon(status: VehicleStatus) {
+function getVehicleIcon(status: VehicleStatus, isFocused = false) {
   const color = STATUS_COLORS[status];
+  const size = isFocused ? 42 : 34;
+  const shadow = isFocused
+    ? "0 0 0 4px rgba(255,255,255,0.9), 0 8px 18px rgba(0,0,0,.35)"
+    : "0 4px 10px rgba(0,0,0,.35)";
 
   return L.divIcon({
     className: "",
-    iconSize: [34, 34],
-    iconAnchor: [17, 17],
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -18],
     html: `
       <div
         style="
-          width:34px;
-          height:34px;
+          width:${size}px;
+          height:${size}px;
           border-radius:50%;
           background:${color};
           display:flex;
           align-items:center;
           justify-content:center;
-          box-shadow:0 4px 10px rgba(0,0,0,.35);
+          box-shadow:${shadow};
           border:2px solid #fff;
+          ${isFocused ? "animation: vehicleBounce 0.6s ease-out;" : ""}
         "
       >
+        ${
+          isFocused
+            ? `<span style="
+                position:absolute;
+                top:50%;
+                left:50%;
+                width:${Math.round(size * 1.15)}px;
+                height:${Math.round(size * 1.15)}px;
+                border-radius:50%;
+                background:${color};
+                opacity:0.35;
+                animation: vehiclePulse 1.4s ease-out infinite;
+              "></span>`
+            : ""
+        }
         <span style="font-size:18px; line-height:1;">🚚</span>
       </div>
     `,
@@ -145,6 +185,7 @@ export function LeafletMapContainer({
   vehicles: overrideVehicles,
   height = "600px",
 }: LeafletMapContainerProps = {}) {
+  const { t } = useTranslation();
   const { theme } = useTheme();
   const mapRef = useRef<L.Map | null>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -158,6 +199,26 @@ export function LeafletMapContainer({
   const [infoOpen, setInfoOpen] = useState(true);
   const [panelOpen, setPanelOpen] = useState(true);
   const isDarkMode = theme === "dark";
+  const speedUnit = t("dashboard.live_map.units.kmh");
+  const placeholderDash = t("dashboard.live_map.placeholder_dash");
+  const labelVehicle = t("dashboard.live_map.labels.vehicle");
+  const labelStatus = t("dashboard.live_map.labels.status");
+  const labelDriver = t("dashboard.live_map.labels.driver");
+  const labelSpeed = t("dashboard.live_map.labels.speed");
+  const labelCoordinates = t("dashboard.live_map.labels.coordinates");
+  const labelLocation = t("dashboard.live_map.labels.location");
+  const labelLastUpdated = t("dashboard.live_map.labels.last_updated");
+  const liveVehicleLabel = t("dashboard.live_map.live_vehicle");
+  const vehicleInformationLabel = t("dashboard.live_map.vehicle_information");
+  const locationUnavailable = t("dashboard.live_map.location_unavailable");
+  const closeVehicleDetailsLabel = t("dashboard.live_map.aria.close_vehicle_details");
+  const collapseVehicleDetailsLabel = t("dashboard.live_map.aria.collapse_vehicle_details");
+  const expandVehicleDetailsLabel = t("dashboard.live_map.aria.expand_vehicle_details");
+
+  const formatStatusLabel = useCallback(
+    (status: VehicleStatus) => t(STATUS_LABEL_KEYS[status]),
+    [t],
+  );
 
   const [statusFilter, setStatusFilter] = useState<Record<VehicleStatus, boolean>>({
     Running: true,
@@ -169,6 +230,12 @@ export function LeafletMapContainer({
   /* ================= MAP INIT ================= */
   useEffect(() => {
     if (!mapContainerRef.current || mapRef.current) return;
+    if (!document.getElementById("vehicle-marker-animations")) {
+      const style = document.createElement("style");
+      style.id = "vehicle-marker-animations";
+      style.textContent = vehicleMarkerAnimations;
+      document.head.appendChild(style);
+    }
 
     const map = L.map(mapContainerRef.current, {
       zoomControl: true,
@@ -305,8 +372,9 @@ export function LeafletMapContainer({
     displayedVehicles
       .filter((v) => statusFilter[v.status])
       .forEach((v) => {
+        const isFocused = selectedVehicle?.vehicle_no === v.vehicle_no;
         const marker = L.marker([v.lat, v.lng], {
-          icon: getVehicleIcon(v.status),
+          icon: getVehicleIcon(v.status, isFocused),
         });
         marker.on("click", () => {
           setSelectedVehicle(v);
@@ -317,15 +385,28 @@ export function LeafletMapContainer({
             `
               <div style="min-width:140px;">
                 <div style="font-weight:600;">${v.vehicle_no}</div>
-                <div>Driver: ${v.driver}</div>
-                <div>Status: ${v.status}</div>
-                <div>Speed: ${v.speed} km/h</div>
+                <div>${labelDriver}: ${v.driver || placeholderDash}</div>
+                <div>${labelStatus}: ${formatStatusLabel(v.status)}</div>
+                <div>${labelSpeed}: ${v.speed} ${speedUnit}</div>
               </div>
             `,
             { direction: "top", offset: [0, -12], opacity: 0.95 }
           ).addTo(vehicleLayerRef.current!);
+        if (isFocused) {
+          marker.openTooltip();
+        }
       });
-  }, [displayedVehicles, statusFilter]);
+  }, [
+    displayedVehicles,
+    formatStatusLabel,
+    labelDriver,
+    labelSpeed,
+    labelStatus,
+    placeholderDash,
+    selectedVehicle,
+    speedUnit,
+    statusFilter,
+  ]);
 
   /* ================= DRAW GEOFENCES ================= */
   useEffect(() => {
@@ -356,6 +437,13 @@ export function LeafletMapContainer({
       mapRef.current.fitBounds(bounds, { padding: [40, 40] });
     }
   }, [geofenceSites, displayedVehicles]);
+
+  useEffect(() => {
+    if (!mapRef.current || !selectedVehicle) return;
+    mapRef.current.setView([selectedVehicle.lat, selectedVehicle.lng], Math.max(mapRef.current.getZoom(), 15), {
+      animate: true,
+    });
+  }, [selectedVehicle]);
 
   /* ================= UI ================= */
   return (
@@ -403,7 +491,7 @@ export function LeafletMapContainer({
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
                   <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: ".08em", opacity: 0.7 }}>
-                    Vehicle
+                    {labelVehicle}
                   </div>
                   <div style={{ fontSize: 18, fontWeight: 600 }}>
                     {selectedVehicle.vehicle_no}
@@ -419,7 +507,7 @@ export function LeafletMapContainer({
                     cursor: "pointer",
                     color: isDarkMode ? "#f8fafc" : "#0f172a",
                   }}
-                  aria-label="Close vehicle details"
+                  aria-label={closeVehicleDetailsLabel}
                 >
                   ×
                 </button>
@@ -442,32 +530,32 @@ export function LeafletMapContainer({
               🚚
             </div>
             <div style={{ fontSize: 12, lineHeight: 1.5 }}>
-              <div style={{ fontWeight: 600 }}>Live Vehicle</div>
-              <div style={{ opacity: 0.8 }}>{selectedVehicle.location || "Location unavailable"}</div>
+              <div style={{ fontWeight: 600 }}>{liveVehicleLabel}</div>
+              <div style={{ opacity: 0.8 }}>{selectedVehicle.location || locationUnavailable}</div>
             </div>
           </div>
 
           <div style={{ marginTop: 12, fontSize: 13, lineHeight: 1.5 }}>
             <div>
-              <strong>Status:</strong> {selectedVehicle.status}
+              <strong>{labelStatus}:</strong> {formatStatusLabel(selectedVehicle.status)}
             </div>
             <div>
-              <strong>Driver:</strong> {selectedVehicle.driver || "-"}
+              <strong>{labelDriver}:</strong> {selectedVehicle.driver || placeholderDash}
             </div>
             <div>
-              <strong>Speed:</strong> {selectedVehicle.speed} km/h
+              <strong>{labelSpeed}:</strong> {selectedVehicle.speed} {speedUnit}
             </div>
             <div>
-              <strong>Coordinates:</strong> {selectedVehicle.lat.toFixed(5)}, {selectedVehicle.lng.toFixed(5)}
+              <strong>{labelCoordinates}:</strong> {selectedVehicle.lat.toFixed(5)}, {selectedVehicle.lng.toFixed(5)}
             </div>
             {selectedVehicle.location ? (
               <div>
-                <strong>Location:</strong> {selectedVehicle.location}
+                <strong>{labelLocation}:</strong> {selectedVehicle.location}
               </div>
             ) : null}
             {selectedVehicle.updated_at ? (
               <div>
-                <strong>Last Updated:</strong> {selectedVehicle.updated_at}
+                <strong>{labelLastUpdated}:</strong> {selectedVehicle.updated_at}
               </div>
             ) : null}
           </div>
@@ -496,27 +584,27 @@ export function LeafletMapContainer({
                 }}
                 aria-expanded={infoOpen}
               >
-                <span>Vehicle Information</span>
+                <span>{vehicleInformationLabel}</span>
                 <span style={{ fontSize: 16 }}>{infoOpen ? "−" : "+"}</span>
               </button>
 
               {infoOpen && (
                 <div style={{ marginTop: 10, fontSize: 13, lineHeight: 1.5 }}>
                   <div>
-                    <strong>Vehicle No:</strong> {selectedVehicle.vehicle_no}
+                    <strong>{t("dashboard.live_map.info.vehicle_no")}:</strong> {selectedVehicle.vehicle_no}
                   </div>
                   <div>
-                    <strong>Status:</strong> {selectedVehicle.status}
+                    <strong>{labelStatus}:</strong> {formatStatusLabel(selectedVehicle.status)}
                   </div>
                   <div>
-                    <strong>Driver:</strong> {selectedVehicle.driver || "-"}
+                    <strong>{labelDriver}:</strong> {selectedVehicle.driver || placeholderDash}
                   </div>
                   <div>
-                    <strong>Speed:</strong> {selectedVehicle.speed} km/h
+                    <strong>{labelSpeed}:</strong> {selectedVehicle.speed} {speedUnit}
                   </div>
                   {selectedVehicle.updated_at ? (
                     <div>
-                      <strong>Last Updated:</strong> {selectedVehicle.updated_at}
+                      <strong>{labelLastUpdated}:</strong> {selectedVehicle.updated_at}
                     </div>
                   ) : null}
                 </div>
@@ -547,7 +635,7 @@ export function LeafletMapContainer({
               lineHeight: 1,
               zIndex: 1200,
             }}
-            aria-label={panelOpen ? "Collapse vehicle details" : "Expand vehicle details"}
+            aria-label={panelOpen ? collapseVehicleDetailsLabel : expandVehicleDetailsLabel}
           >
             {panelOpen ? "‹" : "›"}
           </button>
@@ -584,7 +672,7 @@ export function LeafletMapContainer({
                 setStatusFilter((p) => ({ ...p, [s]: !p[s] }))
               }
             />{" "}
-            {s}
+            {formatStatusLabel(s)}
           </label>
         ))}
       </div>

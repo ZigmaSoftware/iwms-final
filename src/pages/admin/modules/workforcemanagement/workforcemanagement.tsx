@@ -1,20 +1,21 @@
 import { useNavigate } from "react-router-dom";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import "./workforcemanagement.css";
-
-const stats = [
-  { label: "Ticket", value: "9856", icon: "doc" },
-  { label: "Tons", value: "5,901.750", icon: "scale" },
-];
-
-const reports = [
-  { label: "Day Wise Report", type: "day" as const },
-  { label: "Date Wise Report", type: "date" as const },
-];
+import { useTranslation } from "react-i18next";
 
 export default function WorkforceManagement() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { encWorkforceManagement, encDateReport, encDayReport } = getEncryptedRoute();
+  const stats = [
+    { label: t("admin.workforce_management.stats.ticket"), value: "9856", icon: "doc" },
+    { label: t("admin.workforce_management.stats.tons"), value: "5,901.750", icon: "scale" },
+  ];
+
+  const reports = [
+    { label: t("admin.workforce_management.reports.day"), type: "day" as const },
+    { label: t("admin.workforce_management.reports.date"), type: "date" as const },
+  ];
 
   const handleReportClick = (type: "day" | "date") => {
     if (type === "date") {
@@ -29,7 +30,7 @@ export default function WorkforceManagement() {
       <div className="wf-content">
         <div className="wf-left-col">
           <section className="wf-section">
-            <h2>Input Waste Statistics</h2>
+            <h2>{t("admin.workforce_management.input_stats_title")}</h2>
             <div className="wf-stat-grid">
               {stats.map((stat) => (
                 <article key={stat.label}>
@@ -42,30 +43,32 @@ export default function WorkforceManagement() {
           </section>
 
           <section className="wf-section">
-            <h2>Reports</h2>
+            <h2>{t("admin.workforce_management.reports_title")}</h2>
             <div className="wf-report-grid">
               {reports.map((report) => (
                 <article key={report.label} onClick={() => handleReportClick(report.type)}>
                   <span className="icon-report" aria-hidden="true" />
                   <p className="label">{report.label}</p>
-                  <p className="cta">Click Here</p>
+                  <p className="cta">{t("admin.workforce_management.reports_cta")}</p>
                 </article>
               ))}
             </div>
           </section>
 
           <section className="wf-section">
-            <h2>Multimedia</h2>
+            <h2>{t("admin.workforce_management.multimedia_title")}</h2>
             <article className="wf-media-card">
               <span className="icon-media" aria-hidden="true" />
               <div>
-                <p className="label">Plant</p>
-                <p className="cta">Live Stream</p>
+                <p className="label">{t("admin.workforce_management.multimedia_plant")}</p>
+                <p className="cta">{t("admin.workforce_management.multimedia_live")}</p>
               </div>
             </article>
           </section>
 
-          <footer className="wf-footer">Copyright © 2024-2025 ZIGMA</footer>
+          <footer className="wf-footer">
+            {t("admin.workforce_management.footer")}
+          </footer>
         </div>
 
         <div className="wf-right-col">
@@ -89,10 +92,10 @@ export default function WorkforceManagement() {
               </svg>
             </div>
             <div className="wf-region">
-              <p>UTTAR PRADESH</p>
-              <p>उत्तर प्रदेश</p>
+              <p>{t("admin.workforce_management.region_en")}</p>
+              <p>{t("admin.workforce_management.region_local")}</p>
             </div>
-            <p className="wf-rights">All Rights Reserved.</p>
+            <p className="wf-rights">{t("admin.workforce_management.rights")}</p>
           </div>
         </div>
       </div>
