@@ -356,7 +356,7 @@ export default function StaffCreationList() {
               body={(row: Staff) => row.contact_mobile || "-"}
             />
 
-            {/* 🔥 Toggle with FormData */}
+            {/* Toggle with FormData */}
             <Column
               header={t("common.status")}
               body={statusTemplate}

@@ -758,6 +758,7 @@ const resources = {
           sub_property: "SubProperty",
           staff_master: "Staff Master",
           staff_creation: "Staff Creation",
+          staff_template: "Staff Template",
           customer_masters: "Customer Masters",
           customer_creation: "Customer Creation",
           transport_masters: "Transport Masters",

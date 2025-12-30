@@ -235,7 +235,7 @@ export default function VehicleTypeCreation() {
             style={{ minWidth: "200px" }}
           />
 
-          {/* 🔥 Toggle Status */}
+          {/* Toggle Status */}
           <Column
             field="is_active"
             header={t("common.status")}

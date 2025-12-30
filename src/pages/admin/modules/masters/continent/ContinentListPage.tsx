@@ -212,7 +212,7 @@ export default function ContinentList() {
             style={{ minWidth: "200px" }}
           />
 
-          {/* 🔥 Toggle Switch Column */}
+          {/*  Toggle Switch Column */}
           <Column
             header={t("common.status")}
             body={statusBodyTemplate}

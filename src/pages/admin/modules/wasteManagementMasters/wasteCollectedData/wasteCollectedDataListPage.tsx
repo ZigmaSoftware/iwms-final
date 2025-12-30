@@ -232,7 +232,7 @@ export default function WasteCollectedDataList() {
             sortable
           />
 
-          {/* 🔥 NEW Switch Toggle */}
+          {/*  NEW Switch Toggle */}
           <Column
             field="is_active"
             header={t("common.status")}
