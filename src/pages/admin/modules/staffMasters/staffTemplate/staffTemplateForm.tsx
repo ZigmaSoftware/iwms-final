@@ -1,0 +1,294 @@
+import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import Swal from "sweetalert2";
+import { useTranslation } from "react-i18next";
+
+import ComponentCard from "@/components/common/ComponentCard";
+import Label from "@/components/form/Label";
+import Select from "@/components/form/Select";
+import { Switch } from "@/components/ui/switch";
+
+import { getEncryptedRoute } from "@/utils/routeCache";
+import { staffTemplateApi, userCreationApi } from "@/helpers/admin";
+
+/* ================= TYPES ================= */
+
+type Option = {
+  value: string;
+  label: string;
+};
+
+type StaffTemplateFormData = {
+  primary_driver_id: string;
+  secondary_driver_id: string;
+  primary_operator_id: string;
+  secondary_operator_id: string;
+  is_active: boolean;
+};
+
+/* ================= INITIAL STATE ================= */
+
+const initialFormData: StaffTemplateFormData = {
+  primary_driver_id: "",
+  secondary_driver_id: "",
+  primary_operator_id: "",
+  secondary_operator_id: "",
+  is_active: true,
+};
+
+/* ================= COMPONENT ================= */
+
+export default function StaffTemplateForm() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  const isEdit = Boolean(id);
+
+  const [formData, setFormData] =
+    useState<StaffTemplateFormData>(initialFormData);
+
+  const [driverOptions, setDriverOptions] = useState<Option[]>([]);
+  const [operatorOptions, setOperatorOptions] = useState<Option[]>([]);
+  const [submitting, setSubmitting] = useState(false);
+  const [fetching, setFetching] = useState(false);
+
+  const { encStaffMasters, encStaffTemplate } = getEncryptedRoute();
+  const ENC_LIST_PATH = `/${encStaffMasters}/${encStaffTemplate}`;
+
+  /* ================= LOAD STAFF OPTIONS ================= */
+
+  useEffect(() => {
+    userCreationApi
+      .list({ params: { active_status: 1 } })
+      .then((res: any) => {
+        const data = Array.isArray(res) ? res : res?.data ?? [];
+
+        const staffOnly = data.filter(
+          (u: any) =>
+            u.user_type_name === "Staff" &&
+            u.is_active === true &&
+            u.is_deleted === false &&
+            u.staff_unique_id
+        );
+
+        const drivers: Option[] = staffOnly
+          .filter((s: any) => s.staffusertype_name === "driver")
+          .map((s: any) => ({
+            value: s.staff_unique_id, // ✅ IMPORTANT
+            label: s.staff_name,
+          }));
+
+        const operators: Option[] = staffOnly
+          .filter((s: any) => s.staffusertype_name === "operator")
+          .map((s: any) => ({
+            value: s.staff_unique_id, // ✅ IMPORTANT
+            label: s.staff_name,
+          }));
+
+        setDriverOptions(drivers);
+        setOperatorOptions(operators);
+      })
+      .catch(() => {
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      });
+  }, [t]);
+
+  /* ================= LOAD TEMPLATE (EDIT) ================= */
+  // ⚠️ Loads ONLY after options exist
+
+  useEffect(() => {
+    if (
+      !isEdit ||
+      !id ||
+      driverOptions.length === 0 ||
+      operatorOptions.length === 0
+    )
+      return;
+
+    setFetching(true);
+
+    staffTemplateApi
+      .get(id)
+      .then((tpl: any) => {
+        setFormData({
+          primary_driver_id: tpl.primary_driver_id ?? "",
+          secondary_driver_id: tpl.secondary_driver_id ?? "",
+          primary_operator_id: tpl.primary_operator_id ?? "",
+          secondary_operator_id: tpl.secondary_operator_id ?? "",
+          is_active: Boolean(tpl.is_active),
+        });
+      })
+      .catch(() => {
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      })
+      .finally(() => setFetching(false));
+  }, [id, isEdit, driverOptions.length, operatorOptions.length, t]);
+
+  /* ================= SUBMIT ================= */
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    // Business rule
+    if (
+      formData.primary_driver_id &&
+      formData.primary_driver_id === formData.primary_operator_id
+    ) {
+      Swal.fire(
+        t("common.error"),
+        "Primary Driver and Primary Operator cannot be the same",
+        "warning"
+      );
+      return;
+    }
+
+    setSubmitting(true);
+
+    try {
+      const payload = {
+        primary_driver_id: formData.primary_driver_id,
+        secondary_driver_id: formData.secondary_driver_id || null,
+        primary_operator_id: formData.primary_operator_id,
+        secondary_operator_id: formData.secondary_operator_id || null,
+        is_active: formData.is_active,
+      };
+
+      const formBody = new FormData();
+      Object.entries(payload).forEach(([k, v]) => {
+        if (v === null || v === undefined) return;
+        formBody.append(k, String(v));
+      });
+
+      if (isEdit && id) {
+        await staffTemplateApi.update(id, formBody);
+      } else {
+        await staffTemplateApi.create(formBody);
+      }
+
+      Swal.fire(
+        t("common.success"),
+        isEdit ? t("common.updated_success") : t("common.created_success"),
+        "success"
+      );
+
+      navigate(ENC_LIST_PATH);
+    } catch {
+      Swal.fire(t("common.error"), t("common.save_failed"), "error");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  /* ================= RENDER ================= */
+
+  return (
+    <div className="p-6">
+      <ComponentCard
+        title={
+          isEdit
+            ? t("admin.staff_template.title_edit")
+            : t("admin.staff_template.title_add")
+        }
+        desc={t("admin.staff_template.subtitle")}
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            {/* PRIMARY DRIVER */}
+            <div>
+              <Label>{t("admin.staff_template.primary_driver")}</Label>
+              <Select
+                value={formData.primary_driver_id}
+                onChange={(v) =>
+                  setFormData((p) => ({ ...p, primary_driver_id: v }))
+                }
+                options={driverOptions}
+                placeholder={t("common.select_option")}
+                required
+                disabled={fetching}
+              />
+            </div>
+
+            {/* SECONDARY DRIVER */}
+            <div>
+              <Label>{t("admin.staff_template.secondary_driver")}</Label>
+              <Select
+                value={formData.secondary_driver_id}
+                onChange={(v) =>
+                  setFormData((p) => ({ ...p, secondary_driver_id: v }))
+                }
+                options={driverOptions}
+                placeholder={t("common.optional")}
+                disabled={fetching}
+              />
+            </div>
+
+            {/* PRIMARY OPERATOR */}
+            <div>
+              <Label>{t("admin.staff_template.primary_operator")}</Label>
+              <Select
+                value={formData.primary_operator_id}
+                onChange={(v) =>
+                  setFormData((p) => ({ ...p, primary_operator_id: v }))
+                }
+                options={operatorOptions}
+                placeholder={t("common.select_option")}
+                required
+                disabled={fetching}
+              />
+            </div>
+
+            {/* SECONDARY OPERATOR */}
+            <div>
+              <Label>{t("admin.staff_template.secondary_operator")}</Label>
+              <Select
+                value={formData.secondary_operator_id}
+                onChange={(v) =>
+                  setFormData((p) => ({ ...p, secondary_operator_id: v }))
+                }
+                options={operatorOptions}
+                placeholder={t("common.optional")}
+                disabled={fetching}
+              />
+            </div>
+
+            {/* STATUS */}
+            <div className="flex items-center gap-3">
+              <Label>{t("common.status")}</Label>
+              <Switch
+                checked={formData.is_active}
+                onCheckedChange={(v) =>
+                  setFormData((p) => ({ ...p, is_active: v }))
+                }
+                disabled={fetching}
+              />
+            </div>
+          </div>
+
+          {/* ACTIONS */}
+          <div className="flex justify-end gap-3">
+            <button
+              type="submit"
+              disabled={submitting || fetching}
+              className="rounded-lg bg-green-custom px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {submitting
+                ? t("common.saving")
+                : isEdit
+                ? t("common.update")
+                : t("common.save")}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate(ENC_LIST_PATH)}
+              className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-600"
+            >
+              {t("common.cancel")}
+            </button>
+          </div>
+        </form>
+      </ComponentCard>
+    </div>
+  );
+}

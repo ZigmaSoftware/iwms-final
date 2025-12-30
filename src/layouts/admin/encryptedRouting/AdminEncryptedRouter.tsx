@@ -24,8 +24,8 @@ import SubPropertyList from "@/pages/admin/modules/masters/subproperty/SubProper
 import SubPropertyForm from "@/pages/admin/modules/masters/subproperty/SubPropertyForm";
 import BinListPage from "@/pages/admin/modules/masters/bin/BinListPage";
 import BinForm from "@/pages/admin/modules/masters/bin/BinForm";
-import StaffCreationList from "@/pages/admin/modules/masters/staffCreation/staffcreationlist";
-import StaffCreationForm from "@/pages/admin/modules/masters/staffCreation/staffcreationForm";
+import StaffCreationList from "@/pages/admin/modules/staffMasters/staffCreation/staffcreationlist";
+import StaffCreationForm from "@/pages/admin/modules/staffMasters/staffCreation/staffcreationForm";
 // Admin
 import UserTypeList from "@/pages/admin/modules/admin/userType/user-typeList";
 import UserTypeForm from "@/pages/admin/modules/admin/userType/user-typeForm";
@@ -76,6 +76,8 @@ import UserScreenList from "@/pages/admin/modules/admin/userScreen/userScreenLis
 import UserScreenForm from "@/pages/admin/modules/admin/userScreen/userScreenForm";
 import UserScreenPermissionForm from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionForm";
 import UserScreenPermissionList from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionList";
+import StaffTemplateList from "@/pages/admin/modules/staffMasters/staffTemplate/staffTemplateList";
+import StaffTemplateForm from "@/pages/admin/modules/staffMasters/staffTemplate/staffTemplateForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -110,7 +112,10 @@ const ROUTES: RouteMap = {
     wards: { list: WardList, form: WardForm },
     properties: { list: PropertyList, form: PropertyForm },
     "sub-properties": { list: SubPropertyList, form: SubPropertyForm },
+  },
+  "staff-masters": {
     "staff-creation": { list: StaffCreationList, form: StaffCreationForm },
+    "staff-template": {list: StaffTemplateList, form: StaffTemplateForm}
   },
   "transport-master": {
     fuel: { list: FuelList, form: FuelForm },

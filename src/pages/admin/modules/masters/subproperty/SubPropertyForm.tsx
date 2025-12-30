@@ -177,7 +177,7 @@ export default function SubPropertyForm() {
 
               <SelectContent>
                 {properties
-                  .filter((p) => p.is_active === true) // 🔥 Only active properties
+                  .filter((p) => p.is_active === true) // Only active properties
                   .map((p) => (
                     <SelectItem key={p.unique_id} value={p.unique_id}>
                       {p.property_name}

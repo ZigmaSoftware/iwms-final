@@ -66,6 +66,8 @@ const {
   encUserScreenAction,
   encMainScreen,
   encUserScreenPermission,
+  encStaffMasters,
+  encStaffTemplate,
 } = getEncryptedRoute();
 
 type NavItem = {
@@ -121,12 +123,13 @@ const masterItems: NavItem[] = [
   },
 ];
 
-const staffCreationItems: NavItem[] = [
+const staffMasters: NavItem[] = [
   {
     nameKey: "admin.nav.staff_master",
     icon: <Users size={18} />,
     subItems: [
-      { nameKey: "admin.nav.staff_creation", path: `/${encMasters}/${encStaffCreation}` },
+      { nameKey: "admin.nav.staff_creation", path: `/${encStaffMasters}/${encStaffCreation}` },
+      { nameKey: "admin.nav.staff_template", path: `/${encStaffMasters}/${encStaffTemplate}`}
     ],
   },
 ];
@@ -265,6 +268,7 @@ const AppSidebar: React.FC = () => {
       | "main"
       | "admin"
       | "master"
+      | "staffMaster"
       | "entry"
       | "report"
       | "others"
@@ -325,6 +329,7 @@ const AppSidebar: React.FC = () => {
       main: navItems,
       admin: adminItems,
       master: masterItems,
+      staffMaster: staffMasters, 
       entry: [],
       citizenGrievance: citizenGrievanceItems,
       transportMaster: transportMasters,
@@ -479,7 +484,7 @@ const AppSidebar: React.FC = () => {
             <div>{renderMenuItems(navItems, "main")}</div>
             <div>{renderMenuItems(adminItems, "admin")}</div>
             <div>{renderMenuItems(masterItems, "master")}</div>
-            <div>{renderMenuItems(staffCreationItems, "staffCreation")}</div>
+            <div>{renderMenuItems(staffMasters, "staffMaster")}</div>
             <div>{renderMenuItems(customerMasters, "customerMaster")}</div>
             <div>{renderMenuItems(transportMasters, "transportMaster")}</div>
             <div>
