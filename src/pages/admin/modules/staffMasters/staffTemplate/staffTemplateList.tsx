@@ -1,0 +1,256 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import { useTranslation } from "react-i18next";
+
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
+import { FilterMatchMode } from "primereact/api";
+
+import { Switch } from "@/components/ui/switch";
+import { PencilIcon } from "@/icons";
+import { staffCreationApi, staffTemplateApi } from "@/helpers/admin";
+import { getEncryptedRoute } from "@/utils/routeCache";
+
+/* ================= TYPES ================= */
+
+type StaffTemplate = {
+  unique_id: string;
+
+  primary_driver_id: string;
+  primary_driver_name: string;
+
+  secondary_driver_id?: string | null;
+  secondary_driver_name?: string;
+
+  primary_operator_id: string;
+  primary_operator_name: string;
+
+  secondary_operator_id?: string | null;
+  secondary_operator_name?: string;
+
+  extra_staff_ids?: string[];
+
+  is_active: boolean;
+  is_deleted: boolean;
+
+  created_at: string;
+  updated_at: string;
+};
+
+/* ================= COMPONENT ================= */
+
+export default function StaffTemplateList() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const [templates, setTemplates] = useState<StaffTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
+
+  const [datatableFilters, setDatatableFilters] = useState<any>({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  });
+
+  const { encStaffMasters, encStaffTemplate } = getEncryptedRoute();
+  const ENC_NEW_PATH = `/${encStaffMasters}/${encStaffTemplate}/new`;
+  const ENC_EDIT_PATH = (id: string) =>
+    `/${encStaffMasters}/${encStaffTemplate}/${id}/edit`;
+
+  /* ================= FETCH ================= */
+
+  const fetchTemplates = async () => {
+    setLoading(true);
+    try {
+      const payload: any = await staffTemplateApi.list(); // GET
+      const data =
+        Array.isArray(payload) ? payload :
+        Array.isArray(payload?.data) ? payload.data :
+        payload?.data?.results ?? [];
+        console.log(data);
+
+      setTemplates(data);
+    } catch {
+      Swal.fire(t("common.error"), t("common.load_failed"), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTemplates();
+  }, []);
+
+  /* ================= FILTER ================= */
+
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setGlobalFilterValue(value);
+    setDatatableFilters({
+      global: { value, matchMode: FilterMatchMode.CONTAINS },
+    });
+  };
+
+  /* ================= STATUS TOGGLE ================= */
+
+  const statusTemplate = (row: StaffTemplate) => {
+    const updateStatus = async (value: boolean) => {
+      try {
+        const formData = new FormData();
+        formData.append("is_active", String(value));
+
+        await staffTemplateApi.update(row.unique_id, formData);
+
+        fetchTemplates();
+      } catch {
+        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
+      }
+    };
+
+    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
+  };
+
+  /* ================= ACTIONS ================= */
+
+  const actionTemplate = (row: StaffTemplate) => (
+    <div className="flex justify-center">
+      <button
+        title={t("common.edit")}
+        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
+        className="text-blue-600 hover:text-blue-800"
+      >
+        <PencilIcon className="size-5" />
+      </button>
+    </div>
+  );
+
+  const indexTemplate = (_: StaffTemplate, { rowIndex }: any) => rowIndex + 1;
+
+  /* ================= HEADER ================= */
+
+  const header = (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">
+            Staff Template List
+          </h1>
+          <p className="text-sm text-gray-500">
+            Driver & Operator assignment templates
+          </p>
+        </div>
+
+        <Button
+          label="Create Template"
+          icon="pi pi-plus"
+          className="p-button-success p-button-sm"
+          onClick={() => navigate(ENC_NEW_PATH)}
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <div className="flex items-center gap-2 border rounded-full px-3 py-1 bg-white">
+          <i className="pi pi-search text-gray-500" />
+          <InputText
+            value={globalFilterValue}
+            onChange={onGlobalFilterChange}
+            placeholder="Search templates"
+            className="border-none text-sm"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  /* ================= RENDER ================= */
+
+  return (
+    <div className="p-3">
+      <DataTable
+        value={templates}
+        paginator
+        rows={10}
+        loading={loading}
+        filters={datatableFilters}
+        globalFilterFields={[
+          "unique_id",
+          "primary_driver_name",
+          "primary_operator_name",
+          "secondary_driver_name",
+          "secondary_operator_name",
+        ]}
+        header={header}
+        stripedRows
+        showGridlines
+        className="p-datatable-sm"
+        emptyMessage="No staff templates found"
+      >
+        <Column header="S.No" body={indexTemplate} style={{ width: 70 }} />
+
+        <Column
+          field="unique_id"
+          header="Template ID"
+          sortable
+        />
+
+        <Column
+          header="Primary Driver"
+          body={(r: StaffTemplate) => r.primary_driver_name}
+          sortable
+        />
+
+        <Column
+          header="Secondary Driver"
+          body={(r: StaffTemplate) => r.secondary_driver_name || "-"}
+        />
+
+        <Column
+          header="Primary Operator"
+          body={(r: StaffTemplate) => r.primary_operator_name}
+          sortable
+        />
+
+        <Column
+          header="Secondary Operator"
+          body={(r: StaffTemplate) => r.secondary_operator_name || "-"}
+        />
+
+        <Column
+          header="Extra Staff"
+          body={(r: StaffTemplate) =>
+            r.extra_staff_ids?.length ?? 0
+          }
+          style={{ width: 130 }}
+        />
+
+        <Column
+          header="Status"
+          body={statusTemplate}
+          style={{ width: 120 }}
+        />
+
+        <Column
+          header="Created At"
+          body={(r: StaffTemplate) =>
+            new Date(r.created_at).toLocaleDateString()
+          }
+        />
+
+        <Column
+            header="Updated At"
+            body={(r: StaffTemplate)=>
+                new Date(r.updated_at).toLocaleDateString()
+            }
+        />
+
+        <Column
+          header="Actions"
+          body={actionTemplate}
+          style={{ width: 120 }}
+        />
+      </DataTable>
+    </div>
+  );
+}

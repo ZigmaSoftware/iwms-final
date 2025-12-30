@@ -200,7 +200,7 @@ export default function FuelList() {
             style={{ minWidth: "200px" }}
           />
 
-          {/* 🔥 NEW — Toggle Status */}
+          {/* NEW — Toggle Status */}
           <Column
             field="is_active"
             header={t("common.status")}
