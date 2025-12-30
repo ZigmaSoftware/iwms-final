@@ -37,9 +37,11 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   const current = LANGUAGES.some((lang) => lang.value === normalized)
     ? normalized
     : "en";
-  const defaultIconClass =
-    variant === "select" ? "text-current opacity-70" : "text-muted-foreground";
-  const iconClass = cn("text-base", iconClassName ?? defaultIconClass);
+  const defaultIconClass = "text-white";
+  const iconClass = cn("text-[16px] leading-none", iconClassName ?? defaultIconClass);
+  const iconBadgeClass = cn(
+    "language-icon-badge language-icon-badge--animate"
+  );
 
   const setLang = (lang: LanguageCode) => {
     i18n.changeLanguage(lang);
@@ -53,10 +55,15 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
           onValueChange={(value) => setLang(value as LanguageCode)}
         >
           <SelectTrigger
-            className={cn("h-9 w-full gap-2 text-xs", triggerClassName)}
+            className={cn(
+              "rainbow-border h-10 w-full gap-2 py-2 text-xs",
+              triggerClassName
+            )}
           >
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              <GIcon name="translate" className={iconClass} />
+              <span className={iconBadgeClass}>
+                <GIcon name="translate" className={iconClass} />
+              </span>
               <SelectValue
                 className="min-w-0 truncate"
                 placeholder={t("common.language_en")}
@@ -77,7 +84,9 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
-      <GIcon name="translate" className={iconClass} />
+      <span className={iconBadgeClass}>
+        <GIcon name="translate" className={iconClass} />
+      </span>
       {LANGUAGES.map((language) => (
         <Button
           key={language.value}

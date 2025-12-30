@@ -19,7 +19,7 @@ export function ThemeToggleButton({ className }: ThemeToggleButtonProps) {
       aria-label="Toggle theme"
       onClick={toggleTheme}
       className={cn(
-        "flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2",
+        "rainbow-border flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2",
         isDark
           ? "border-white/15 bg-white/5 text-white focus-visible:ring-white/30"
           : "border-[var(--admin-border)] bg-white/90 text-[var(--admin-text)] shadow-[0_10px_24px_rgba(9,74,141,0.08)] focus-visible:ring-[var(--admin-primarySoft)]",
