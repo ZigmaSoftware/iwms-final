@@ -115,7 +115,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
             {/* THEME TOGGLE */}
             <button
               onClick={toggleTheme}
-              className="rounded-md border border-gray-200 bg-white p-2 text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
+              className="rainbow-border rounded-md border border-gray-200 bg-white p-2 text-gray-600 transition hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200 dark:hover:bg-gray-800"
               aria-label="Toggle color theme"
             >
               {theme === "light" ? (
@@ -131,6 +131,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               size="sm"
               onClick={handleSignOut}
               className="
+                rainbow-border
                 flex items-center gap-1 
                 rounded-md 
                 border-gray-300 dark:border-gray-600
