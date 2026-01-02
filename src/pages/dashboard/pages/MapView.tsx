@@ -6,6 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Navigation, Search, ChevronDown } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useTranslation } from "react-i18next";
+import { fetchWasteReport } from "@/utils/wasteApi";
 
 type RawRecord = Record<string, unknown>;
 type StatusKey = "running" | "idle" | "stopped" | "no_data";
@@ -154,6 +155,15 @@ function createVehicleIcon(status: StatusKey, isFocused: boolean) {
 const TRACKING_API_URL =
   "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM";
 
+const TRIP_SUMMARY_ENDPOINT =
+  "https://gpsvtsprobend.vamosys.com/v2/getTripSummary";
+
+const TRIP_SUMMARY_USER_ID = "NMCP2DISPOSAL";
+
+const IST_DAY_KEY = new Intl.DateTimeFormat("en-CA", {
+  timeZone: "Asia/Kolkata",
+});
+
 const HISTORY_TIMESTAMP_KEYS = [
   "deviceTime",
   "timestamp",
@@ -185,6 +195,123 @@ function pickNum(source: RawRecord, keys: string[]): number | null {
   }
   return null;
 }
+
+const parseNumeric = (value: unknown): number | null => {
+  if (value === undefined || value === null || value === "") return null;
+  const cleaned =
+    typeof value === "string" ? value.replace(/,/g, "").trim() : value;
+  const num = Number(cleaned);
+  return Number.isNaN(num) ? null : num;
+};
+
+const normalizeVehicleId = (value?: string) =>
+  value ? value.replace(/[^a-z0-9]/gi, "").toUpperCase() : "";
+
+const PLATE_PATTERN = /[A-Z]{2}\d{1,2}[A-Z]{1,2}\d{3,4}/g;
+
+const extractPlateId = (value?: string) => {
+  const normalized = normalizeVehicleId(value);
+  if (!normalized) return "";
+  const match = normalized.match(PLATE_PATTERN);
+  if (match && match[0]) return match[0];
+  return normalized;
+};
+
+const idsMatch = (left?: string, right?: string) => {
+  const normalizedLeft = extractPlateId(left);
+  const normalizedRight = extractPlateId(right);
+  if (!normalizedLeft || !normalizedRight) return false;
+  if (normalizedLeft === normalizedRight) return true;
+  const [shorter, longer] =
+    normalizedLeft.length <= normalizedRight.length
+      ? [normalizedLeft, normalizedRight]
+      : [normalizedRight, normalizedLeft];
+  if (shorter.length < 5) return false;
+  const diff = longer.length - shorter.length;
+  if (diff > 3) return false;
+  return longer.startsWith(shorter) || longer.endsWith(shorter);
+};
+
+const pickVehicleId = (row: RawRecord) =>
+  pick(
+    row,
+    [
+      "Vehicle No",
+      "Vehicle_No",
+      "VehicleNo",
+      "vehicle no",
+      "vehicleno",
+      "vehicle_no",
+      "vehicleNo",
+      "vehicle_number",
+      "vehicleNumber",
+      "Reg_No",
+      "reg_no",
+      "registrationNo",
+      "regNo",
+    ],
+    ""
+  );
+
+const parseWeightParts = (row: RawRecord) => {
+  const dry =
+    parseNumeric(row.Dry_Wt ?? row.dry_weight ?? row.dryWeight ?? row.dry_wt) ??
+    0;
+  const wet =
+    parseNumeric(row.Wet_Wt ?? row.wet_weight ?? row.wetWeight ?? row.wet_wt) ??
+    0;
+  const mix =
+    parseNumeric(row.Mix_Wt ?? row.mix_weight ?? row.mixWeight ?? row.mix_wt) ??
+    0;
+  const net =
+    parseNumeric(
+      row.Net_Wt ??
+        row.net_wt ??
+        row.netWeight ??
+        row.total_net_weight ??
+        row.totalNetWeight ??
+        row.total_weight ??
+        row.weight
+    ) ?? dry + wet + mix;
+
+  return { dry, wet, mix, net };
+};
+
+const parseTripTimestamp = (v?: number | string) => {
+  if (!v) return null;
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? null : d;
+};
+
+const REPORT_DATE_KEYS = [
+  "date",
+  "Date",
+  "collection_date",
+  "collectionDate",
+  "collection_date_time",
+  "collection_datetime",
+  "collection_time",
+  "timestamp",
+  "Start_Time",
+  "start_time",
+  "startTime",
+  "End_Time",
+  "end_time",
+  "endTime",
+];
+
+const getRowDateKey = (row: RawRecord) => {
+  const rawDate = pick(row, REPORT_DATE_KEYS, "");
+  if (/^\d{4}-\d{2}-\d{2}/.test(rawDate)) return rawDate.slice(0, 10);
+  const dmyMatch = rawDate.match(/^(\d{2})[/-](\d{2})[/-](\d{4})/);
+  if (dmyMatch) return `${dmyMatch[3]}-${dmyMatch[2]}-${dmyMatch[1]}`;
+  const ymdSlashMatch = rawDate.match(/^(\d{4})[/-](\d{2})[/-](\d{2})/);
+  if (ymdSlashMatch) return `${ymdSlashMatch[1]}-${ymdSlashMatch[2]}-${ymdSlashMatch[3]}`;
+  if (!rawDate) return "";
+  const parsed = new Date(rawDate);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return IST_DAY_KEY.format(parsed);
+};
 
 function pickRaw(source: RawRecord, keys: string[]): unknown {
   for (const key of keys) {
@@ -250,8 +377,20 @@ type LiveVehicle = {
   location?: string;
 };
 
+type VehicleMetrics = {
+  loading: boolean;
+  totalWeightTodayTons: number | null;
+  totalDistanceTodayKm: number | null;
+  totalDistanceMonthKm: number | null;
+  totalTripsToday: number | null;
+  dryWeightTodayTons: number | null;
+  wetWeightTodayTons: number | null;
+  mixWeightTodayTons: number | null;
+  reportDateKey: string | null;
+};
+
 function normalizeVehicle(record: RawRecord): LiveVehicle | null {
-  const id = pick(record, ["vehicleId", "vehicle_id", "vehicleNo", "regNo", "vehicle_number"]);
+  const id = pick(record, ["vehicleNo", "regNo", "vehicle_number", "vehicleId", "vehicle_id"]);
   const lat = pickNum(record, ["lat", "latitude", "Latitude"]);
   const lng = pickNum(record, ["lng", "lon", "longitude", "Longitude"]);
   if (!id || lat === null || lng === null) return null;
@@ -290,6 +429,18 @@ export default function MapView() {
   const [liveError, setLiveError] = useState("");
   const [lastUpdatedAt, setLastUpdatedAt] = useState(new Date());
   const [panelOpen, setPanelOpen] = useState(false);
+  const metricsRequestRef = useRef(0);
+  const [metrics, setMetrics] = useState<VehicleMetrics>({
+    loading: false,
+    totalWeightTodayTons: null,
+    totalDistanceTodayKm: null,
+    totalDistanceMonthKm: null,
+    totalTripsToday: null,
+    dryWeightTodayTons: null,
+    wetWeightTodayTons: null,
+    mixWeightTodayTons: null,
+    reportDateKey: null,
+  });
 
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<L.Map | null>(null);
@@ -512,6 +663,149 @@ export default function MapView() {
 
   const selectedVehicle = liveVehicles.find((vehicle) => vehicle.id === vehicleId);
 
+  useEffect(() => {
+    if (!selectedVehicle) {
+      setMetrics({
+        loading: false,
+        totalWeightTodayTons: null,
+        totalDistanceTodayKm: null,
+        totalDistanceMonthKm: null,
+        totalTripsToday: null,
+        dryWeightTodayTons: null,
+        wetWeightTodayTons: null,
+        mixWeightTodayTons: null,
+        reportDateKey: null,
+      });
+      return;
+    }
+
+    const requestId = ++metricsRequestRef.current;
+    const currentVehicleId = selectedVehicle.id;
+    let cancelled = false;
+
+    const loadMetrics = async () => {
+      setMetrics((prev) => ({ ...prev, loading: true }));
+      try {
+        const now = new Date();
+        const todayKey = IST_DAY_KEY.format(now);
+        const reportStart = new Date(now);
+        reportStart.setDate(reportStart.getDate() - 90);
+        const reportStartKey = IST_DAY_KEY.format(reportStart);
+        const monthStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          1
+        ).getTime();
+        const monthEnd = new Date(
+          now.getFullYear(),
+          now.getMonth() + 1,
+          0,
+          23,
+          59,
+          59
+        ).getTime();
+
+        const tripUrl = `${TRIP_SUMMARY_ENDPOINT}?vehicleId=${encodeURIComponent(
+          currentVehicleId
+        )}&fromDateUTC=${monthStart}&toDateUTC=${monthEnd}&userId=${TRIP_SUMMARY_USER_ID}&duration=0`;
+
+        const [tripRes, weightResult] = await Promise.all([
+          fetch(tripUrl).then((res) => res.json()),
+          fetchWasteReport("day_wise_data", reportStartKey, todayKey).catch(
+            () => ({ rows: [] }),
+          ),
+        ]);
+
+        if (cancelled || requestId !== metricsRequestRef.current) return;
+
+        const history: Array<Record<string, any>> =
+          tripRes?.data?.historyConsilated || [];
+
+        let totalMonth = 0;
+        let totalToday = 0;
+        for (const entry of history) {
+          const ts = parseTripTimestamp(entry.startTime ?? entry.endTime);
+          if (!ts) continue;
+          const distance = Number(entry.tripDistance || 0);
+          if (Number.isNaN(distance)) continue;
+          totalMonth += distance;
+          if (IST_DAY_KEY.format(ts) === todayKey) {
+            totalToday += distance;
+          }
+        }
+
+        const targetVehicle = normalizeVehicleId(currentVehicleId);
+        const dailyAgg: Record<
+          string,
+          { trips: number; dry: number; wet: number; mix: number; net: number }
+        > = {};
+        let matchedAny = false;
+
+        weightResult.rows.forEach((row: RawRecord) => {
+          const rowVehicle = pickVehicleId(row);
+          if (!idsMatch(targetVehicle, rowVehicle)) return;
+          const rowDateKey = getRowDateKey(row);
+          if (!rowDateKey) return;
+          matchedAny = true;
+          const weights = parseWeightParts(row);
+          const tripCount =
+            parseNumeric(
+              row.total_trip ?? row.totalTrip ?? row.trips ?? row.trip
+            ) ?? 1;
+          const existing =
+            dailyAgg[rowDateKey] ?? { trips: 0, dry: 0, wet: 0, mix: 0, net: 0 };
+          dailyAgg[rowDateKey] = {
+            trips: existing.trips + tripCount,
+            dry: existing.dry + weights.dry,
+            wet: existing.wet + weights.wet,
+            mix: existing.mix + weights.mix,
+            net: existing.net + weights.net,
+          };
+        });
+
+        let reportDateKey: string | null = null;
+        let selectedAgg:
+          | { trips: number; dry: number; wet: number; mix: number; net: number }
+          | null = null;
+
+        if (matchedAny) {
+          if (dailyAgg[todayKey]) {
+            reportDateKey = todayKey;
+            selectedAgg = dailyAgg[todayKey];
+          } else {
+            const latestDateKey = Object.keys(dailyAgg).sort().slice(-1)[0];
+            if (latestDateKey) {
+              reportDateKey = latestDateKey;
+              selectedAgg = dailyAgg[latestDateKey];
+            }
+          }
+        }
+
+        setMetrics({
+          loading: false,
+          totalWeightTodayTons: selectedAgg ? selectedAgg.net / 1000 : null,
+          totalDistanceTodayKm: totalToday,
+          totalDistanceMonthKm: totalMonth,
+          totalTripsToday: selectedAgg ? selectedAgg.trips : null,
+          dryWeightTodayTons: selectedAgg ? selectedAgg.dry / 1000 : null,
+          wetWeightTodayTons: selectedAgg ? selectedAgg.wet / 1000 : null,
+          mixWeightTodayTons: selectedAgg ? selectedAgg.mix / 1000 : null,
+          reportDateKey,
+        });
+      } catch (error) {
+        if (cancelled || requestId !== metricsRequestRef.current) return;
+        setMetrics((prev) => ({ ...prev, loading: false }));
+      }
+    };
+
+    loadMetrics();
+    const interval = window.setInterval(loadMetrics, 60000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, [selectedVehicle?.id]);
+
   return (
     <div className="space-y-3">
       <div>
@@ -632,6 +926,7 @@ export default function MapView() {
                   onToggle={() => setPanelOpen((prev) => !prev)}
                   onClose={() => setPanelOpen(false)}
                   isDarkMode={isDarkMode}
+                  metrics={metrics}
                 />
                 <div className="absolute left-3 bottom-3 rounded-md bg-background/80 px-3 py-1 text-[11px] font-medium text-muted-foreground shadow">
                   <div>
@@ -786,12 +1081,14 @@ function VehicleSidePanel({
   onToggle,
   onClose,
   isDarkMode,
+  metrics,
 }: {
   vehicle?: LiveVehicle;
   open: boolean;
   onToggle: () => void;
   onClose: () => void;
   isDarkMode: boolean;
+  metrics: VehicleMetrics;
 }) {
   const { t, i18n } = useTranslation();
   const [infoOpen, setInfoOpen] = useState(true);
@@ -807,6 +1104,34 @@ function VehicleSidePanel({
   const lastUpdatedLabel = vehicle
     ? new Date(vehicle.lastUpdate).toLocaleString(i18n.language || "en-US")
     : t("dashboard.live_map.placeholder_na");
+  const placeholderDash = t("dashboard.live_map.placeholder_dash");
+  const loadingLabel = t("common.loading");
+  const weightUnitLabel = t("common.tons");
+  const tripsTodayLabel = t("dashboard.live_map.info.trips_today");
+  const dryWeightLabel = t("dashboard.live_map.info.dry_weight_today");
+  const wetWeightLabel = t("dashboard.live_map.info.wet_weight_today");
+  const mixWeightLabel = t("dashboard.live_map.info.mix_weight_today");
+  const reportDateLabel = t("dashboard.live_map.info.report_date");
+
+  const formatMetricValue = (value: number | null, unit: string) => {
+    if (value === null) return placeholderDash;
+    return `${value.toFixed(2)} ${unit}`;
+  };
+
+  const formatTripValue = (value: number | null) => {
+    if (value === null) return placeholderDash;
+    return Math.round(value).toLocaleString();
+  };
+
+  const renderMetricValue = (value: number | null, unit: string) => {
+    if (metrics.loading && value === null) return loadingLabel;
+    return formatMetricValue(value, unit);
+  };
+
+  const renderTripValue = (value: number | null) => {
+    if (metrics.loading && value === null) return loadingLabel;
+    return formatTripValue(value);
+  };
 
   return (
     <div
@@ -867,29 +1192,29 @@ function VehicleSidePanel({
             </div>
 
             <div className="space-y-3 px-3 pt-3 text-xs">
-              <div className="space-y-1">
-                <div>
-                  <span className="font-semibold">{t("dashboard.live_map.labels.status")}:</span>{" "}
-                  <span className="text-muted-foreground">
-                    {meta ? t(meta.labelKey) : t("dashboard.live_map.status_unknown")}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-semibold">{t("dashboard.live_map.labels.driver")}:</span>{" "}
-                  <span className="text-muted-foreground">{driverLabel}</span>
-                </div>
-                <div>
-                  <span className="font-semibold">{t("dashboard.live_map.labels.speed")}:</span>{" "}
-                  <span className="text-muted-foreground">
-                    {vehicle.speed.toFixed(1)} {t("dashboard.live_map.units.kmh")}
-                  </span>
-                </div>
-                <div>
-                  <span className="font-semibold">{t("dashboard.live_map.labels.coordinates")}:</span>{" "}
-                  <span className="text-muted-foreground">
-                    {vehicle.lat.toFixed(5)}, {vehicle.lng.toFixed(5)}
-                  </span>
-                </div>
+                <div className="space-y-1">
+                  <div>
+                    <span className="font-semibold">{t("dashboard.live_map.labels.status")}:</span>{" "}
+                    <span className="text-muted-foreground">
+                      {meta ? t(meta.labelKey) : t("dashboard.live_map.status_unknown")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">{t("dashboard.live_map.labels.driver")}:</span>{" "}
+                    <span className="text-muted-foreground">{driverLabel}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">{t("dashboard.live_map.labels.speed")}:</span>{" "}
+                    <span className="text-muted-foreground">
+                      {vehicle.speed.toFixed(1)} {t("dashboard.live_map.units.kmh")}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="font-semibold">{t("dashboard.live_map.labels.coordinates")}:</span>{" "}
+                    <span className="text-muted-foreground">
+                      {vehicle.lat.toFixed(5)}, {vehicle.lng.toFixed(5)}
+                    </span>
+                  </div>
                 <div>
                   <span className="font-semibold">{t("dashboard.live_map.labels.location")}:</span>{" "}
                   <span className="text-muted-foreground">{locationLabel}</span>
@@ -911,14 +1236,38 @@ function VehicleSidePanel({
                 </button>
                 {infoOpen && (
                   <div className="mt-2 space-y-1 rounded-md border border-border/60 bg-background/60 p-2">
-                    <InfoRow label={t("dashboard.live_map.info.vehicle_no")} value={vehicle.label} />
-                    <InfoRow label={t("dashboard.live_map.labels.status")} value={meta ? t(meta.labelKey) : t("dashboard.live_map.status_unknown")} />
-                    <InfoRow label={t("dashboard.live_map.labels.driver")} value={driverLabel} />
                     <InfoRow
-                      label={t("dashboard.live_map.labels.speed")}
-                      value={`${vehicle.speed.toFixed(1)} ${t("dashboard.live_map.units.kmh")}`}
+                      label={reportDateLabel}
+                      value={metrics.reportDateKey ?? placeholderDash}
                     />
-                    <InfoRow label={t("dashboard.live_map.labels.last_updated")} value={lastUpdatedLabel} />
+                    <InfoRow
+                      label={tripsTodayLabel}
+                      value={renderTripValue(metrics.totalTripsToday)}
+                    />
+                    <InfoRow
+                      label={dryWeightLabel}
+                      value={renderMetricValue(metrics.dryWeightTodayTons, weightUnitLabel)}
+                    />
+                    <InfoRow
+                      label={wetWeightLabel}
+                      value={renderMetricValue(metrics.wetWeightTodayTons, weightUnitLabel)}
+                    />
+                    <InfoRow
+                      label={mixWeightLabel}
+                      value={renderMetricValue(metrics.mixWeightTodayTons, weightUnitLabel)}
+                    />
+                    <InfoRow
+                      label={t("dashboard.live_map.info.total_weight_today")}
+                      value={renderMetricValue(metrics.totalWeightTodayTons, weightUnitLabel)}
+                    />
+                    <InfoRow
+                      label={t("dashboard.live_map.info.total_distance_today")}
+                      value={renderMetricValue(metrics.totalDistanceTodayKm, "km")}
+                    />
+                    <InfoRow
+                      label={t("dashboard.live_map.info.total_distance_month")}
+                      value={renderMetricValue(metrics.totalDistanceMonthKm, "km")}
+                    />
                   </div>
                 )}
               </div>

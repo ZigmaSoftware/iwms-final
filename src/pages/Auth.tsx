@@ -140,7 +140,7 @@ export default function Auth() {
   console.log(username + " " + password);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f3f6f4] p-4 font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-[#f3f6f4] dark:bg-[#050b15] p-4 font-sans">
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${BgImg})` }}
@@ -149,9 +149,9 @@ export default function Auth() {
 
       <div className="relative w-full max-w-5xl grid md:grid-cols-2 rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
         {/* LEFT */}
-        <div className="flex flex-col items-center justify-center p-10 bg-[#e8f5e9] text-center border-r border-gray-200">
+        <div className="flex flex-col items-center justify-center p-10 bg-[#e8f5e9] dark:bg-[#0f1c31] text-center border-r border-gray-200">
           <img src={ZigmaLogo} className="h-40 w-40 mb-4" />
-          <h2 className="text-2xl font-bold text-[#2e7d32]">
+          <h2 className="text-2xl font-bold text-[#2e7d32] dark:text-[#9be37d]">
             {t("login.left_title")}
           </h2>
           <p className="text-gray-700 text-sm mt-3 max-w-xs leading-relaxed">
@@ -166,7 +166,7 @@ export default function Auth() {
               <h1 className="text-3xl font-semibold text-gray-800">
                 {t("login.title")}
               </h1>
-              <p className="text-[#43A047] mt-1 text-sm">
+              <p className="text-[#43A047] dark:text-[#7cd67c] mt-1 text-sm">
                 {t("login.subtitle")}
               </p>
             </div>
@@ -186,7 +186,7 @@ export default function Auth() {
                   setUsername(e.target.value)
                 }
                 className="h-12 rounded-lg bg-white border border-gray-300 
-                  text-gray-800 placeholder-gray-500 
+                  text-gray-800 placeholder-gray-500 dark:placeholder-gray-400
                   focus:ring-2 focus:ring-[#43A047] focus:border-[#43A047]"
                 required
               />
@@ -207,7 +207,7 @@ export default function Auth() {
                     setPassword(e.target.value)
                   }
                   className="h-12 rounded-lg bg-white border border-gray-300 
-                    text-gray-800 placeholder-gray-500 
+                    text-gray-800 placeholder-gray-500 dark:placeholder-gray-400
                     focus:ring-2 focus:ring-[#43A047] focus:border-[#43A047] pr-12"
                   required
                 />
@@ -250,7 +250,7 @@ export default function Auth() {
             </Button>
 
             <div className="pt-6 border-t border-dashed border-gray-200">
-              <p className="text-xs uppercase tracking-[0.2em] text-gray-400 text-center">
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-400 dark:text-gray-300 text-center">
                 {t("login.rnd_shortcuts_label")}
               </p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">

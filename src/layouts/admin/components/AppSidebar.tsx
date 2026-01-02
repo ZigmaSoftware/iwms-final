@@ -258,7 +258,7 @@ const menuButtonBase =
   "flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold";
 
 const AppSidebar: React.FC = () => {
-  const { isExpanded, isMobileOpen } = useSidebar();
+  const { isExpanded, isMobileOpen, toggleSidebar } = useSidebar();
   const location = useLocation();
   const { t } = useTranslation();
   const showFullSidebar = isExpanded || isMobileOpen;
@@ -324,6 +324,11 @@ const AppSidebar: React.FC = () => {
 
   useEffect(() => {
     let matched = false;
+    const skipAutoOpenSubmenuKeys = new Set([
+      "admin.nav.vehicle_tracking",
+      "admin.nav.vehicle_history",
+      "admin.nav.collection_monitoring",
+    ]);
 
     const menus: Record<string, NavItem[]> = {
       main: navItems,
@@ -345,8 +350,10 @@ const AppSidebar: React.FC = () => {
       items.forEach((nav, index) => {
         nav.subItems?.forEach((sub) => {
           if (isActive(sub.path, true)) {
-            setOpenSubmenu({ type: type as any, index });
             matched = true;
+            if (!skipAutoOpenSubmenuKeys.has(sub.nameKey)) {
+              setOpenSubmenu({ type: type as any, index });
+            }
           }
         });
       });
@@ -369,6 +376,12 @@ const AppSidebar: React.FC = () => {
   }, [openSubmenu]);
 
   const handleSubmenuToggle = (index: number, type: any) => {
+    if (!showFullSidebar) {
+      toggleSidebar();
+      setOpenSubmenu({ type, index });
+      return;
+    }
+
     setOpenSubmenu((prev) =>
       prev && prev.type === type && prev.index === index
         ? null

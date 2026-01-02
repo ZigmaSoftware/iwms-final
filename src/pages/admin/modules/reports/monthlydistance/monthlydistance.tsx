@@ -100,7 +100,7 @@ const parseTripTimestamp = (v?: number | string) => {
 };
 
 const formatCellValue = (v?: number) =>
-  typeof v === "number" ? v.toFixed(2) : "-";
+  typeof v === "number" && v > 0 ? v.toFixed(2) : "-";
 
 /* ===== FIXED CONCURRENCY (NO RACE) ===== */
 
@@ -144,6 +144,7 @@ export default function MonthlyDistance() {
   /* ===== VEHICLE + MONTH CACHE ===== */
 
   const cacheRef = useRef<Record<string, VehicleDistanceRow>>({});
+  const requestIdRef = useRef(0);
 
   const monthDays = useMemo(
     () => buildMonthDays(selectedMonth),
@@ -171,9 +172,13 @@ export default function MonthlyDistance() {
           .map(normalizeVehicle)
           .filter(Boolean) as VehicleOption[];
 
-        setVehicles(list.length ? list : FALLBACK_VEHICLES);
+        const deduped = Array.from(
+          new Map(list.map((item) => [item.id, item])).values(),
+        );
+
+        setVehicles(deduped.length ? deduped : FALLBACK_VEHICLES);
         setRosterError(
-          list.length ? "" : "admin.reports.monthly_distance.error_fallback",
+          deduped.length ? "" : "admin.reports.monthly_distance.error_fallback",
         );
       })
       .catch(() => {
@@ -187,6 +192,7 @@ export default function MonthlyDistance() {
   const fetchFleetData = useCallback(async () => {
     if (!vehicles.length || !monthDays.length) return;
 
+    const requestId = ++requestIdRef.current;
     setFleetRows([]);
     setFetchError("");
 
@@ -194,15 +200,25 @@ export default function MonthlyDistance() {
     const from = new Date(y, m - 1, 1).getTime();
     const to = new Date(y, m, 0, 23, 59, 59).getTime();
 
+    const rowMap = new Map<string, VehicleDistanceRow>();
+
+    const commitRow = (row: VehicleDistanceRow) => {
+      if (requestId !== requestIdRef.current) return;
+      rowMap.set(row.vehicleId, row);
+      setFleetRows((prev) => {
+        if (requestId !== requestIdRef.current) return prev;
+        return Array.from(rowMap.values()).sort((a, b) =>
+          a.vehicleId.localeCompare(b.vehicleId)
+        );
+      });
+    };
+
     await runWithConcurrency(vehicles, CHUNK_SIZE, async (v) => {
+      if (requestId !== requestIdRef.current) return;
       const cacheKey = `${selectedMonth}_${v.id}`;
 
       if (cacheRef.current[cacheKey]) {
-        setFleetRows((prev) =>
-          [...prev, cacheRef.current[cacheKey]].sort((a, b) =>
-            a.vehicleId.localeCompare(b.vehicleId)
-          )
-        );
+        commitRow(cacheRef.current[cacheKey]);
         return;
       }
 
@@ -237,13 +253,11 @@ export default function MonthlyDistance() {
 
         cacheRef.current[cacheKey] = row;
 
-        setFleetRows((prev) =>
-          [...prev, row].sort((a, b) =>
-            a.vehicleId.localeCompare(b.vehicleId)
-          )
-        );
+        commitRow(row);
       } catch {
-        setFetchError("admin.reports.monthly_distance.error_partial");
+        if (requestId === requestIdRef.current) {
+          setFetchError("admin.reports.monthly_distance.error_partial");
+        }
       }
     });
   }, [vehicles, monthDays, selectedMonth]);
@@ -317,7 +331,7 @@ export default function MonthlyDistance() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold">
-              {t("admin.reports.monthly_distance.title")}
+              {t("admin.reports.monthly_distance.title")} (KM)
             </h1>
             <p className="text-sm text-gray-500">{monthHeadline}</p>
           </div>

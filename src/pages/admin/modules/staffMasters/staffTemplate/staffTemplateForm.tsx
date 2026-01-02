@@ -137,7 +137,7 @@ export default function StaffTemplateForm() {
     ) {
       Swal.fire(
         t("common.error"),
-        "Primary Driver and Primary Operator cannot be the same",
+        t("admin.staff_template.error_primary_role_duplicate"),
         "warning"
       );
       return;

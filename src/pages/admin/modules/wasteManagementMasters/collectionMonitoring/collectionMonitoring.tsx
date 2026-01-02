@@ -4,6 +4,7 @@ import flatpickr from "flatpickr";
 import type { Instance as FlatpickrInstance } from "flatpickr/dist/types/instance";
 import { customerCreationApi, wasteCollectionApi } from "@/helpers/admin";
 import "./collectionMonitor.css";
+import "../../../../../components/map/adminMapPanel.css";
 import "flatpickr/dist/flatpickr.min.css";
 import {
   filterActiveCustomers,
@@ -162,6 +163,7 @@ const WasteCollectionMonitor: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [map, setMap] = useState<L.Map | null>(null);
   const [focusedVehicleId, setFocusedVehicleId] = useState("");
+  const [panelOpen, setPanelOpen] = useState(true);
   const vehicleMarkerLookupRef = useRef<Record<string, L.Marker>>({});
   const getVehicleStatusLabel = (status: VehicleStatus) => {
     switch (status) {
@@ -269,6 +271,15 @@ const WasteCollectionMonitor: React.FC = () => {
       ? t("common.collected")
       : t("common.not_collected")
     : null;
+
+  const focusedVehicle = useMemo(
+    () => vehicles.find((vehicle) => vehicle.id === focusedVehicleId) ?? null,
+    [vehicles, focusedVehicleId]
+  );
+
+  const focusedVehicleStatusClass = focusedVehicle
+    ? focusedVehicle.status.toLowerCase().replace(" ", "-")
+    : "";
 
   // Fetch vehicle data from Vamosys
   const fetchVamosysData = useCallback(async () => {
@@ -682,8 +693,151 @@ const WasteCollectionMonitor: React.FC = () => {
         </div>
 
         {/* Map */}
-        <div className="map-wrapper">
-          <div id="map" style={{ height: "calc(100vh - 320px)", width: "100%" }}></div>
+        <div
+          className="map-wrapper"
+          style={{ height: "calc(100vh - 320px)", width: "100%" }}
+        >
+          <div id="map" className="map-canvas"></div>
+          <div className={`admin-map-panel ${panelOpen ? "is-open" : ""}`}>
+            <button
+              type="button"
+              className="admin-map-panel__toggle"
+              onClick={() => setPanelOpen((prev) => !prev)}
+            >
+              {panelOpen ? "<" : ">"}
+            </button>
+            <button
+              type="button"
+              className="admin-map-panel__close"
+              onClick={() => setPanelOpen(false)}
+            >
+              x
+            </button>
+            <div className="admin-map-panel__content">
+              <div className="admin-map-panel__section">
+                <div className="admin-map-panel__section-title">
+                  {t("common.vehicle")}
+                </div>
+                {focusedVehicle ? (
+                  <>
+                    <div className="admin-map-panel__header">
+                      <div>
+                        <div className="admin-map-panel__eyebrow">
+                          {t("dashboard.live_map.labels.vehicle")}
+                        </div>
+                        <div className="admin-map-panel__title">
+                          {focusedVehicle.number}
+                        </div>
+                      </div>
+                      <span
+                        className={`admin-map-panel__status status-${focusedVehicleStatusClass}`}
+                      >
+                        {getVehicleStatusLabel(focusedVehicle.status)}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("dashboard.live_map.labels.speed")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {Number(focusedVehicle.speed).toFixed(1)}{" "}
+                        {t("dashboard.live_map.units.kmh")}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("admin.vehicle_tracking.labels.ignition")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {focusedVehicle.ignition ? "ON" : "OFF"}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("admin.vehicle_tracking.labels.distance")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {Number(focusedVehicle.distance).toFixed(1)} km
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("dashboard.live_map.labels.location")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {focusedVehicle.location || t("common.location_unavailable")}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("admin.vehicle_tracking.labels.updated")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {focusedVehicle.updatedAt}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="admin-map-panel__empty">
+                    {t("dashboard.live_map.select_vehicle")}
+                  </div>
+                )}
+              </div>
+
+              <div className="admin-map-panel__divider" />
+
+              <div className="admin-map-panel__section">
+                <div className="admin-map-panel__section-title">
+                  {t("common.customer")}
+                </div>
+                {selectedCustomerLocation ? (
+                  <>
+                    <div className="admin-map-panel__header">
+                      <div>
+                        <div className="admin-map-panel__eyebrow">
+                          {t("common.customer")}
+                        </div>
+                        <div className="admin-map-panel__title">
+                          {selectedCustomerLocation.name}
+                        </div>
+                      </div>
+                      <span className="admin-map-panel__status">
+                        {selectedCustomerStatusLabel}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("common.address")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {selectedCustomerLocation.address || t("common.not_available")}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("common.zone")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {selectedCustomerLocation.zone || t("common.not_available")}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("common.ward")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {selectedCustomerLocation.ward || t("common.not_available")}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="admin-map-panel__empty">
+                    {t("admin.collection_monitoring.select_customer_hint")}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="map-household-summary">
             {statusOptions.map((status) => {
               const isSelected = selectedStatus === status.value;

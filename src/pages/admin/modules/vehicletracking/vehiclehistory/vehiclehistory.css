@@ -123,19 +123,103 @@
 /* ---------------------------------------- */
 
 .vh-map-wrapper {
+  position: relative;
   width: 100%;
   height: 570px;
   background: var(--admin-surfaceAlt);
   border-radius: 18px;
   border: 1px solid var(--admin-border);
   overflow: hidden;
-  position: relative;
   animation: fadeIn 0.5s ease forwards;
 }
 
-.vh-map-wrapper .leaflet-container {
+.vh-map-canvas {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
+}
+
+.vh-map-canvas.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+
+@keyframes vhVehiclePulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 0;
+  }
+}
+
+.vh-vehicle-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  color: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.3);
+  position: relative;
+}
+
+.vh-vehicle-marker.status-running {
+  background: #16a34a;
+}
+
+.vh-vehicle-marker.status-idle {
+  background: #f59e0b;
+}
+
+.vh-vehicle-marker.status-stopped {
+  background: #2563eb;
+}
+
+.vh-vehicle-marker.status-no_data {
+  background: #ef4444;
+}
+
+.vh-vehicle-marker .vh-vehicle-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.35;
+  transform: translate(-50%, -50%);
+  animation: vhVehiclePulse 1.4s ease-out infinite;
+}
+
+.vh-vehicle-icon {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.vh-popup {
+  min-width: 140px;
+  font-size: 12px;
+}
+
+.vh-popup-title {
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.vh-popup-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
 }
 
 /* ---------------------------------------- */
