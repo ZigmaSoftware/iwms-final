@@ -64,7 +64,8 @@ export const adminEndpoints = {
      VEHICLES
   ========================= */
   vehicleTypes: "vehicles/vehicle-type",
-  vehicleCreation: "vehicles/vehicle-creation",
+  vehicleAssigning: "vehicles/vehicle-Assigning",
+  vehicleCreations: "vehicles/vehicle-creation",
 } as const;
 
 export type AdminEntity = keyof typeof adminEndpoints;

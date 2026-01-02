@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEffect, useMemo, useState } from "react";
-import { vehicleCreationApi } from "@/helpers/admin";
+import { vehicleAssigningApi } from "@/helpers/admin";
 import { useTranslation } from "react-i18next";
 
 type VehicleStatus = "active" | "maintenance" | "inactive";
@@ -64,7 +64,7 @@ export default function Vehicle() {
     let isMounted = true;
     const loadVehicles = async () => {
       try {
-        const response = await vehicleCreationApi.list();
+        const response = await vehicleAssigningApi.list();
         const rows = normalizeList(response);
         const deduped = new Map<string, VehicleCard>();
 
