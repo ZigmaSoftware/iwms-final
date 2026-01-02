@@ -12,6 +12,7 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon, TrashBinIcon } from "@/icons";
 import { Switch } from "@/components/ui/switch";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -24,6 +25,7 @@ type MainCategory = {
 };
 
 export default function MainComplaintCategoryList() {
+  const { t } = useTranslation();
   const [records, setRecords] = useState<MainCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -55,13 +57,13 @@ export default function MainComplaintCategoryList() {
 
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This category will be deleted!",
+      title: t("admin.citizen_grievance.main_category.confirm_title"),
+      text: t("admin.citizen_grievance.main_category.confirm_message"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: t("admin.citizen_grievance.main_category.confirm_button"),
     });
 
     if (!confirm.isConfirmed) return;
@@ -69,7 +71,7 @@ export default function MainComplaintCategoryList() {
     await mobileApi.delete(`main-category/${id}/`);
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("admin.citizen_grievance.main_category.deleted"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -91,7 +93,7 @@ export default function MainComplaintCategoryList() {
       <button
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
-        title="Edit"
+        title={t("common.update")}
       >
         <PencilIcon className="size-5" />
       </button>
@@ -123,7 +125,7 @@ export default function MainComplaintCategoryList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search..."
+          placeholder={t("admin.citizen_grievance.main_category.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -137,15 +139,15 @@ export default function MainComplaintCategoryList() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Main Categories
+              {t("admin.citizen_grievance.main_category.title")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage all customer complaint categories
+              {t("admin.citizen_grievance.main_category.subtitle")}
             </p>
           </div>
 
           <Button
-            label="Add New"
+            label={t("common.add_new")}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -165,30 +167,30 @@ export default function MainComplaintCategoryList() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No records found."
+          emptyMessage={t("admin.citizen_grievance.main_category.empty_message")}
           className="p-datatable-sm"
         >
           <Column
-            header="S.No"
+            header={t("admin.citizen_grievance.main_category.columns.s_no")}
             body={indexTemplate}
             style={{ width: "80px" }}
           />
 
           <Column
             field="main_categoryName"
-            header="Main Category"
+            header={t("admin.citizen_grievance.main_category.columns.main_category")}
             sortable
           />
 
           <Column
             field="is_active"
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "150px" }}
           />
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px" }}
           />

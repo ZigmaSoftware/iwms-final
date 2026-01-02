@@ -8,6 +8,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -64,11 +65,6 @@ const DISPLAY_DAY = new Intl.DateTimeFormat("en-GB", {
   day: "2-digit",
   month: "short",
   timeZone: "Asia/Kolkata",
-});
-
-const monthLabelFormatter = new Intl.DateTimeFormat("en-US", {
-  month: "long",
-  year: "numeric",
 });
 
 const buildMonthDays = (monthValue: string) => {
@@ -129,6 +125,7 @@ const runWithConcurrency = async <T,>(
 /* ================= COMPONENT ================= */
 
 export default function MonthlyDistance() {
+  const { t, i18n } = useTranslation();
   const [vehicles, setVehicles] = useState<VehicleOption[]>(FALLBACK_VEHICLES);
   const [monthInput, setMonthInput] = useState(formatMonthInput(new Date()));
   const [selectedMonth, setSelectedMonth] = useState(monthInput);
@@ -155,10 +152,14 @@ export default function MonthlyDistance() {
 
   const monthHeadline = useMemo(() => {
     const [y, m] = selectedMonth.split("-").map(Number);
+    const formatter = new Intl.DateTimeFormat(i18n.language || "en-US", {
+      month: "long",
+      year: "numeric",
+    });
     return y && m
-      ? monthLabelFormatter.format(new Date(y, m - 1, 1))
+      ? formatter.format(new Date(y, m - 1, 1))
       : "";
-  }, [selectedMonth]);
+  }, [i18n.language, selectedMonth]);
 
   /* ================= LOAD VEHICLES ================= */
 
@@ -171,11 +172,13 @@ export default function MonthlyDistance() {
           .filter(Boolean) as VehicleOption[];
 
         setVehicles(list.length ? list : FALLBACK_VEHICLES);
-        setRosterError(list.length ? "" : "Using fallback vehicles");
+        setRosterError(
+          list.length ? "" : "admin.reports.monthly_distance.error_fallback",
+        );
       })
       .catch(() => {
         setVehicles(FALLBACK_VEHICLES);
-        setRosterError("Vehicle roster unavailable");
+        setRosterError("admin.reports.monthly_distance.error_unavailable");
       });
   }, []);
 
@@ -240,7 +243,7 @@ export default function MonthlyDistance() {
           )
         );
       } catch {
-        setFetchError("Some vehicles failed to load");
+        setFetchError("admin.reports.monthly_distance.error_partial");
       }
     });
   }, [vehicles, monthDays, selectedMonth]);
@@ -264,7 +267,7 @@ export default function MonthlyDistance() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search vehicle..."
+          placeholder={t("admin.reports.monthly_distance.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -272,27 +275,37 @@ export default function MonthlyDistance() {
   );
 
   /* ================= EXPORT ================= */
+  const exportLabels = useMemo(
+    () => ({
+      index: t("admin.reports.monthly_distance.columns.index"),
+      vehicle: t("admin.reports.monthly_distance.columns.vehicle_id"),
+      total: t("admin.reports.monthly_distance.columns.total"),
+      sheetName: t("admin.reports.monthly_distance.export_sheet"),
+      filePrefix: t("admin.reports.monthly_distance.export_file_prefix"),
+    }),
+    [i18n.language, t],
+  );
 
   const handleExport = () => {
     const data = fleetRows.map((r, i) => {
       const rec: Record<string, string> = {
-        "#": String(i + 1),
-        Vehicle: r.vehicleId,
+        [exportLabels.index]: String(i + 1),
+        [exportLabels.vehicle]: r.vehicleId,
       };
       monthDays.forEach((d) => {
         rec[d.label] = formatCellValue(r.distances[d.iso]);
       });
-      rec.Total = formatCellValue(r.total);
+      rec[exportLabels.total] = formatCellValue(r.total);
       return rec;
     });
 
     const ws = XLSX.utils.json_to_sheet(data);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Monthly Distance");
+    XLSX.utils.book_append_sheet(wb, ws, exportLabels.sheetName);
 
     saveAs(
       new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })]),
-      `monthly-distance-${selectedMonth}.xlsx`
+      `${exportLabels.filePrefix}-${selectedMonth}.xlsx`
     );
   };
 
@@ -303,7 +316,9 @@ export default function MonthlyDistance() {
 
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold">Monthly Distance</h1>
+            <h1 className="text-3xl font-bold">
+              {t("admin.reports.monthly_distance.title")}
+            </h1>
             <p className="text-sm text-gray-500">{monthHeadline}</p>
           </div>
 
@@ -318,19 +333,19 @@ export default function MonthlyDistance() {
               onClick={() => setSelectedMonth(monthInput)}
               className="bg-blue-600 text-white px-4 py-2 rounded"
             >
-              Go
+              {t("common.go")}
             </button>
             <button
               onClick={handleExport}
               className="bg-green-600 text-white px-4 py-2 rounded"
             >
-              Download
+              {t("common.download")}
             </button>
           </div>
         </div>
 
-        {rosterError && <div className="p-2 text-blue-600">{rosterError}</div>}
-        {fetchError && <div className="p-2 text-red-600">{fetchError}</div>}
+        {rosterError && <div className="p-2 text-blue-600">{t(rosterError)}</div>}
+        {fetchError && <div className="p-2 text-red-600">{t(fetchError)}</div>}
 
         <DataTable
           value={fleetRows}
@@ -346,12 +361,16 @@ export default function MonthlyDistance() {
           className="p-datatable-sm"
         >
           <Column
-            header="#"
+            header={t("admin.reports.monthly_distance.columns.index")}
             body={(_, o) => o.rowIndex + 1}
             style={{ width: "80px" }}
           />
 
-          <Column field="vehicleId" header="Vehicle ID" sortable />
+          <Column
+            field="vehicleId"
+            header={t("admin.reports.monthly_distance.columns.vehicle_id")}
+            sortable
+          />
 
           {monthDays.map((d) => (
             <Column
@@ -364,7 +383,7 @@ export default function MonthlyDistance() {
           ))}
 
           <Column
-            header="Total"
+            header={t("admin.reports.monthly_distance.columns.total")}
             body={(r: VehicleDistanceRow) => formatCellValue(r.total)}
             style={{ width: "120px" }}
           />

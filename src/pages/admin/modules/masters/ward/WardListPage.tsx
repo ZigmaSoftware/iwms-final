@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -34,29 +35,8 @@ type ErrorWithResponse = {
   };
 };
 
-const extractErrorMessage = (error: unknown) => {
-  if (!error) return "Something went wrong while processing the request.";
-  if (typeof error === "string") return error;
-
-  const data = (error as ErrorWithResponse)?.response?.data;
-
-  if (typeof data === "string") return data;
-  if (Array.isArray(data)) return data.join(", ");
-
-  if (data && typeof data === "object") {
-    return Object.entries(data as Record<string, unknown>)
-      .map(([k, v]) =>
-        Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
-      )
-      .join("\n");
-  }
-
-  if (error instanceof Error && error.message) return error.message;
-
-  return "Something went wrong while processing the request.";
-};
-
 export default function WardList() {
+  const { t } = useTranslation();
   const [wards, setWards] = useState<WardRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -75,6 +55,28 @@ export default function WardList() {
   const ENC_EDIT_PATH = (id: string) =>
     `/${encMasters}/${encWards}/${id}/edit`;
 
+  const extractErrorMessage = (error: unknown) => {
+    if (!error) return t("common.request_failed");
+    if (typeof error === "string") return error;
+
+    const data = (error as ErrorWithResponse)?.response?.data;
+
+    if (typeof data === "string") return data;
+    if (Array.isArray(data)) return data.join(", ");
+
+    if (data && typeof data === "object") {
+      return Object.entries(data as Record<string, unknown>)
+        .map(([k, v]) =>
+          Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
+        )
+        .join("\n");
+    }
+
+    if (error instanceof Error && error.message) return error.message;
+
+    return t("common.request_failed");
+  };
+
   // ===========================
   //   Load Data
   // ===========================
@@ -86,7 +88,7 @@ export default function WardList() {
     } catch (error) {
       Swal.fire({
         icon: "error",
-        title: "Unable to load wards",
+        title: t("common.error"),
         text: extractErrorMessage(error),
       });
     } finally {
@@ -103,12 +105,12 @@ export default function WardList() {
   // ===========================
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This ward will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      confirmButtonText: "Delete",
+      confirmButtonText: t("common.confirm_delete_button"),
     });
 
     if (!confirm.isConfirmed) return;
@@ -117,7 +119,7 @@ export default function WardList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -143,7 +145,9 @@ export default function WardList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Wards..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.nav.ward"),
+          })}
           className="p-inputtext-sm !border-0 !shadow-none !outline-none"
         />
       </div>
@@ -201,12 +205,16 @@ export default function WardList() {
 
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Wards</h1>
-            <p className="text-gray-500 text-sm">Manage ward records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              {t("admin.nav.ward")}
+            </h1>
+            <p className="text-gray-500 text-sm">
+              {t("common.manage_item_records", { item: t("admin.nav.ward") })}
+            </p>
           </div>
 
           <Button
-            label="Add Ward"
+            label={t("common.add_item", { item: t("admin.nav.ward") })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -224,7 +232,9 @@ export default function WardList() {
           header={renderHeader()}
           stripedRows
           showGridlines
-          emptyMessage="No wards found."
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.nav.ward"),
+          })}
           globalFilterFields={[
             "name",
             "zone_name",
@@ -235,37 +245,37 @@ export default function WardList() {
           ]}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
             field="zone_name"
-            header="Zone"
+            header={t("admin.nav.zone")}
             sortable
             body={(row) => cap(row.zone_name)}
           />
 
           <Column
             field="city_name"
-            header="City"
+            header={t("admin.nav.city")}
             sortable
             body={(row) => cap(row.city_name)}
           />
 
           <Column
             field="name"
-            header="Ward"
+            header={t("admin.nav.ward")}
             sortable
             body={(row) => cap(row.name)}
           />
 
           <Column
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "140px" }}
           />
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px", textAlign: "center" }}
           />

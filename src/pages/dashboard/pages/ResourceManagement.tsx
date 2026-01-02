@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useEffect, useMemo, useState } from "react";
 import { userCreationApi } from "@/helpers/admin";
+import { useTranslation } from "react-i18next";
 
 const normalizeList = (payload: any) => {
   if (Array.isArray(payload)) return payload;
@@ -18,12 +19,31 @@ const normalizeList = (payload: any) => {
 
 export default function ResourceManagement() {
   const [employees, setEmployees] = useState<any[]>([]);
+  const { t } = useTranslation();
+  const allFilterValue = "all";
   // FILTER STATES
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState("All Roles");
-  const [zoneFilter, setZoneFilter] = useState("All Zones");
-  const [vehicleFilter, setVehicleFilter] = useState("All Vehicles");
-  const [joinDateFilter, setJoinDateFilter] = useState("All Join Dates");
+  const [roleFilter, setRoleFilter] = useState(allFilterValue);
+  const [zoneFilter, setZoneFilter] = useState(allFilterValue);
+  const [vehicleFilter, setVehicleFilter] = useState(allFilterValue);
+  const [joinDateFilter, setJoinDateFilter] = useState(allFilterValue);
+
+  const translateRole = (role: string) => {
+    const normalized = role.toLowerCase();
+    if (normalized === "driver") return t("dashboard.resources.roles.driver");
+    if (normalized === "operator") return t("dashboard.resources.roles.operator");
+    if (normalized === "helper") return t("dashboard.resources.roles.helper");
+    if (normalized === "staff") return t("dashboard.resources.roles.staff");
+    return role;
+  };
+
+  const translateStatus = (status: string) => {
+    const normalized = status.toLowerCase();
+    if (normalized === "active") return t("common.active");
+    if (normalized === "inactive") return t("common.inactive");
+    if (normalized === "on-leave") return t("dashboard.resources.status.on_leave");
+    return status;
+  };
 
   // Fetch staff users only
   useEffect(() => {
@@ -60,29 +80,49 @@ export default function ResourceManagement() {
 
   // CLEAN LABEL OPTIONS
   const roleOptions = useMemo(
-    () => ["All Roles", ...new Set(employees.map((e) => e.role || "Staff"))],
-    [employees]
+    () => [
+      { value: allFilterValue, label: t("dashboard.resources.filters.all_roles") },
+      ...Array.from(new Set(employees.map((e) => e.role || t("dashboard.resources.roles.staff")))).map(
+        (role) => ({ value: role, label: translateRole(role) })
+      ),
+    ],
+    [employees, t]
   );
   const zoneOptions = useMemo(
-    () => ["All Zones", ...new Set(employees.map((e) => e.zone || "-"))],
-    [employees]
+    () => [
+      { value: allFilterValue, label: t("dashboard.resources.filters.all_zones") },
+      ...new Set(employees.map((e) => e.zone || "-")),
+    ].map((zone) =>
+      typeof zone === "string" ? { value: zone, label: zone } : zone
+    ),
+    [employees, t]
   );
   const vehicleOptions = useMemo(
-    () => ["All Vehicles", ...new Set(employees.map((e) => e.vehicle || "-"))],
-    [employees]
+    () => [
+      { value: allFilterValue, label: t("dashboard.resources.filters.all_vehicles") },
+      ...new Set(employees.map((e) => e.vehicle || "-")),
+    ].map((vehicle) =>
+      typeof vehicle === "string" ? { value: vehicle, label: vehicle } : vehicle
+    ),
+    [employees, t]
   );
   const joinDateOptions = useMemo(
-    () => ["All Join Dates", ...new Set(employees.map((e) => e.joinDate || "-"))],
-    [employees]
+    () => [
+      { value: allFilterValue, label: t("dashboard.resources.filters.all_join_dates") },
+      ...new Set(employees.map((e) => e.joinDate || "-")),
+    ].map((date) =>
+      typeof date === "string" ? { value: date, label: date } : date
+    ),
+    [employees, t]
   );
 
   // RESET FILTERS
   const clearFilters = () => {
     setSearchQuery("");
-    setRoleFilter("All Roles");
-    setZoneFilter("All Zones");
-    setVehicleFilter("All Vehicles");
-    setJoinDateFilter("All Join Dates");
+    setRoleFilter(allFilterValue);
+    setZoneFilter(allFilterValue);
+    setVehicleFilter(allFilterValue);
+    setJoinDateFilter(allFilterValue);
   };
 
   // FILTER LOGIC
@@ -93,16 +133,17 @@ export default function ResourceManagement() {
       emp.role.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesRole =
-      roleFilter === "All Roles" || emp.role.toLowerCase() === roleFilter.toLowerCase();
+      roleFilter === allFilterValue ||
+      emp.role.toLowerCase() === roleFilter.toLowerCase();
 
     const matchesZone =
-      zoneFilter === "All Zones" || emp.zone === zoneFilter;
+      zoneFilter === allFilterValue || emp.zone === zoneFilter;
 
     const matchesVehicle =
-      vehicleFilter === "All Vehicles" || emp.vehicle === vehicleFilter;
+      vehicleFilter === allFilterValue || emp.vehicle === vehicleFilter;
 
     const matchesJoinDate =
-      joinDateFilter === "All Join Dates" || emp.joinDate === joinDateFilter;
+      joinDateFilter === allFilterValue || emp.joinDate === joinDateFilter;
 
     return matchesSearch && matchesRole && matchesZone && matchesVehicle && matchesJoinDate;
   });
@@ -118,11 +159,11 @@ export default function ResourceManagement() {
 
   const workforceStats = [
     {
-      label: "Total Workforce",
+      label: t("dashboard.resources.stats.total_workforce"),
       value: employees.length,
-      subtext: "All personnel",
+      subtext: t("dashboard.resources.stats.total_workforce_subtext"),
       accent: "from-white via-sky-50 to-sky-200 dark:from-slate-900 dark:via-sky-950/40 dark:to-slate-900",
-      filterValue: "All Roles",
+      filterValue: allFilterValue,
       border: "border-sky-200/80 dark:border-sky-500/40",
       ringColor: "ring-sky-300 dark:ring-sky-500/60",
       emphasis: true,
@@ -133,11 +174,11 @@ export default function ResourceManagement() {
       },
     },
     {
-      label: "Drivers",
+      label: t("dashboard.resources.stats.drivers"),
       value: roleCounts["driver"] ?? 0,
-      subtext: "Driver roster",
+      subtext: t("dashboard.resources.stats.drivers_subtext"),
       accent: "from-white via-emerald-50 to-emerald-200 dark:from-slate-900 dark:via-emerald-950/40 dark:to-slate-900",
-      filterValue: "Driver",
+      filterValue: "driver",
       border: "border-emerald-200/80 dark:border-emerald-500/40",
       ringColor: "ring-emerald-300 dark:ring-emerald-500/60",
       colors: {
@@ -147,11 +188,11 @@ export default function ResourceManagement() {
       },
     },
     {
-      label: "Operators",
+      label: t("dashboard.resources.stats.operators"),
       value: roleCounts["operator"] ?? 0,
-      subtext: "Operations crew",
+      subtext: t("dashboard.resources.stats.operators_subtext"),
       accent: "from-white via-amber-50 to-amber-200 dark:from-slate-900 dark:via-amber-950/40 dark:to-slate-900",
-      filterValue: "Operator",
+      filterValue: "operator",
       border: "border-amber-200/80 dark:border-amber-500/40",
       ringColor: "ring-amber-300 dark:ring-amber-500/60",
       colors: {
@@ -229,11 +270,13 @@ export default function ResourceManagement() {
           <div className="space-y-4 relative pt-4">
             <div>
               <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                Resource Management
+                {t("dashboard.resources.title")}
               </h2>
               <div className="flex items-center gap-1 text-sky-500 dark:text-sky-300 mt-2 text-sm">
                 <Sparkles className="h-4 w-4 animate-pulse" />
-                <p className="text-muted-foreground">Search & filter workforce</p>
+                <p className="text-muted-foreground">
+                  {t("dashboard.resources.subtitle")}
+                </p>
               </div>
             </div>
 
@@ -241,7 +284,7 @@ export default function ResourceManagement() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder="Search"
+                placeholder={t("dashboard.resources.search_placeholder")}
                 className="pl-10"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -256,8 +299,8 @@ export default function ResourceManagement() {
                 </SelectTrigger>
                 <SelectContent>
                   {roleOptions.map((role) => (
-                    <SelectItem key={role} value={role}>
-                      {role}
+                    <SelectItem key={role.value} value={role.value}>
+                      {role.label}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -269,8 +312,10 @@ export default function ResourceManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {zoneOptions.map((z) => (
-                    <SelectItem key={z} value={z}>{z}</SelectItem>
+                  {zoneOptions.map((zone) => (
+                    <SelectItem key={zone.value} value={zone.value}>
+                      {zone.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -281,8 +326,10 @@ export default function ResourceManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {vehicleOptions.map((v) => (
-                    <SelectItem key={v} value={v}>{v}</SelectItem>
+                  {vehicleOptions.map((vehicle) => (
+                    <SelectItem key={vehicle.value} value={vehicle.value}>
+                      {vehicle.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -293,8 +340,10 @@ export default function ResourceManagement() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {joinDateOptions.map((d) => (
-                    <SelectItem key={d} value={d}>{d}</SelectItem>
+                  {joinDateOptions.map((date) => (
+                    <SelectItem key={date.value} value={date.value}>
+                      {date.label}
+                    </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -306,7 +355,7 @@ export default function ResourceManagement() {
               className="w-full border text-slate-700 dark:text-white bg-gradient-to-r from-sky-100 via-slate-100 to-blue-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 hover:from-sky-200 hover:to-blue-200 dark:hover:from-slate-700 dark:hover:to-slate-800 transition-colors"
               onClick={clearFilters}
             >
-              Clear
+              {t("dashboard.resources.clear")}
             </Button>
           </div>
         </div>
@@ -317,7 +366,7 @@ export default function ResourceManagement() {
             {workforceStats.map((stat) => {
               const valueSize = stat.emphasis ? "text-4xl font-bold" : "text-3xl font-semibold";
               const accentOpacity = stat.emphasis ? "opacity-60" : "opacity-35";
-              const isActive = roleFilter === (stat.filterValue ?? "All Roles");
+              const isActive = roleFilter === (stat.filterValue ?? allFilterValue);
               const activeRing = isActive
                 ? `ring-2 ring-offset-2 ring-offset-white dark:ring-offset-slate-900 ${stat.ringColor ?? ""}`
                 : "";
@@ -326,7 +375,7 @@ export default function ResourceManagement() {
                 <button
                   type="button"
                   key={stat.label}
-                  onClick={() => setRoleFilter(stat.filterValue ?? "All Roles")}
+                  onClick={() => setRoleFilter(stat.filterValue ?? allFilterValue)}
                   className={`relative overflow-hidden rounded-2xl border ${
                     stat.border ?? "border-border/40 dark:border-border/60"
                   } bg-white/80 dark:bg-slate-950/70 backdrop-blur p-4 w-full transition-transform duration-500 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:dark:ring-offset-slate-900 ${activeRing} text-left`}
@@ -382,8 +431,12 @@ export default function ResourceManagement() {
                       <CardDescription className="text-xs">{emp.id}</CardDescription>
 
                       <div className="flex flex-wrap gap-2">
-                        <Badge className={getRoleColor(emp.role)} variant="outline">{emp.role}</Badge>
-                        <Badge className={getStatusColor(emp.status)} variant="outline">{emp.status}</Badge>
+                        <Badge className={getRoleColor(emp.role)} variant="outline">
+                          {translateRole(emp.role)}
+                        </Badge>
+                        <Badge className={getStatusColor(emp.status)} variant="outline">
+                          {translateStatus(emp.status)}
+                        </Badge>
                       </div>
                     </div>
                   </div>
@@ -404,21 +457,22 @@ export default function ResourceManagement() {
 
                   <div className="pt-2 border-t space-y-1 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Zone:</span>
+                      <span className="text-muted-foreground">{t("dashboard.resources.labels.zone")}</span>
                       <span className="font-medium">{emp.zone}</span>
                     </div>
 
-                    {/* <div className="flex justify-between">
-                      <span className="text-muted-foreground">Vehicle:</span>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">{t("dashboard.resources.labels.vehicle")}</span>
                       <span className="font-medium">{emp.vehicle}</span>
-                    </div> */}
+                    </div>
+
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Ward:</span>
                       <span className="font-medium">{emp.ward}</span>
                     </div>
 
                     <div className="text-xs text-muted-foreground">
-                      Joined: {emp.joinDate}
+                      {t("dashboard.resources.labels.joined")}: {emp.joinDate}
                     </div>
                   </div>
                 </CardContent>

@@ -3,59 +3,61 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, MapPin, Clock, Filter, BellRing, ShieldAlert, Activity } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 
-const alerts = [
+const ALERTS_DATA = [
   {
     id: 1,
     type: "deviation",
     vehicle: "TRK-015",
-    message: "Route deviation detected - 2.4km off planned route",
-    zone: "Zone B",
-    time: "5 minutes ago",
+    messageKey: "dashboard.alerts.message_route_deviation",
+    zoneKey: "dashboard.alerts.zone_b",
+    timeKey: "dashboard.alerts.time_5_minutes_ago",
     severity: "high",
   },
   {
     id: 2,
     type: "weighbridge",
     vehicle: "TRK-008",
-    message: "Weight mismatch: Expected 2.8T, Logged 3.2T (14% difference)",
-    zone: "Zone C",
-    time: "12 minutes ago",
+    messageKey: "dashboard.alerts.message_weight_mismatch",
+    zoneKey: "dashboard.alerts.zone_c",
+    timeKey: "dashboard.alerts.time_12_minutes_ago",
     severity: "critical",
   },
   {
     id: 3,
     type: "missed",
     vehicle: "TRK-022",
-    message: "Missed pickup at location #47",
-    zone: "Zone D",
-    time: "18 minutes ago",
+    messageKey: "dashboard.alerts.message_missed_pickup",
+    zoneKey: "dashboard.alerts.zone_d",
+    timeKey: "dashboard.alerts.time_18_minutes_ago",
     severity: "medium",
   },
   {
     id: 4,
     type: "late",
     vehicle: "TRK-001",
-    message: "Staff late login - Scheduled: 06:00, Actual: 06:42",
-    zone: "Zone A",
-    time: "1 hour ago",
+    messageKey: "dashboard.alerts.message_staff_late_login",
+    zoneKey: "dashboard.alerts.zone_a",
+    timeKey: "dashboard.alerts.time_1_hour_ago",
     severity: "low",
   },
   {
     id: 5,
     type: "deviation",
     vehicle: "TRK-019",
-    message: "Extended idle time at location (45 minutes)",
-    zone: "Zone E",
-    time: "1 hour ago",
+    messageKey: "dashboard.alerts.message_extended_idle",
+    zoneKey: "dashboard.alerts.zone_e",
+    timeKey: "dashboard.alerts.time_1_hour_ago",
     severity: "medium",
   },
 ];
 
 export default function Alerts() {
-  const severityCounts = alerts.reduce(
+  const { t } = useTranslation();
+  const severityCounts = ALERTS_DATA.reduce(
     (acc, alert) => {
       acc[alert.severity] = (acc[alert.severity] || 0) + 1;
       return acc;
@@ -89,9 +91,9 @@ export default function Alerts() {
 
   const summaryCards = [
     {
-      label: "Total Active Alerts",
-      value: alerts.length,
-      subtext: "Records across fleet",
+      label: t("dashboard.alerts.summary_total_active_alerts"),
+      value: ALERTS_DATA.length,
+      subtext: t("dashboard.alerts.summary_records_across_fleet"),
       gradient: "bg-gradient-to-br from-white via-sky-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900/40 dark:to-slate-900",
       border: "border-sky-200/80 dark:border-sky-500/40",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
@@ -99,9 +101,9 @@ export default function Alerts() {
       Icon: BellRing,
     },
     {
-      label: "Critical Alerts",
+      label: t("dashboard.alerts.summary_critical_alerts"),
       value: severityCounts["critical"] ?? 0,
-      subtext: "Immediate action",
+      subtext: t("dashboard.alerts.summary_immediate_action"),
       gradient: "bg-gradient-to-br from-white via-rose-50 to-rose-100 dark:from-slate-950 dark:via-rose-950/20 dark:to-slate-900",
       border: "border-rose-200/80 dark:border-rose-500/40",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
@@ -109,9 +111,9 @@ export default function Alerts() {
       Icon: ShieldAlert,
     },
     {
-      label: "High Priority",
+      label: t("dashboard.alerts.summary_high_priority"),
       value: severityCounts["high"] ?? 0,
-      subtext: "Needs review",
+      subtext: t("dashboard.alerts.summary_needs_review"),
       gradient: "bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:from-slate-950 dark:via-amber-950/20 dark:to-slate-900",
       border: "border-amber-200/80 dark:border-amber-500/40",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
@@ -119,9 +121,9 @@ export default function Alerts() {
       Icon: Activity,
     },
     {
-      label: "Medium & Low",
+      label: t("dashboard.alerts.summary_medium_low"),
       value: (severityCounts["medium"] ?? 0) + (severityCounts["low"] ?? 0),
-      subtext: "Monitoring",
+      subtext: t("dashboard.alerts.summary_monitoring"),
       gradient: "bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-900",
       border: "border-emerald-200/80 dark:border-emerald-500/40",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
@@ -176,35 +178,37 @@ export default function Alerts() {
         <div className={heroPanelClass}>
           <div>
             <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
-              Alert Management
+              {t("dashboard.alerts.title")}
             </h2>
-            <p className="text-muted-foreground">Monitor deviations, missed pickups, and system alerts</p>
+            <p className="text-muted-foreground">
+              {t("dashboard.alerts.subtitle")}
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Select defaultValue="all">
               <SelectTrigger className="w-[190px]">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by zone" />
+                <SelectValue placeholder={t("dashboard.alerts.filter_by_zone")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Zones</SelectItem>
-                <SelectItem value="a">Zone A</SelectItem>
-                <SelectItem value="b">Zone B</SelectItem>
-                <SelectItem value="c">Zone C</SelectItem>
-                <SelectItem value="d">Zone D</SelectItem>
-                <SelectItem value="e">Zone E</SelectItem>
+                <SelectItem value="all">{t("dashboard.alerts.all_zones")}</SelectItem>
+                <SelectItem value="a">{t("dashboard.alerts.zone_a")}</SelectItem>
+                <SelectItem value="b">{t("dashboard.alerts.zone_b")}</SelectItem>
+                <SelectItem value="c">{t("dashboard.alerts.zone_c")}</SelectItem>
+                <SelectItem value="d">{t("dashboard.alerts.zone_d")}</SelectItem>
+                <SelectItem value="e">{t("dashboard.alerts.zone_e")}</SelectItem>
               </SelectContent>
             </Select>
             <Select defaultValue="all">
               <SelectTrigger className="w-[190px]">
-                <SelectValue placeholder="Filter by severity" />
+                <SelectValue placeholder={t("dashboard.alerts.filter_by_severity")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Severities</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="all">{t("dashboard.alerts.all_severities")}</SelectItem>
+                <SelectItem value="critical">{t("dashboard.alerts.severity_critical")}</SelectItem>
+                <SelectItem value="high">{t("dashboard.alerts.severity_high")}</SelectItem>
+                <SelectItem value="medium">{t("dashboard.alerts.severity_medium")}</SelectItem>
+                <SelectItem value="low">{t("dashboard.alerts.severity_low")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -245,12 +249,12 @@ export default function Alerts() {
 
         <Card className={surfaceCardClass}>
           <CardHeader>
-            <CardTitle>Active Alerts</CardTitle>
-            <CardDescription>Real-time alerts requiring attention</CardDescription>
+            <CardTitle>{t("dashboard.alerts.active_alerts_title")}</CardTitle>
+            <CardDescription>{t("dashboard.alerts.active_alerts_description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {alerts.map((alert, index) => {
+              {ALERTS_DATA.map((alert, index) => {
                 const severity = severityTokens[alert.severity];
                 return (
                   <div
@@ -270,23 +274,23 @@ export default function Alerts() {
                       <div className="flex items-center gap-2">
                         <span className="font-semibold text-base">{alert.vehicle}</span>
                         <Badge variant="outline" className={cn("text-xs font-semibold", severity.badge)}>
-                          {alert.severity.toUpperCase()}
+                          {t(`dashboard.alerts.severity_${alert.severity}`)}
                         </Badge>
                       </div>
-                      <p className="text-sm text-foreground">{alert.message}</p>
+                      <p className="text-sm text-foreground">{t(alert.messageKey)}</p>
                       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
-                          {alert.zone}
+                          {t(alert.zoneKey)}
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {alert.time}
+                          {t(alert.timeKey)}
                         </span>
                       </div>
                     </div>
                     <Button variant="outline" size="sm" className="relative">
-                      Review
+                      {t("dashboard.alerts.review")}
                     </Button>
                   </div>
                 );

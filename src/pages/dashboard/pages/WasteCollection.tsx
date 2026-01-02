@@ -4,6 +4,7 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import type { ChartData } from "chart.js";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
+import { useTranslation } from "react-i18next";
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -89,9 +90,15 @@ type MonthlyStat = {
 };
 
 // ---------------------- Fallback Samples ----------------------
+const todayKey = new Date().toISOString().slice(0, 10);
+const currentMonthLabel = new Date().toLocaleString("en-US", {
+  month: "long",
+  year: "numeric",
+});
+
 const FALLBACK_DAILY_DATA: DailyRow[] = [
   {
-    date: "2025-10-15",
+    date: todayKey,
     zone: "Zone A",
     wet: 8.5,
     dry: 5.2,
@@ -113,7 +120,14 @@ const ZONE_WASTE_SUMMARY: Record<
 };
 
 const FALLBACK_MONTHLY_STATS: MonthlyStat[] = [
-  { month: "October 2025", wet: 245, dry: 156, total: 401, avgDaily: 13.4 , mix: 0},
+  {
+    month: currentMonthLabel,
+    wet: 245,
+    dry: 156,
+    total: 401,
+    avgDaily: 13.4,
+    mix: 0,
+  },
 ];
 
 const WEIGHMENT_API_URL =
@@ -124,13 +138,20 @@ const WEIGHMENT_API_KEY = "ZIGMA-DELHI-WEIGHMENT-2025-SECURE";
 const toTons = (v: number | undefined | null) =>
   Number(((v ?? 0) / 1000).toFixed(2));
 
-const formatTons = (v: number) => `${v.toFixed(1)} Tons`;
+const formatTons = (v: number, unitLabel = "Tons") =>
+  `${v.toFixed(1)} ${unitLabel}`;
 
-const formatMonthLabel = (isoDate: string) => {
+const formatMonthLabel = (
+  isoDate: string,
+  locale = "en-US",
+  fallbackLabel = "Current Month",
+) => {
   const d = new Date(isoDate);
-  if (Number.isNaN(d.getTime())) return "Current Month";
-  return d.toLocaleString("en-US", { month: "long", year: "numeric" });
+  if (Number.isNaN(d.getTime())) return fallbackLabel;
+  return d.toLocaleString(locale, { month: "long", year: "numeric" });
 };
+
+const toDateKey = (value?: string) => (typeof value === "string" ? value.slice(0, 10) : "");
 
 // ---------------------- Drilldown Dummy Data ----------------------
 const CITY_DATA: Record<string, { zones: Record<string, string[]> }> = {
@@ -387,27 +408,27 @@ const PROPERTY_IMPACT: Record<
 const WASTE_CATEGORY_META: Record<
   WasteCategoryKey,
   {
-    label: string;
-    description: string;
+    labelKey: string;
+    descriptionKey: string;
     icon: ReactNode;
     gradient: string;
   }
 > = {
   household: {
-    label: "Household Waste",
-    description: "Dry, wet & mixed streams",
+    labelKey: "dashboard.waste_collection.categories.household",
+    descriptionKey: "dashboard.waste_collection.categories.household_desc",
     icon: <Home className="h-4 w-4 text-blue-600" />,
     gradient: "from-blue-50 to-blue-100",
   },
   ewaste: {
-    label: "E-Waste",
-    description: "Electronics, batteries & appliances",
+    labelKey: "dashboard.waste_collection.categories.ewaste",
+    descriptionKey: "dashboard.waste_collection.categories.ewaste_desc",
     icon: <Recycle className="h-4 w-4 text-amber-600" />,
     gradient: "from-amber-50 to-amber-100",
   },
   medical: {
-    label: "Medical Waste",
-    description: "Infectious and general medical ",
+    labelKey: "dashboard.waste_collection.categories.medical",
+    descriptionKey: "dashboard.waste_collection.categories.medical_desc",
     icon: <BarChart3 className="h-4 w-4 text-rose-600" />,
     gradient: "from-rose-50 to-rose-100",
   },
@@ -960,6 +981,7 @@ const getYesterdayISO = () => {
 
 // ------------------------- MAIN COMPONENT -------------------------
 export default function WasteCollection() {
+  const { t, i18n } = useTranslation();
   // Core data states
   const [dailyData, setDailyData] = useState<DailyRow[]>(FALLBACK_DAILY_DATA);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStat[]>(
@@ -967,6 +989,9 @@ export default function WasteCollection() {
   );
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
+  const locale = i18n.language || "en-US";
+  const tonsLabel = t("common.tons");
+  const tonsShortLabel = t("dashboard.waste_collection.units.tons_short");
 
   const pageBgClass = cn(
     "min-h-screen p-6 transition-colors duration-300",
@@ -1064,8 +1089,13 @@ export default function WasteCollection() {
       const rows: ApiWasteRow[] = Array.isArray(data?.data) ? data.data : [];
       if (!rows.length) return false;
 
+      const activeRows = rows.filter((row) => {
+        const dateKey = toDateKey(row.date);
+        return dateKey && dateKey <= todayKey;
+      });
+
       // Daily
-      const formatted = rows
+      const formatted = activeRows
         .map((row) => {
           const wet = toTons(row.wet_weight);
           const dry = toTons(row.dry_weight);
@@ -1075,8 +1105,8 @@ export default function WasteCollection() {
             : wet + dry + mix;
 
           return {
-            date: row.date ?? "",
-            zone: data?.site ?? "All Zones",
+            date: toDateKey(row.date),
+            zone: data?.site ?? t("dashboard.waste_collection.all_zones"),
             wet,
             dry,
             total,
@@ -1085,15 +1115,18 @@ export default function WasteCollection() {
             households: Number(row.no_of_household ?? 0),
           };
         })
-        .filter((r) => r.date)
         .sort(
           (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
         );
 
-      if (formatted.length) setDailyData(formatted);
+      if (formatted.length) {
+        setDailyData(formatted);
+      } else {
+        setDailyData([]);
+      }
 
       // Monthly
-      const totals = rows.reduce(
+      const totals = activeRows.reduce(
         (a, r) => {
           a.wet += r.wet_weight ?? 0;
           a.dry += r.dry_weight ?? 0;
@@ -1105,13 +1138,17 @@ export default function WasteCollection() {
       );
 
       const actDays =
-        rows.filter((r) => Number(r.total_net_weight ?? 0) > 0).length ||
-        rows.length ||
+        activeRows.filter((r) => Number(r.total_net_weight ?? 0) > 0).length ||
+        activeRows.length ||
         1;
 
       setMonthlyStats([
         {
-          month: formatMonthLabel(fromDate),
+          month: formatMonthLabel(
+            fromDate,
+            locale,
+            t("dashboard.waste_collection.current_month"),
+          ),
           wet: toTons(totals.wet),
           dry: toTons(totals.dry),
           mix: toTons(totals.mix),
@@ -1133,6 +1170,15 @@ export default function WasteCollection() {
 
   const wardWasteData = wardBaseData;
 
+  const pieLabels = useMemo(
+    () => [
+      t("dashboard.waste_collection.categories.household"),
+      t("dashboard.waste_collection.categories.ewaste"),
+      t("dashboard.waste_collection.categories.medical"),
+    ],
+    [i18n.language, t],
+  );
+
   const getZonePieChartData = (
     zoneName?: string
   ): ChartData<"pie", number[], string> => {
@@ -1149,7 +1195,7 @@ export default function WasteCollection() {
       );
 
     return {
-      labels: ["Household Waste", "E-Waste", "Medical Waste"],
+      labels: pieLabels,
       datasets: [
         {
           data: [
@@ -1176,7 +1222,7 @@ export default function WasteCollection() {
       : [0, 0, 0];
 
     return {
-      labels: ["Household Waste", "E-Waste", "Medical Waste"],
+      labels: pieLabels,
       datasets: [
         {
           data,
@@ -1195,7 +1241,7 @@ export default function WasteCollection() {
 
   const wardPieData = useMemo(
     () => getWardPieChartData(wardWasteData),
-    [wardWasteData]
+    [pieLabels, wardWasteData]
   );
 
   const selectedWardBreakdown =
@@ -1203,17 +1249,37 @@ export default function WasteCollection() {
       ? wardWasteData[selectedWasteType]
       : null;
 
+  const getPropertyLabel = (value: string) => {
+    if (value === "All") return t("dashboard.waste_collection.properties.all");
+    if (value === "Household") return t("dashboard.waste_collection.properties.household");
+    if (value === "Commercial") return t("dashboard.waste_collection.properties.commercial");
+    return value;
+  };
+
+  const getSubPropertyLabel = (value: string) => {
+    if (value === "All") return t("dashboard.waste_collection.properties.all");
+    if (value === "Apartments") return t("dashboard.waste_collection.subproperties.apartments");
+    if (value === "Residences / Villas") {
+      return t("dashboard.waste_collection.subproperties.residences_villas");
+    }
+    if (value === "Theatre Waste") return t("dashboard.waste_collection.subproperties.theatre_waste");
+    if (value === "Medical Waste") return t("dashboard.waste_collection.subproperties.medical_waste");
+    return value;
+  };
+
   const propertyDescriptor =
-    property === "All" ? "All Properties" : `${property} - ${subProperty}`;
+    property === "All"
+      ? t("dashboard.waste_collection.properties.all_properties")
+      : `${getPropertyLabel(property)} - ${getSubPropertyLabel(subProperty)}`;
 
   const zonePieData = useMemo(
     () => getZonePieChartData(selectedZone ?? undefined),
-    [selectedZone]
+    [pieLabels, selectedZone]
   );
 
   const zoneTotalDisplay = selectedZone
-    ? formatTons(computeZoneTotals(selectedZone))
-    : formatTons(0);
+    ? formatTons(computeZoneTotals(selectedZone), tonsLabel)
+    : formatTons(0, tonsLabel);
 
   const propertyRecords = useMemo(() => {
     const data =
@@ -1286,15 +1352,15 @@ export default function WasteCollection() {
         <div className={heroPanelClass}>
           <div>
             <h2 className="text-4xl font-bold bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
-              Waste Collection Dashboard
+              {t("dashboard.waste_collection.title")}
             </h2>
             <p className={cn("mt-2 text-lg", isDarkMode ? "text-slate-300" : "text-slate-600")}>
-              Real-time tracking and analytics for waste management
+              {t("dashboard.waste_collection.subtitle")}
             </p>
           </div>
           <Button className="gap-2 bg-gradient-to-r from-sky-400 to-blue-500 hover:from-sky-500 hover:to-blue-600 text-white">
             <Download className="h-4 w-4" />
-            Export Report
+            {t("dashboard.waste_collection.export_report")}
           </Button>
         </div>
 
@@ -1304,12 +1370,14 @@ export default function WasteCollection() {
           <Card className="border border-sky-200 bg-gradient-to-br from-white via-sky-50 to-indigo-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-sky-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-sky-600 dark:text-sky-200">
-                Today's Collection
+                {t("dashboard.waste_collection.kpi_today")}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {yesterdayEntry ? formatTons(yesterdayEntry.total) : "--"}
+                {yesterdayEntry
+                  ? formatTons(yesterdayEntry.total, tonsLabel)
+                  : "--"}
               </div>
               <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
                 <Trash2 className="h-6 w-6 text-sky-600 dark:text-sky-200" />
@@ -1320,11 +1388,15 @@ export default function WasteCollection() {
           {/* WET */}
           <Card className="border border-emerald-200 bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-emerald-600 dark:text-emerald-200">Wet Waste</CardTitle>
+              <CardTitle className="text-sm font-semibold text-emerald-600 dark:text-emerald-200">
+                {t("dashboard.waste_collection.kpi_wet")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {yesterdayEntry ? formatTons(yesterdayEntry.wet) : "--"}
+                {yesterdayEntry
+                  ? formatTons(yesterdayEntry.wet, tonsLabel)
+                  : "--"}
               </div>
               <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
                 <Droplets className="h-6 w-6 text-emerald-600 dark:text-emerald-200" />
@@ -1335,11 +1407,15 @@ export default function WasteCollection() {
           {/* DRY */}
           <Card className="border border-rose-200 bg-gradient-to-br from-white via-rose-50 to-rose-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-rose-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-rose-600 dark:text-rose-200">Dry Waste</CardTitle>
+              <CardTitle className="text-sm font-semibold text-rose-600 dark:text-rose-200">
+                {t("dashboard.waste_collection.kpi_dry")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {yesterdayEntry ? formatTons(yesterdayEntry.dry) : "--"}
+                {yesterdayEntry
+                  ? formatTons(yesterdayEntry.dry, tonsLabel)
+                  : "--"}
               </div>
               <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
                 <Recycle className="h-6 w-6 text-rose-600 dark:text-rose-200" />
@@ -1348,11 +1424,15 @@ export default function WasteCollection() {
           </Card>
           <Card className="border border-purple-200 bg-gradient-to-br from-white via-purple-50 to-purple-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-purple-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
             <CardHeader>
-              <CardTitle className="text-sm font-semibold text-purple-600 dark:text-purple-200">Mixed Waste</CardTitle>
+              <CardTitle className="text-sm font-semibold text-purple-600 dark:text-purple-200">
+                {t("dashboard.waste_collection.kpi_mixed")}
+              </CardTitle>
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {yesterdayEntry ? formatTons(yesterdayEntry.mix) : "--"}
+                {yesterdayEntry
+                  ? formatTons(yesterdayEntry.mix, tonsLabel)
+                  : "--"}
               </div>
               <div className="p-2 bg-white/70 dark:bg-slate-900/60 rounded-lg">
                 <Recycle className="h-6 w-6 text-purple-600 dark:text-purple-200" />
@@ -1364,12 +1444,14 @@ export default function WasteCollection() {
           <Card className="border border-amber-200 bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:border-slate-800 dark:bg-gradient-to-br dark:from-slate-950 dark:via-amber-950/20 dark:to-slate-900 text-slate-800 dark:text-slate-100 hover:-translate-y-1 transition-all">
             <CardHeader>
               <CardTitle className="text-sm font-semibold text-amber-600 dark:text-amber-200">
-                Monthly Total
+                {t("dashboard.waste_collection.kpi_monthly_total")}
               </CardTitle>
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {monthStat ? formatTons(monthStat.total) : "401 Tons"}
+                {monthStat
+                  ? formatTons(monthStat.total, tonsLabel)
+                  : formatTons(401, tonsLabel)}
               </div>
               <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
                 <Calendar className="h-6 w-6 text-amber-600 dark:text-amber-200" />
@@ -1414,7 +1496,7 @@ export default function WasteCollection() {
                 )}
               >
                 <BarChart3 className="h-4 w-4 mr-2" />
-                Daily Data
+                {t("dashboard.waste_collection.tabs.daily")}
               </TabsTrigger>
 
               <TabsTrigger
@@ -1427,7 +1509,7 @@ export default function WasteCollection() {
                 )}
               >
                 <Calendar className="h-4 w-4 mr-2" />
-                Monthly Summary
+                {t("dashboard.waste_collection.tabs.monthly")}
               </TabsTrigger>
 
               <TabsTrigger
@@ -1440,7 +1522,7 @@ export default function WasteCollection() {
                 )}
               >
                 <MapPin className="h-4 w-4 mr-2" />
-                Zone Analysis
+                {t("dashboard.waste_collection.tabs.zone")}
               </TabsTrigger>
             </TabsList>
 
@@ -1451,10 +1533,10 @@ export default function WasteCollection() {
                 <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
                   <div>
                     <h3 className="text-xl font-bold">
-                      Daily Collection Records
+                      {t("dashboard.waste_collection.daily_title")}
                     </h3>
                     <p className="text-slate-600">
-                      Comprehensive waste collection performance metrics
+                      {t("dashboard.waste_collection.daily_subtitle")}
                     </p>
                   </div>
 
@@ -1475,12 +1557,12 @@ export default function WasteCollection() {
                   <Table>
                     <TableHeader>
                       <TableRow className={tableHeadClass}>
-                        <TableHead>Date</TableHead>
-                        <TableHead>Zone</TableHead>
-                        <TableHead>Wet (Tons)</TableHead>
-                        <TableHead>Dry (Tons)</TableHead>
-                        <TableHead>Mix (Tons)</TableHead>
-                        <TableHead>Total (Tons)</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.date")}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.zone")}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.wet", { unit: tonsLabel })}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.dry", { unit: tonsLabel })}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.mixed", { unit: tonsLabel })}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.total", { unit: tonsLabel })}</TableHead>
                       </TableRow>
                     </TableHeader>
 
@@ -1488,7 +1570,7 @@ export default function WasteCollection() {
                       {paginatedDailyData.map((row, index) => (
                         <TableRow key={index} className={tableRowHoverClass}>
                           <TableCell>
-                            {new Date(row.date).toLocaleDateString("en-US")}
+                            {new Date(row.date).toLocaleDateString(locale)}
                           </TableCell>
 
                           <TableCell>
@@ -1524,7 +1606,7 @@ export default function WasteCollection() {
                   <div className={paginationFooterClass}>
                     {/* Rows per page */}
                     <div className="flex items-center gap-2 text-sm">
-                      <span>Rows per page</span>
+                      <span>{t("dashboard.waste_collection.rows_per_page")}</span>
                       <Select
                         value={String(dailyPageSize)}
                         onValueChange={(v) => setDailyPageSize(Number(v))}
@@ -1555,7 +1637,10 @@ export default function WasteCollection() {
                       </Button>
 
                       <span className={paginationLabelClass}>
-                        Page {dailyPage} of {totalDailyPages}
+                        {t("dashboard.waste_collection.page_of", {
+                          page: dailyPage,
+                          totalPages: totalDailyPages,
+                        })}
                       </span>
 
                       <Button
@@ -1579,18 +1664,20 @@ export default function WasteCollection() {
             {/* ---------------- MONTHLY ---------------- */}
             <TabsContent value="monthly" className="mt-6">
               <div className="space-y-4">
-                <h3 className="text-xl font-bold">Monthly Summary</h3>
+                <h3 className="text-xl font-bold">
+                  {t("dashboard.waste_collection.monthly_title")}
+                </h3>
 
                 <div className={tableContainerClass}>
                   <Table>
                     <TableHeader>
                       <TableRow className={tableHeadClass}>
-                        <TableHead>Month</TableHead>
-                        <TableHead>Wet (Tons)</TableHead>
-                        <TableHead>Dry (Tons)</TableHead>
-                        <TableHead>Mix (Tons)</TableHead>
-                        <TableHead>Total (Tons)</TableHead>
-                        <TableHead>Avg Daily</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.month")}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.wet", { unit: tonsLabel })}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.dry", { unit: tonsLabel })}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.mixed", { unit: tonsLabel })}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.total", { unit: tonsLabel })}</TableHead>
+                        <TableHead>{t("dashboard.waste_collection.headers.avg_daily")}</TableHead>
                       </TableRow>
                     </TableHeader>
 
@@ -1616,11 +1703,13 @@ export default function WasteCollection() {
               <div className="space-y-6">
                 {/* City Dropdown */}
                 <div className="flex items-center gap-4">
-                  <h3 className="text-xl font-bold">Zone Analysis</h3>
+                  <h3 className="text-xl font-bold">
+                    {t("dashboard.waste_collection.zone_title")}
+                  </h3>
 
                   <Select value={selectedCity} onValueChange={setSelectedCity}>
                     <SelectTrigger className="w-56">
-                      <SelectValue placeholder="Select City" />
+                      <SelectValue placeholder={t("dashboard.waste_collection.select_city")} />
                     </SelectTrigger>
                     <SelectContent>
                       {Object.keys(CITY_DATA).map((city) => (
@@ -1661,9 +1750,9 @@ export default function WasteCollection() {
 
                       <CardContent>
                         <div className="flex justify-between">
-                          <span>Total Collected</span>
+                          <span>{t("dashboard.waste_collection.total_collected")}</span>
                           <span className="font-bold">
-                            {formatTons(computeZoneTotals(zone))}
+                            {formatTons(computeZoneTotals(zone), tonsLabel)}
                           </span>
                         </div>
                       </CardContent>
@@ -1685,9 +1774,12 @@ export default function WasteCollection() {
                           className="flex items-center gap-2 mb-2 text-sm text-slate-500"
                           onClick={() => setZoneDialog(false)}
                         >
-                          <ArrowLeft className="h-4 w-4" /> Back
+                          <ArrowLeft className="h-4 w-4" />{" "}
+                          {t("dashboard.waste_collection.back")}
                         </button>
-                        Zone: {selectedZone}
+                        {t("dashboard.waste_collection.zone_label", {
+                          zone: selectedZone,
+                        })}
                       </DialogTitle>
                     </DialogHeader>
 
@@ -1699,7 +1791,9 @@ export default function WasteCollection() {
                       )}
                     >
                       <h3 className="text-lg font-semibold mb-4 text-center">
-                        Total Waste Summary for {selectedZone}
+                        {t("dashboard.waste_collection.zone_summary_title", {
+                          zone: selectedZone,
+                        })}
                       </h3>
 
                       <div className="w-full flex items-center justify-center gap-6">
@@ -1709,7 +1803,7 @@ export default function WasteCollection() {
                       </div>
                       <div className=" items-center justify-center mt-4 flex">
                         <div className="flex justify-between w-48">
-                          <span>Total Collected</span>
+                          <span>{t("dashboard.waste_collection.total_collected")}</span>
                           <span className="font-bold">{zoneTotalDisplay}</span>
                         </div>
                       </div>
@@ -1757,9 +1851,12 @@ export default function WasteCollection() {
                             setZoneDialog(true);
                           }}
                         >
-                          <ArrowLeft className="h-4 w-4" /> Back
+                          <ArrowLeft className="h-4 w-4" />{" "}
+                          {t("dashboard.waste_collection.back")}
                         </button>
-                        Ward: {selectedWard}
+                        {t("dashboard.waste_collection.ward_label", {
+                          ward: selectedWard,
+                        })}
                       </DialogTitle>
                     </DialogHeader>
 
@@ -1772,7 +1869,9 @@ export default function WasteCollection() {
                           )}
                         >
                           <h3 className="text-lg font-semibold mb-4 text-center">
-                            Ward Waste Mix · {selectedWard}
+                            {t("dashboard.waste_collection.ward_mix_title", {
+                              ward: selectedWard,
+                            })}
                           </h3>
                           <div className="flex flex-col items-center gap-4">
                             <div className="h-64 w-64">
@@ -1782,13 +1881,14 @@ export default function WasteCollection() {
                               {WASTE_CATEGORY_KEYS.map((key) => (
                                 <div key={key} className="text-center">
                                   <p className="text-slate-500">
-                                    {WASTE_CATEGORY_META[key].label}
+                                    {t(WASTE_CATEGORY_META[key].labelKey)}
                                   </p>
                                   <p className="font-bold">
                                     {formatTons(
                                       wardWasteData
                                         ? wardWasteData[key].total
-                                        : 0
+                                        : 0,
+                                      tonsLabel,
                                     )}
                                   </p>
                                 </div>
@@ -1879,18 +1979,22 @@ export default function WasteCollection() {
                             <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                               <div>
                                 <CardTitle>
-                                  Collection Runs · {propertyDescriptor}
+                                  {t("dashboard.waste_collection.collection_runs", {
+                                    descriptor: propertyDescriptor,
+                                  })}
                                 </CardTitle>
                                 <CardDescription>
-                                  Latest 10 pickups tagged to{" "}
-                                  {property === "All"
-                                    ? "all property types"
-                                    : `${subProperty} (${property})`}
+                                  {t("dashboard.waste_collection.latest_pickups", {
+                                    target:
+                                      property === "All"
+                                        ? t("dashboard.waste_collection.all_property_types")
+                                        : `${getSubPropertyLabel(subProperty)} (${getPropertyLabel(property)})`,
+                                  })}
                                 </CardDescription>
                               </div>
                               <div className="grid gap-4 sm:grid-cols-2">
                                 <div>
-                                  <Label>Property</Label>
+                                  <Label>{t("dashboard.waste_collection.property_label")}</Label>
                                   <Select
                                     value={property}
                                     onValueChange={(v) =>
@@ -1900,7 +2004,7 @@ export default function WasteCollection() {
                                     }
                                   >
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Property" />
+                                      <SelectValue placeholder={t("dashboard.waste_collection.property_placeholder")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {(
@@ -1911,7 +2015,7 @@ export default function WasteCollection() {
                                         >
                                       ).map((p) => (
                                         <SelectItem key={p} value={p}>
-                                          {p}
+                                          {getPropertyLabel(p)}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -1919,18 +2023,18 @@ export default function WasteCollection() {
                                 </div>
 
                                 <div>
-                                  <Label>Subproperty</Label>
+                                  <Label>{t("dashboard.waste_collection.subproperty_label")}</Label>
                                   <Select
                                     value={subProperty}
                                     onValueChange={(v) => setSubProperty(v)}
                                   >
                                     <SelectTrigger>
-                                      <SelectValue placeholder="Subproperty" />
+                                      <SelectValue placeholder={t("dashboard.waste_collection.subproperty_placeholder")} />
                                     </SelectTrigger>
                                     <SelectContent>
                                       {PROPERTY_OPTIONS[property].map((sp) => (
                                         <SelectItem key={sp} value={sp}>
-                                          {sp}
+                                          {getSubPropertyLabel(sp)}
                                         </SelectItem>
                                       ))}
                                     </SelectContent>
@@ -1944,12 +2048,12 @@ export default function WasteCollection() {
                               <Table>
                                 <TableHeader>
                                   <TableRow className={tableHeadClass}>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Location</TableHead>
-                                    <TableHead>Dry</TableHead>
-                                    <TableHead>Wet</TableHead>
-                                    <TableHead>Mixed</TableHead>
-                                    <TableHead>Last Pickup</TableHead>
+                                    <TableHead>{t("dashboard.waste_collection.headers.id")}</TableHead>
+                                    <TableHead>{t("dashboard.waste_collection.headers.location")}</TableHead>
+                                    <TableHead>{t("dashboard.waste_collection.headers.dry_short")}</TableHead>
+                                    <TableHead>{t("dashboard.waste_collection.headers.wet_short")}</TableHead>
+                                    <TableHead>{t("dashboard.waste_collection.headers.mixed_short")}</TableHead>
+                                    <TableHead>{t("dashboard.waste_collection.headers.last_pickup")}</TableHead>
                                   </TableRow>
                                 </TableHeader>
                                 <TableBody>
@@ -1967,13 +2071,13 @@ export default function WasteCollection() {
                                         </div>
                                       </TableCell>
                                       <TableCell>
-                                        {record.dry.toFixed(2)} t
+                                        {record.dry.toFixed(2)} {tonsShortLabel}
                                       </TableCell>
                                       <TableCell>
-                                        {record.wet.toFixed(2)} t
+                                        {record.wet.toFixed(2)} {tonsShortLabel}
                                       </TableCell>
                                       <TableCell>
-                                        {record.mixed.toFixed(2)} t
+                                        {record.mixed.toFixed(2)} {tonsShortLabel}
                                       </TableCell>
                                       <TableCell
                                         className={cn(
@@ -1993,7 +2097,7 @@ export default function WasteCollection() {
                       </div>
                     ) : (
                       <p className="text-center text-slate-500">
-                        Select a ward to view detailed information.
+                        {t("dashboard.waste_collection.select_ward")}
                       </p>
                     )}
                   </DialogContent>

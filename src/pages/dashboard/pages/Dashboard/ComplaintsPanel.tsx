@@ -5,12 +5,15 @@ import { AlertTriangle, CheckCircle, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { complaintApi } from "@/helpers/admin";
+import { useTranslation } from "react-i18next";
 
 export function ComplaintsPanel() {
-  const [complaints, setComplaints] = useState<ComplaintData[]>([]);
+  const { t, i18n } = useTranslation();
+  const [complaints, setComplaints] = useState<ComplaintRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const { encDashboardGrievances } = getEncryptedRoute();
   const grievancesPath = `/dashboard/${encDashboardGrievances}`;
+  const rtf = new Intl.RelativeTimeFormat(i18n.language, { numeric: "auto" });
 
   useEffect(() => {
     let isMounted = true;
@@ -18,7 +21,7 @@ export function ComplaintsPanel() {
       try {
         const response = await complaintApi.list();
         const rows = Array.isArray(response) ? response : [];
-        const deduped = new Map<string, ComplaintData>();
+        const deduped = new Map<string, ComplaintRecord>();
 
         rows.forEach((row: Record<string, any>, index: number) => {
           const id = String(
@@ -42,14 +45,15 @@ export function ComplaintsPanel() {
             row.sub_category ??
             row.category ??
             row.details ??
-            "Complaint";
+            t("dashboard.home.complaint_fallback");
 
-          const mapped: ComplaintData = {
+          const mapped: ComplaintRecord = {
             id,
             title: String(title),
             status: normalizedStatus,
             priority: normalizedPriority,
-            timestamp: formatTimeAgo(createdDate) ?? "-",
+            timestamp: createdDate ? createdDate.toISOString() : "-",
+            createdAt: createdDate ? createdDate.getTime() : undefined,
             year: createdDate ? String(createdDate.getFullYear()) : "-",
           };
 
@@ -59,18 +63,26 @@ export function ComplaintsPanel() {
             return;
           }
 
-          if (!createdDate) return;
-          const existingDate = parseTimeAgo(existing.timestamp);
-          if (!existingDate || createdDate > existingDate) {
+          if (!mapped.createdAt) return;
+          const existingDate = existing.createdAt ?? 0;
+          if (!existingDate || mapped.createdAt > existingDate) {
             deduped.set(id, mapped);
           }
         });
 
+        const priorityRank: Record<ComplaintData["priority"], number> = {
+          High: 0,
+          Medium: 1,
+          Low: 2,
+        };
+
         const sorted = Array.from(deduped.values()).sort((a, b) => {
-          const aDate = parseTimeAgo(a.timestamp);
-          const bDate = parseTimeAgo(b.timestamp);
-          if (!aDate || !bDate) return 0;
-          return bDate.getTime() - aDate.getTime();
+          const rankDiff = priorityRank[a.priority] - priorityRank[b.priority];
+          if (rankDiff !== 0) return rankDiff;
+
+          const aDate = a.createdAt ?? 0;
+          const bDate = b.createdAt ?? 0;
+          return bDate - aDate;
         });
 
         if (isMounted) {
@@ -105,6 +117,8 @@ export function ComplaintsPanel() {
     return { total, inProgress, resolved };
   }, [complaints]);
 
+  const shouldScroll = complaints.length > 3;
+
   const CARD_STYLE =
     "flex flex-col items-center justify-center p-4 rounded-lg border border-gray-200 dark:border-gray-700";
 
@@ -135,29 +149,61 @@ export function ComplaintsPanel() {
     }
   };
 
+  const getStatusLabel = (status: ComplaintData["status"]) => {
+    if (status === "In Progress") return t("common.status_in_progress");
+    if (status === "Resolved") return t("common.status_resolved");
+    return t("common.status_open");
+  };
+
+  const getPriorityLabel = (priority: ComplaintData["priority"]) => {
+    if (priority === "High") return t("common.priority_high");
+    if (priority === "Low") return t("common.priority_low");
+    return t("common.priority_medium");
+  };
+
+  const formatTimeAgo = (createdAt?: number) => {
+    if (!createdAt) return "-";
+    const diffMs = Date.now() - createdAt;
+    const diffSec = Math.max(Math.floor(diffMs / 1000), 0);
+    const formatWithUnit = (value: number, unit: Intl.RelativeTimeFormatUnit) =>
+      rtf.format(-value, unit);
+
+    if (diffSec < 60) return formatWithUnit(diffSec, "second");
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return formatWithUnit(diffMin, "minute");
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return formatWithUnit(diffHr, "hour");
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay < 30) return formatWithUnit(diffDay, "day");
+    const diffMonth = Math.floor(diffDay / 30);
+    if (diffMonth < 12) return formatWithUnit(diffMonth, "month");
+    const diffYear = Math.floor(diffMonth / 12);
+    return formatWithUnit(diffYear, "year");
+  };
+
   return (
     <DataCard
-      title="Grievances"
+      title={t("dashboard.home.grievances_title")}
       compact
       action={
         <Link
           to={grievancesPath}
           className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
         >
-          View all
+          {t("common.view_all")}
         </Link>
       }
     >
       {loading && !complaints.length ? (
         <div className="py-4 text-center text-xs text-muted-foreground">
-          Loading grievances...
+          {t("dashboard.home.grievances_loading")}
         </div>
       ) : null}
       <div className="grid grid-cols-3 gap-2 mt-2">
         {/* TOTAL */}
         <div className={`${CARD_STYLE} bg-blue-50 dark:bg-blue-900/20`}>
           <div className="text-[14px] text-gray-600 dark:text-gray-300 font-bold">
-            Total
+            {t("common.total")}
           </div>
           <div className="text-lg font-bold text-blue-700 dark:text-blue-300">
             {summary.total}
@@ -167,7 +213,7 @@ export function ComplaintsPanel() {
         {/* IN PROGRESS */}
         <div className={`${CARD_STYLE} bg-yellow-50 dark:bg-yellow-900/20`}>
           <div className="text-[14px] text-gray-600 dark:text-gray-300 font-bold">
-            In Progress
+            {t("common.status_in_progress")}
           </div>
           <div className="text-lg font-bold text-yellow-700 dark:text-yellow-300">
             {summary.inProgress}
@@ -177,7 +223,7 @@ export function ComplaintsPanel() {
         {/* RESOLVED */}
         <div className={`${CARD_STYLE} bg-green-50 dark:bg-green-900/20`}>
           <div className="text-[14px] text-gray-600 dark:text-gray-300 font-bold">
-            Resolved
+            {t("common.status_resolved")}
           </div>
           <div className="text-lg font-bold text-green-700 dark:text-green-300">
             {summary.resolved}
@@ -185,14 +231,20 @@ export function ComplaintsPanel() {
         </div>
       </div>
 
-      <div className="mt-3 space-y-2 max-h-52 overflow-y-auto pr-1">
+      <div
+        className={`mt-3 space-y-2 pr-1 ${
+          shouldScroll ? "max-h-40 overflow-y-auto" : ""
+        }`}
+      >
         {!loading && !complaints.length && (
           <div className="text-xs text-muted-foreground">
-            No grievances available.
+            {t("dashboard.home.grievances_none")}
           </div>
         )}
         {complaints.map((complaint, idx) => {
           const meta = getStatusMeta(complaint.status);
+          const statusLabel = getStatusLabel(complaint.status);
+          const priorityLabel = getPriorityLabel(complaint.priority);
           return (
             <div key={complaint.id} className="flex gap-2">
               <div className="flex flex-col items-center">
@@ -211,11 +263,11 @@ export function ComplaintsPanel() {
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-full border ${priorityStyles[complaint.priority]}`}
                   >
-                    {complaint.priority}
+                    {priorityLabel}
                   </span>
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {complaint.status} • {complaint.timestamp}
+                  {statusLabel} • {formatTimeAgo(complaint.createdAt)}
                 </p>
               </div>
             </div>
@@ -240,41 +292,4 @@ function normalizePriority(raw: unknown): ComplaintData["priority"] {
   return "Medium";
 }
 
-function formatTimeAgo(date: Date | null): string | null {
-  if (!date || Number.isNaN(date.getTime())) return null;
-  const diffMs = Date.now() - date.getTime();
-  const diffSec = Math.max(Math.floor(diffMs / 1000), 0);
-  if (diffSec < 60) return `${diffSec}s ago`;
-  const diffMin = Math.floor(diffSec / 60);
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.floor(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.floor(diffHr / 24);
-  if (diffDay < 30) return `${diffDay}d ago`;
-  const diffMonth = Math.floor(diffDay / 30);
-  if (diffMonth < 12) return `${diffMonth}mo ago`;
-  const diffYear = Math.floor(diffMonth / 12);
-  return `${diffYear}y ago`;
-}
-
-function parseTimeAgo(label: string): Date | null {
-  const value = label.trim();
-  const match = value.match(/^(\d+)(s|m|h|d|mo|y) ago$/);
-  if (!match) return null;
-  const amount = Number(match[1]);
-  const unit = match[2];
-  const now = Date.now();
-  const multiplier =
-    unit === "s"
-      ? 1000
-      : unit === "m"
-      ? 60_000
-      : unit === "h"
-      ? 3_600_000
-      : unit === "d"
-      ? 86_400_000
-      : unit === "mo"
-      ? 2_592_000_000
-      : 31_536_000_000;
-  return new Date(now - amount * multiplier);
-}
+type ComplaintRecord = ComplaintData & { createdAt?: number };

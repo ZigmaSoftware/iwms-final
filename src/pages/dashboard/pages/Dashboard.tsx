@@ -1,42 +1,79 @@
 import { MetricCard } from "@/components/MetricCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Truck, AlertTriangle, CheckCircle, Clock } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 export default function Dashboard() {
+  const { t, i18n } = useTranslation();
+  const rtf = new Intl.RelativeTimeFormat(i18n.language, { numeric: "auto" });
+  const formatRelative = (value: number, unit: Intl.RelativeTimeFormatUnit) =>
+    rtf.format(value, unit);
+
+  const activities = [
+    {
+      vehicle: "TRK-001",
+      statusKey: "dashboard.overview.activity_completed_route",
+      time: formatRelative(-2, "minute"),
+      type: "success",
+    },
+    {
+      vehicle: "TRK-015",
+      statusKey: "dashboard.overview.activity_deviation_alert",
+      time: formatRelative(-5, "minute"),
+      type: "warning",
+    },
+    {
+      vehicle: "TRK-008",
+      statusKey: "dashboard.overview.activity_weight_mismatch",
+      time: formatRelative(-12, "minute"),
+      type: "destructive",
+    },
+    {
+      vehicle: "TRK-022",
+      statusKey: "dashboard.overview.activity_started_route",
+      time: formatRelative(-18, "minute"),
+      type: "default",
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold tracking-tight text-foreground">Dashboard Overview</h2>
-        <p className="text-muted-foreground">Real-time fleet monitoring and analytics</p>
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">
+          {t("dashboard.overview.title")}
+        </h2>
+        <p className="text-muted-foreground">
+          {t("dashboard.overview.subtitle")}
+        </p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Active Vehicles"
+          title={t("dashboard.overview.kpi_active_vehicles")}
           value={24}
           icon={Truck}
-          trend="+2 from yesterday"
+          trend={t("dashboard.overview.trend_active_vehicles")}
           variant="success"
         />
         <MetricCard
-          title="Idle Vehicles"
+          title={t("dashboard.overview.kpi_idle_vehicles")}
           value={5}
           icon={Clock}
-          trend="Normal range"
+          trend={t("dashboard.overview.trend_idle_vehicles")}
           variant="warning"
         />
         <MetricCard
-          title="Active Alerts"
+          title={t("dashboard.overview.kpi_active_alerts")}
           value={8}
           icon={AlertTriangle}
-          trend="3 critical"
+          trend={t("dashboard.overview.trend_active_alerts")}
           variant="destructive"
         />
         <MetricCard
-          title="Completed Routes"
+          title={t("dashboard.overview.kpi_completed_routes")}
           value={142}
           icon={CheckCircle}
-          trend="+12% this week"
+          trend={t("dashboard.overview.trend_completed_routes")}
           variant="success"
         />
       </div>
@@ -44,21 +81,20 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Latest fleet updates and events</CardDescription>
+            <CardTitle>{t("dashboard.overview.recent_activity_title")}</CardTitle>
+            <CardDescription>
+              {t("dashboard.overview.recent_activity_subtitle")}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {[
-                { vehicle: "TRK-001", status: "Completed route", time: "2 min ago", type: "success" },
-                { vehicle: "TRK-015", status: "Deviation alert", time: "5 min ago", type: "warning" },
-                { vehicle: "TRK-008", status: "Weight mismatch", time: "12 min ago", type: "destructive" },
-                { vehicle: "TRK-022", status: "Started route", time: "18 min ago", type: "default" },
-              ].map((activity, idx) => (
+              {activities.map((activity, idx) => (
                 <div key={idx} className="flex items-center justify-between border-b pb-3 last:border-0 last:pb-0">
                   <div className="space-y-1">
                     <p className="text-sm font-medium">{activity.vehicle}</p>
-                    <p className="text-xs text-muted-foreground">{activity.status}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t(activity.statusKey)}
+                    </p>
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground">{activity.time}</span>
@@ -82,15 +118,21 @@ export default function Dashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Vehicle Status Distribution</CardTitle>
-            <CardDescription>Current fleet status overview</CardDescription>
+            <CardTitle>{t("dashboard.overview.status_distribution_title")}</CardTitle>
+            <CardDescription>
+              {t("dashboard.overview.status_distribution_subtitle")}
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Running</span>
-                  <span className="font-medium">24 vehicles</span>
+                  <span className="text-muted-foreground">
+                    {t("dashboard.overview.status_running")}
+                  </span>
+                  <span className="font-medium">
+                    {t("dashboard.overview.vehicles_count", { count: 24 })}
+                  </span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                   <div className="h-full bg-gradient-success" style={{ width: "65%" }} />
@@ -98,8 +140,12 @@ export default function Dashboard() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Idle</span>
-                  <span className="font-medium">5 vehicles</span>
+                  <span className="text-muted-foreground">
+                    {t("dashboard.overview.status_idle")}
+                  </span>
+                  <span className="font-medium">
+                    {t("dashboard.overview.vehicles_count", { count: 5 })}
+                  </span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                   <div className="h-full bg-gradient-warning" style={{ width: "14%" }} />
@@ -107,8 +153,12 @@ export default function Dashboard() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Completed</span>
-                  <span className="font-medium">8 vehicles</span>
+                  <span className="text-muted-foreground">
+                    {t("dashboard.overview.status_completed")}
+                  </span>
+                  <span className="font-medium">
+                    {t("dashboard.overview.vehicles_count", { count: 8 })}
+                  </span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-secondary overflow-hidden">
                   <div className="h-full bg-gradient-primary" style={{ width: "21%" }} />

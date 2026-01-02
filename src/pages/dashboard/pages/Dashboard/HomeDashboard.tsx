@@ -18,13 +18,15 @@ import { MapTabs } from "./map/MapTabs";
 import { MAP_TABS, type MapTabKey } from "./map/mapUtils";
 import { binApi, customerCreationApi, wasteCollectionApi } from "@/helpers/admin";
 import { filterActiveCustomers, normalizeCustomerArray } from "@/utils/customerUtils";
+import { useTranslation } from "react-i18next";
 
 export function HomeDashboard() {
+  const { t } = useTranslation();
   const [binStats, setBinStats] = useState({ active: 0, inactive: 0 });
   const binTotal = binStats.active + binStats.inactive;
   const { encDashboardBins } = getEncryptedRoute();
   const binsPath = `/dashboard/${encDashboardBins}`;
-  const [activeMapTab, setActiveMapTab] = useState<MapTabKey>("all");
+  const [activeMapTab, setActiveMapTab] = useState<MapTabKey>("vehicle");
   const [mapSize, setMapSize] = useState<"mid" | "max">("mid");
   const mapSectionRef = useRef<HTMLDivElement | null>(null);
   const [householdStats, setHouseholdStats] = useState({
@@ -143,10 +145,15 @@ export function HomeDashboard() {
       <div className="flex flex-wrap items-center justify-between gap-3 pb-3">
         <div>
           <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">
-            Operations Map
+            {t("dashboard.home.operations_map_title")}
           </p>
           <p className="text-xs text-gray-500 dark:text-gray-400">
-            {MAP_TABS.find((tab) => tab.key === activeMapTab)?.summary}
+            {(() => {
+              const summaryKey = MAP_TABS.find(
+                (tab) => tab.key === activeMapTab
+              )?.summaryKey;
+              return summaryKey ? t(summaryKey) : "";
+            })()}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -158,7 +165,7 @@ export function HomeDashboard() {
               className={`flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 ${
                 mapSize === "mid" ? "bg-gray-100 dark:bg-gray-800" : ""
               }`}
-              aria-label="Default map size"
+              aria-label={t("dashboard.home.map_size_default_aria")}
             >
               <Square className="h-3.5 w-3.5" />
             </button>
@@ -168,7 +175,7 @@ export function HomeDashboard() {
               className={`flex h-7 w-7 items-center justify-center rounded-full text-gray-600 transition hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-800 ${
                 mapSize === "max" ? "bg-gray-100 dark:bg-gray-800" : ""
               }`}
-              aria-label="Maximize map"
+              aria-label={t("dashboard.home.map_size_max_aria")}
             >
               <Maximize2 className="h-3.5 w-3.5" />
             </button>
@@ -177,7 +184,7 @@ export function HomeDashboard() {
       </div>
 
       <div className="flex-1 min-h-0">
-        {activeMapTab === "all" && (
+        {activeMapTab === "vehicle" && (
           <div className="h-full w-full overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
             <LeafletMapContainer height="100%" />
           </div>
@@ -204,7 +211,7 @@ export function HomeDashboard() {
               <AttendanceMonitor />
               <RecentActivityTimeline />
               <DataCard
-                title="Household Status"
+                title={t("dashboard.home.household_status_title")}
                 compact
                 action={
                   <button
@@ -212,25 +219,31 @@ export function HomeDashboard() {
                     onClick={handleHouseholdViewAll}
                     className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                   >
-                    View all
+                    {t("common.view_all")}
                   </button>
                 }
               >
                 <div className="grid grid-cols-3 gap-3 text-center text-xs font-medium">
                   <div className="p-2 rounded-md bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700">
-                    <div className="text-blue-700 dark:text-blue-400">Total</div>
+                    <div className="text-blue-700 dark:text-blue-400 break-words leading-tight">
+                      {t("common.total")}
+                    </div>
                     <div className="text-lg font-bold text-blue-700 dark:text-blue-400">
                       {householdStats.total}
                     </div>
                   </div>
                   <div className="p-2 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700">
-                    <div className="text-green-700 dark:text-green-400">Collected</div>
+                    <div className="text-green-700 dark:text-green-400 break-words leading-tight">
+                      {t("common.collected")}
+                    </div>
                     <div className="text-lg font-bold text-green-700 dark:text-green-400">
                       {householdStats.collected}
                     </div>
                   </div>
                   <div className="p-2 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700">
-                    <div className="text-red-700 dark:text-red-400">Not Collected</div>
+                    <div className="text-red-700 dark:text-red-400 break-words leading-tight">
+                      {t("common.not_collected")}
+                    </div>
                     <div className="text-lg font-bold text-red-700 dark:text-red-400">
                       {householdStats.notCollected}
                     </div>
@@ -261,33 +274,41 @@ export function HomeDashboard() {
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-2">
                       <Trash2 className="w-5 h-5 text-gray-600 dark:text-gray-300" />
-                      <h3 className="text-sm font-semibold">Bin Sensors</h3>
+                      <h3 className="text-sm font-semibold">
+                        {t("dashboard.home.bin_sensors_title")}
+                      </h3>
                     </div>
                     <Link
                       to={binsPath}
                       className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                     >
-                      View all
+                      {t("common.view_all")}
                     </Link>
                   </div>
 
                   <div className="grid grid-cols-3 gap-3 text-xs font-medium">
                     <div className="p-2 rounded-md bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-700">
-                      <div className="text-green-700 dark:text-green-400">Active</div>
+                      <div className="text-green-700 dark:text-green-400 break-words leading-tight">
+                        {t("common.active")}
+                      </div>
                       <div className="text-lg font-bold text-green-700 dark:text-green-400">
                         {binStats.active}
                       </div>
                     </div>
 
                     <div className="p-2 rounded-md bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700">
-                      <div className="text-red-700 dark:text-red-400">Inactive</div>
+                      <div className="text-red-700 dark:text-red-400 break-words leading-tight">
+                        {t("common.inactive")}
+                      </div>
                       <div className="text-lg font-bold text-red-700 dark:text-red-400">
                         {binStats.inactive}
                       </div>
                     </div>
 
                     <div className="p-2 rounded-md bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-700">
-                      <div className="text-yellow-700 dark:text-yellow-400">Total</div>
+                      <div className="text-yellow-700 dark:text-yellow-400 break-words leading-tight">
+                        {t("common.total")}
+                      </div>
                       <div className="text-lg font-bold text-yellow-700 dark:text-yellow-400">
                         {binTotal}
                       </div>

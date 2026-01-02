@@ -3,10 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { adminApi } from "@/helpers/admin/registry";
+import { useTranslation } from "react-i18next";
 
 const vehicleTypeApi = adminApi.vehicleTypes;
 
 export default function VehicleTypeCreationForm() {
+  const { t } = useTranslation();
   const [vehicleType, setVehicleType] = useState("");
   const [description, setDescription] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -35,8 +37,8 @@ export default function VehicleTypeCreationForm() {
         .catch(() => {
           Swal.fire({
             icon: "error",
-            title: "Failed to load vehicle type",
-            text: "Something went wrong!",
+            title: t("admin.vehicle_type.load_failed_title"),
+            text: t("common.request_failed"),
           });
         });
     }
@@ -52,8 +54,8 @@ export default function VehicleTypeCreationForm() {
     if (!normalizedVehicleType) {
       Swal.fire({
         icon: "warning",
-        title: "Vehicle type is required",
-        text: "Please enter a valid vehicle type name.",
+        title: t("admin.vehicle_type.missing_title"),
+        text: t("admin.vehicle_type.missing_desc"),
       });
       setLoading(false);
       return;
@@ -70,7 +72,7 @@ export default function VehicleTypeCreationForm() {
         await vehicleTypeApi.update(id as string, payload);
         Swal.fire({
           icon: "success",
-          title: "Updated successfully!",
+          title: t("common.updated_success"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -78,7 +80,7 @@ export default function VehicleTypeCreationForm() {
         await vehicleTypeApi.create(payload);
         Swal.fire({
           icon: "success",
-          title: "Added successfully!",
+          title: t("common.added_success"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -93,7 +95,7 @@ export default function VehicleTypeCreationForm() {
         "Unable to save vehicle type.";
       Swal.fire({
         icon: "error",
-        title: "Save Failed",
+        title: t("common.save_failed"),
         text: responseMessage,
       });
     } finally {
@@ -107,7 +109,7 @@ export default function VehicleTypeCreationForm() {
         {/* Header */}
         <div className="px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-800">
-            {isEdit ? "Edit Vehicle Type" : "Add Vehicle Type"}
+            {isEdit ? t("admin.vehicle_type.title_edit") : t("admin.vehicle_type.title_add")}
           </h2>
         </div>
 
@@ -117,11 +119,11 @@ export default function VehicleTypeCreationForm() {
             {/* Vehicle Type Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Vehicle Type Name <span className="text-red-500">*</span>
+                {t("admin.vehicle_type.label")} <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
-                placeholder="Enter vehicle type name"
+                placeholder={t("admin.vehicle_type.placeholder")}
                 value={vehicleType}
                 required
                 onChange={(e) => setVehicleType(e.target.value)}
@@ -135,25 +137,25 @@ export default function VehicleTypeCreationForm() {
             {/* Active Status */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Active Status <span className="text-red-500">*</span>
+                {t("common.status")} <span className="text-red-500">*</span>
               </label>
               <select
                 value={isActive ? "Active" : "Inactive"}
                 onChange={(e) => setIsActive(e.target.value === "Active")}
                 className="w-full px-3 py-2 border border-green-400 rounded-sm focus:outline-none focus:ring-2 focus:ring-green-200"
               >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
+                <option value="Active">{t("common.active")}</option>
+                <option value="Inactive">{t("common.inactive")}</option>
               </select>
             </div>
 
             {/* Description */}
             <div className="">
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
+                {t("common.description")}
               </label>
               <textarea
-                placeholder="Enter description (optional)"
+                placeholder={t("common.description_optional")}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-sm focus:outline-none focus:ring-2 focus:ring-green-200"
@@ -169,14 +171,14 @@ export default function VehicleTypeCreationForm() {
               disabled={loading}
               className="bg-green-600 text-white font-medium px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
             >
-              {loading ? "Saving..." : "Save"}
+              {loading ? t("common.saving") : t("common.save")}
             </button>
             <button
               type="button"
               onClick={() => navigate(ENC_LIST_PATH)}
               className="bg-red-500 text-white font-medium px-6 py-2 rounded hover:bg-red-600 transition"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </form>

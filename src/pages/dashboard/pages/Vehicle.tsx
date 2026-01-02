@@ -10,64 +10,112 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useState } from "react";
-const mockVehicles = [
-  {
-    vehicleId: "VH001",
-    id: "V001",
-    registration: "DL-01-AB-1234",
-    type: "Compactor",
-    capacity: "10 Tons",
-    status: "active",
-    driver: "Rajesh Kumar",
-    zone: "Zone A",
-    lastMaintenance: "2025-10-10",
-    fuelEfficiency: "8.5 km/l",
-  },
-  {
-    vehicleId: "VH002",
-    id: "V002",
-    registration: "DL-01-CD-5678",
-    type: "Tipper",
-    capacity: "15 Tons",
-    status: "maintenance",
-    driver: "Amit Singh",
-    zone: "Zone B",
-    lastMaintenance: "2025-10-12",
-    fuelEfficiency: "7.2 km/l",
-  },
-  {
-    vehicleId: "VH003",
-    id: "V003",
-    registration: "DL-01-EF-9012",
-    type: "Compactor",
-    capacity: "10 Tons",
-    status: "active",
-    driver: "Suresh Yadav",
-    zone: "Zone C",
-    lastMaintenance: "2025-10-08",
-    fuelEfficiency: "8.8 km/l",
-  },
-  {
-    vehicleId: "VH004",
-    id: "V004",
-    registration: "DL-01-GH-3456",
-    type: "Hook Loader",
-    capacity: "20 Tons",
-    status: "inactive",
-    driver: "Unassigned",
-    zone: "-",
-    lastMaintenance: "2025-10-05",
-    fuelEfficiency: "6.5 km/l",
-  },
-];
+import { useEffect, useMemo, useState } from "react";
+import { vehicleAssigningApi } from "@/helpers/admin";
+import { useTranslation } from "react-i18next";
+
+type VehicleStatus = "active" | "maintenance" | "inactive";
+
+type VehicleCard = {
+  vehicleId: string;
+  registration: string;
+  type: string;
+  capacity: string;
+  status: VehicleStatus;
+  driver: string;
+  zone: string;
+  lastMaintenance: string;
+  fuelEfficiency: string;
+};
+
+const normalizeList = (payload: any) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(payload?.results)) return payload.results;
+  return [];
+};
+
+const formatDate = (value?: string | null) => {
+  if (!value) return "-";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return String(value);
+  return parsed.toISOString().split("T")[0];
+};
+
+const resolveStatus = (raw: any, lastMaintenance: string): VehicleStatus => {
+  const isInactive =
+    raw === false || raw === 0 || raw === "0" || raw === "false";
+  if (isInactive) return "inactive";
+  if (!lastMaintenance || lastMaintenance === "-") return "maintenance";
+  return "active";
+};
 
 export default function Vehicle() {
+  const { t } = useTranslation();
+  const [vehicles, setVehicles] = useState<VehicleCard[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
   const [capacityFilter, setCapacityFilter] = useState("all");
   const [maintenanceFilter, setMaintenanceFilter] = useState("all");
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadVehicles = async () => {
+      try {
+        const response = await vehicleAssigningApi.list();
+        const rows = normalizeList(response);
+        const deduped = new Map<string, VehicleCard>();
+
+        rows.forEach((row: Record<string, any>, index: number) => {
+          const vehicleNo = row.vehicle_no ?? row.registration ?? "";
+          const key = String(
+            vehicleNo || row.unique_id || row.id || index
+          ).trim();
+          if (!key) return;
+
+          const lastMaintenance = formatDate(
+            row.last_maintenance ?? row.lastMaintenance
+          );
+
+          const card: VehicleCard = {
+            vehicleId: String(
+              row.unique_id ?? vehicleNo ?? row.id ?? key
+            ).trim(),
+            registration: String(vehicleNo || "-"),
+            type: String(row.vehicle_type_name ?? row.vehicle_type ?? "-"),
+            capacity: String(row.capacity ?? "-"),
+            fuelEfficiency: String(row.fuel_efficiency ?? "-"),
+            lastMaintenance,
+            status: resolveStatus(row.is_active, lastMaintenance),
+            driver: String(row.driver_name ?? row.driver ?? "Unassigned"),
+            zone: String(row.zone_name ?? row.zone ?? "-"),
+          };
+
+          deduped.set(key, card);
+        });
+
+        if (isMounted) {
+          setVehicles(Array.from(deduped.values()));
+        }
+      } catch (error) {
+        console.error("Failed to load vehicle data:", error);
+        if (isMounted) {
+          setVehicles([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadVehicles();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const statusGradients: Record<string, string> = {
     active: "from-white via-emerald-50 to-emerald-300 dark:from-slate-900 dark:via-emerald-900/30 dark:to-emerald-800",
@@ -81,7 +129,16 @@ export default function Vehicle() {
     inactive: "bg-rose-100/70 dark:bg-rose-900/40",
   };
 
-  const statusCounts = mockVehicles.reduce(
+  const statusLabels: Record<string, string> = {
+    active: t("common.active"),
+    maintenance: t("dashboard.vehicle.status.maintenance"),
+    inactive: t("common.inactive"),
+  };
+
+  const translateStatus = (status: string) =>
+    statusLabels[status] ?? status;
+
+  const statusCounts = vehicles.reduce(
     (acc, vehicle) => {
       acc[vehicle.status] = (acc[vehicle.status] || 0) + 1;
       return acc;
@@ -91,9 +148,9 @@ export default function Vehicle() {
 
   const fleetStats = [
     {
-      label: "Total Vehicles",
-      value: mockVehicles.length,
-      subtext: "Across all depots",
+      label: t("dashboard.vehicle.stats.total_vehicles"),
+      value: vehicles.length,
+      subtext: t("dashboard.vehicle.stats.total_vehicles_subtext"),
       accent: "from-white via-sky-50 to-sky-200 dark:from-slate-900 dark:via-sky-950/40 dark:to-slate-900",
       border: "border-sky-200/80 dark:border-sky-500/40",
       ringColor: "ring-sky-300 dark:ring-sky-500/60",
@@ -107,9 +164,9 @@ export default function Vehicle() {
       },
     },
     {
-      label: "Ready For Dispatch",
+      label: t("dashboard.vehicle.stats.ready_dispatch"),
       value: statusCounts["active"] ?? 0,
-      subtext: "Active status",
+      subtext: t("dashboard.vehicle.stats.ready_dispatch_subtext"),
       accent: "from-white via-emerald-50 to-emerald-200 dark:from-slate-900 dark:via-emerald-950/40 dark:to-slate-900",
       border: "border-emerald-200/80 dark:border-emerald-500/40",
       ringColor: "ring-emerald-300 dark:ring-emerald-500/60",
@@ -122,9 +179,9 @@ export default function Vehicle() {
       },
     },
     {
-      label: "Under Maintenance",
+      label: t("dashboard.vehicle.stats.under_maintenance"),
       value: statusCounts["maintenance"] ?? 0,
-      subtext: "Workshops engaged",
+      subtext: t("dashboard.vehicle.stats.under_maintenance_subtext"),
       accent: "from-white via-amber-50 to-yellow-100 dark:from-slate-900 dark:via-amber-950/40 dark:to-slate-900",
       border: "border-amber-200/80 dark:border-amber-500/40",
       ringColor: "ring-amber-300 dark:ring-amber-500/60",
@@ -137,9 +194,9 @@ export default function Vehicle() {
       },
     },
     {
-      label: "Inactive Vehicles",
+      label: t("dashboard.vehicle.stats.inactive_vehicles"),
       value: statusCounts["inactive"] ?? 0,
-      subtext: "Awaiting assignment",
+      subtext: t("dashboard.vehicle.stats.inactive_vehicles_subtext"),
       accent: "from-white via-rose-50 to-rose-200 dark:from-slate-900 dark:via-rose-950/40 dark:to-slate-900",
       border: "border-rose-200/80 dark:border-rose-500/40",
       ringColor: "ring-rose-300 dark:ring-rose-500/60",
@@ -153,9 +210,33 @@ export default function Vehicle() {
     },
   ];
 
+  const typeOptions = useMemo(
+    () =>
+      Array.from(new Set(vehicles.map((v) => v.type).filter((v) => v && v !== "-"))).sort(),
+    [vehicles]
+  );
+
+  const capacityOptions = useMemo(
+    () =>
+      Array.from(new Set(vehicles.map((v) => v.capacity).filter((v) => v && v !== "-"))).sort(),
+    [vehicles]
+  );
+
+  const maintenanceOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          vehicles
+            .map((v) => v.lastMaintenance)
+            .filter((v) => v && v !== "-")
+        )
+      ).sort(),
+    [vehicles]
+  );
 
 
-  const filteredVehicles = mockVehicles.filter((vehicle) => {
+
+  const filteredVehicles = vehicles.filter((vehicle) => {
     const matchesSearch =
       vehicle.registration.toLowerCase().includes(searchQuery.toLowerCase()) ||
       vehicle.driver.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -219,11 +300,13 @@ export default function Vehicle() {
 
           <div className="ml-3 mt-4 relative">
             <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              Vehicle Management
+              {t("dashboard.vehicle.title")}
             </h2>
             <div className="flex items-center gap-1 text-sky-500 mt-2 text-sm">
               <Sparkles className="h-4 w-4 text-sky-500 animate-pulse" />
-              <p className="text-muted-foreground">Search & filter your fleet</p>
+              <p className="text-muted-foreground">
+                {t("dashboard.vehicle.subtitle")}
+              </p>
             </div>
           </div>
 
@@ -232,7 +315,7 @@ export default function Vehicle() {
           <div className="relative ml-3">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search"
+              placeholder={t("dashboard.vehicle.search_placeholder")}
               className="pl-10"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -244,13 +327,13 @@ export default function Vehicle() {
           <div className="ml-3">
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Status Filter" />
+                <SelectValue placeholder={t("dashboard.vehicle.filters.status_placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-                <SelectItem value="inactive">Inactive</SelectItem>
+                <SelectItem value="all">{t("dashboard.vehicle.filters.status_all")}</SelectItem>
+                <SelectItem value="active">{translateStatus("active")}</SelectItem>
+                <SelectItem value="maintenance">{translateStatus("maintenance")}</SelectItem>
+                <SelectItem value="inactive">{translateStatus("inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -261,13 +344,15 @@ export default function Vehicle() {
           <div className="ml-3">
             <Select value={typeFilter} onValueChange={setTypeFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Vehicle Type" />
+                <SelectValue placeholder={t("dashboard.vehicle.filters.type_placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Compactor">Compactor</SelectItem>
-                <SelectItem value="Tipper">Tipper</SelectItem>
-                <SelectItem value="Hook Loader">Hook Loader</SelectItem>
+                <SelectItem value="all">{t("dashboard.vehicle.filters.type_all")}</SelectItem>
+                {typeOptions.map((type) => (
+                  <SelectItem key={type} value={type}>
+                    {type}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -280,13 +365,15 @@ export default function Vehicle() {
           <div className="ml-3">
             <Select value={capacityFilter} onValueChange={setCapacityFilter}>
               <SelectTrigger>
-                <SelectValue placeholder="Capacity" />
+                <SelectValue placeholder={t("dashboard.vehicle.filters.capacity_placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Capacities</SelectItem>
-                <SelectItem value="10 Tons">10 Tons</SelectItem>
-                <SelectItem value="15 Tons">15 Tons</SelectItem>
-                <SelectItem value="20 Tons">20 Tons</SelectItem>
+                <SelectItem value="all">{t("dashboard.vehicle.filters.capacity_all")}</SelectItem>
+                {capacityOptions.map((capacity) => (
+                  <SelectItem key={capacity} value={capacity}>
+                    {capacity}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 
@@ -301,13 +388,13 @@ export default function Vehicle() {
               onValueChange={setMaintenanceFilter}
             >
               <SelectTrigger>
-                <SelectValue placeholder="Last Maintenance" />
+                <SelectValue placeholder={t("dashboard.vehicle.filters.maintenance_placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">Any Date</SelectItem>
-                {mockVehicles.map((v) => (
-                  <SelectItem key={v.vehicleId} value={v.lastMaintenance}>
-                    {v.lastMaintenance}
+                <SelectItem value="all">{t("dashboard.vehicle.filters.maintenance_any")}</SelectItem>
+                {maintenanceOptions.map((date) => (
+                  <SelectItem key={date} value={date}>
+                    {date}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -322,7 +409,7 @@ export default function Vehicle() {
               className="w-full border text-slate-700 dark:text-white bg-gradient-to-r from-sky-100 via-slate-100 to-blue-100 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 hover:from-sky-200 hover:to-blue-200 dark:hover:from-slate-700 dark:hover:to-slate-800 transition-colors"
               onClick={clearFilters}
             >
-              Clear
+              {t("dashboard.vehicle.clear")}
             </Button>
 
           </div>
@@ -368,6 +455,18 @@ export default function Vehicle() {
             })}
           </div>
 
+          {loading && !vehicles.length ? (
+            <div className="text-sm text-muted-foreground">
+              {t("dashboard.vehicle.loading")}
+            </div>
+          ) : null}
+
+          {!loading && !filteredVehicles.length ? (
+            <div className="text-sm text-muted-foreground">
+              {t("dashboard.vehicle.empty")}
+            </div>
+          ) : null}
+
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 pb-4">
             {filteredVehicles.map((vehicle, cardIndex) => (
               <Card
@@ -390,7 +489,7 @@ export default function Vehicle() {
                 />
                 <CardHeader className="relative z-10">
                   <div className="flex items-start justify-between">
-                      <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3">
                       <div className="p-2 rounded-lg bg-sky-50">
                         <Truck className="h-5 w-5 text-sky-600" />
                       </div>
@@ -398,7 +497,7 @@ export default function Vehicle() {
                         <CardTitle>{vehicle.registration}</CardTitle>
                         <CardDescription>{vehicle.type}</CardDescription>
                         <p className="text-xs text-muted-foreground">
-                          ID: {vehicle.vehicleId}
+                          {t("dashboard.vehicle.labels.id")}: {vehicle.vehicleId}
                         </p>
                       </div>
                     </div>
@@ -408,7 +507,7 @@ export default function Vehicle() {
                         vehicle.status
                       )} capitalize tracking-wide`}
                     >
-                      {vehicle.status}
+                      {translateStatus(vehicle.status)}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -416,11 +515,11 @@ export default function Vehicle() {
                 <CardContent className="relative z-10 space-y-3">
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
-                      <p className="text-muted-foreground">Capacity</p>
+                      <p className="text-muted-foreground">{t("dashboard.vehicle.labels.capacity")}</p>
                       <p className="font-medium">{vehicle.capacity}</p>
                     </div>
                     <div>
-                      <p className="text-muted-foreground">Fuel Efficiency</p>
+                      <p className="text-muted-foreground">{t("dashboard.vehicle.labels.fuel_efficiency")}</p>
                       <p className="font-medium">{vehicle.fuelEfficiency}</p>
                     </div>
                   </div>
@@ -431,11 +530,11 @@ export default function Vehicle() {
                       <span className="font-medium ">{vehicle.zone}</span>
                     </div>
                     <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Driver:</span>
+                      <span className="text-muted-foreground">{t("dashboard.vehicle.labels.driver")}:</span>
                       <span className="font-medium">{vehicle.driver}</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Last Maintenance: {vehicle.lastMaintenance}
+                      {t("dashboard.vehicle.labels.last_maintenance")}: {vehicle.lastMaintenance}
                     </p>
                   </div>
 
@@ -446,7 +545,7 @@ export default function Vehicle() {
                       className="flex-1 gap-2 transition-colors border-sky-200 hover:bg-sky-50"
                     >
                       <MapPin className="h-3.5 w-3.5" />
-                      Track
+                      {t("dashboard.vehicle.track")}
                     </Button>
                   </div>
                 </CardContent>

@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 
 import { adminApi } from "@/helpers/admin/registry";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 
 type Customer = {
   id: number;
@@ -26,6 +27,7 @@ type Customer = {
 };
 
 function WasteCollectedForm() {
+  const { t } = useTranslation();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
 
@@ -84,7 +86,11 @@ function WasteCollectedForm() {
     e.preventDefault();
 
     if (!customerId) {
-      Swal.fire("Warning", "Customer is required", "warning");
+      Swal.fire(
+        t("common.warning"),
+        t("admin.waste_collected_data.customer_required"),
+        "warning"
+      );
       return;
     }
 
@@ -102,10 +108,18 @@ function WasteCollectedForm() {
         ? await adminApi.wasteCollections.update(id as string, payload)
         : await adminApi.wasteCollections.create(payload);
 
-      Swal.fire("Success", "Saved successfully", "success");
+      Swal.fire(
+        t("common.success"),
+        t("admin.waste_collected_data.save_success"),
+        "success"
+      );
       navigate(LIST_PATH);
     } catch {
-      Swal.fire("Error", "Save failed", "error");
+      Swal.fire(
+        t("common.save_failed"),
+        t("common.save_failed_desc"),
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -113,14 +127,21 @@ function WasteCollectedForm() {
 
   /* ---------------- RENDER ---------------- */
   return (
-    <ComponentCard title={isEdit ? "Edit Waste Collection" : "Add Waste Collection"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("admin.waste_collected_data.title_edit")
+          : t("admin.waste_collected_data.title_add")
+      }
+    >
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Customer */}
           <div>
             <Label>
-              Customer <span className="text-red-500">*</span>
+              {t("admin.waste_collected_data.customer")}
+              <span className="text-red-500"> *</span>
             </Label>
             <Select
               value={customerId}
@@ -134,7 +155,7 @@ function WasteCollectedForm() {
 
           {/* Address */}
           <div>
-            <Label>Customer Address</Label>
+            <Label>{t("admin.waste_collected_data.customer_address")}</Label>
             <Input
               disabled
               className="bg-gray-100"
@@ -154,7 +175,7 @@ function WasteCollectedForm() {
 
           {/* Zone */}
           <div>
-            <Label>Customer Zone</Label>
+            <Label>{t("admin.waste_collected_data.customer_zone")}</Label>
             <Input
               disabled
               className="bg-gray-100"
@@ -164,7 +185,7 @@ function WasteCollectedForm() {
 
           {/* Ward */}
           <div>
-            <Label>Customer Ward</Label>
+            <Label>{t("admin.waste_collected_data.customer_ward")}</Label>
             <Input
               disabled
               className="bg-gray-100"
@@ -174,7 +195,7 @@ function WasteCollectedForm() {
 
           {/* City */}
           <div>
-            <Label>Customer City</Label>
+            <Label>{t("admin.waste_collected_data.customer_city")}</Label>
             <Input
               disabled
               className="bg-gray-100"
@@ -184,7 +205,7 @@ function WasteCollectedForm() {
 
           {/* District */}
           <div>
-            <Label>Customer District</Label>
+            <Label>{t("admin.waste_collected_data.customer_district")}</Label>
             <Input
               disabled
               className="bg-gray-100"
@@ -194,7 +215,7 @@ function WasteCollectedForm() {
 
           {/* State */}
           <div>
-            <Label>Customer State</Label>
+            <Label>{t("admin.waste_collected_data.customer_state")}</Label>
             <Input
               disabled
               className="bg-gray-100"
@@ -204,7 +225,7 @@ function WasteCollectedForm() {
 
           {/* Country */}
           <div>
-            <Label>Customer Country</Label>
+            <Label>{t("admin.waste_collected_data.customer_country")}</Label>
             <Input
               disabled
               className="bg-gray-100"
@@ -214,7 +235,7 @@ function WasteCollectedForm() {
 
           {/* Dry */}
           <div>
-            <Label>Dry Waste (kg)</Label>
+            <Label>{t("admin.waste_collected_data.dry_waste")}</Label>
             <Input
               type="number"
               value={dryWaste}
@@ -224,7 +245,7 @@ function WasteCollectedForm() {
 
           {/* Wet */}
           <div>
-            <Label>Wet Waste (kg)</Label>
+            <Label>{t("admin.waste_collected_data.wet_waste")}</Label>
             <Input
               type="number"
               value={wetWaste}
@@ -234,7 +255,7 @@ function WasteCollectedForm() {
 
           {/* Mixed */}
           <div>
-            <Label>Mixed Waste (kg)</Label>
+            <Label>{t("admin.waste_collected_data.mixed_waste")}</Label>
             <Input
               type="number"
               value={mixedWaste}
@@ -244,7 +265,7 @@ function WasteCollectedForm() {
 
           {/* Total */}
           <div>
-            <Label>Total Quantity (kg)</Label>
+            <Label>{t("admin.waste_collected_data.total_quantity")}</Label>
             <Input
               disabled
               className="bg-gray-100"
@@ -260,14 +281,18 @@ function WasteCollectedForm() {
             disabled={loading}
             className="bg-green-custom text-white px-4 py-2 rounded"
           >
-            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+            {loading
+              ? t("common.saving")
+              : isEdit
+              ? t("common.update")
+              : t("common.save")}
           </button>
           <button
             type="button"
             onClick={() => navigate(LIST_PATH)}
             className="bg-red-400 text-white px-4 py-2 rounded"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

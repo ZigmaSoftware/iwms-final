@@ -14,6 +14,7 @@ import "primeicons/primeicons.css";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { fetchWasteReport, type WasteApiRow } from "@/utils/wasteApi";
 import "./datereport.css";
+import { useTranslation } from "react-i18next";
 
 type ApiRow = WasteApiRow & {
   Start_Time: string | null;
@@ -37,6 +38,7 @@ const formatNumber = (v?: number | null) =>
 const formatTime = (v: string | null) => (v ? v : "-");
 
 export default function DateReport() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { encWorkforceManagement } = getEncryptedRoute();
 
@@ -75,7 +77,7 @@ export default function DateReport() {
     <div className="flex justify-between items-center">
       <div className="flex gap-3 items-center">
         <label>
-          From
+          {t("admin.workforce_management.date_report.filters.from")}
           <input
             type="date"
             value={fromDate}
@@ -85,7 +87,7 @@ export default function DateReport() {
         </label>
 
         <label>
-          To
+          {t("admin.workforce_management.date_report.filters.to")}
           <input
             type="date"
             value={toDate}
@@ -95,7 +97,7 @@ export default function DateReport() {
         </label>
 
         <Button
-          label="Go"
+          label={t("common.go")}
           // icon="pi pi-search"
           onClick={loadData}
         />
@@ -106,7 +108,7 @@ export default function DateReport() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Date / Time / Weights"
+          placeholder={t("admin.workforce_management.date_report.search_placeholder")}
         />
       </span>
     </div>
@@ -115,7 +117,7 @@ export default function DateReport() {
   /* ================= Fetch ================= */
   async function loadData() {
     if (new Date(fromDate) > new Date(toDate)) {
-      setError("From Date cannot be later than To Date");
+      setError("admin.workforce_management.date_report.error_from_after_to");
       return;
     }
 
@@ -123,23 +125,22 @@ export default function DateReport() {
     setError(null);
 
     try {
-      const { rows: apiRows, message } =
-        await fetchWasteReport<ApiRow>(
-          "date_wise_data",
-          fromDate,
-          toDate
-        );
+      const { rows: apiRows } = await fetchWasteReport<ApiRow>(
+        "date_wise_data",
+        fromDate,
+        toDate
+      );
 
       if (!apiRows.length) {
         setRows([]);
-        setError(message || "No data available");
+        setError("admin.workforce_management.date_report.error_no_data");
         return;
       }
 
       setRows(apiRows);
     } catch (e) {
       setRows([]);
-      setError("Unable to load data");
+      setError("admin.workforce_management.date_report.error_load_failed");
     } finally {
       setLoading(false);
     }
@@ -158,16 +159,16 @@ export default function DateReport() {
         <div className="flex justify-between items-center mb-4">
           <div>
             <h1 className="text-2xl font-bold">
-              Date-wise Waste Report
+              {t("admin.workforce_management.date_report.title")}
             </h1>
             <p className="text-sm text-gray-500">
-              Consolidated waste metrics by date
+              {t("admin.workforce_management.date_report.subtitle")}
             </p>
           </div>
 
           <Button
             icon="pi pi-arrow-left"
-            label="Back"
+            label={t("common.back")}
             severity="success"
             onClick={() =>
               navigate(
@@ -178,7 +179,7 @@ export default function DateReport() {
         </div>
 
         {error && (
-          <p className="text-red-600 mb-3">{error}</p>
+          <p className="text-red-600 mb-3">{t(error)}</p>
         )}
 
         {/* ================= TABLE ================= */}
@@ -203,48 +204,52 @@ export default function DateReport() {
             "total_net_weight",
             "average_weight_per_trip",
           ]}
-          emptyMessage="No records found"
+          emptyMessage={t("admin.workforce_management.date_report.empty_message")}
           className="p-datatable-sm"
         >
           <Column
-            header="S.No"
+            header={t("admin.workforce_management.date_report.columns.s_no")}
             body={indexTemplate}
             style={{ width: "80px" }}
           />
 
-          <Column field="date" header="Date" sortable />
           <Column
-            header="Start Time"
+            field="date"
+            header={t("admin.workforce_management.date_report.columns.date")}
+            sortable
+          />
+          <Column
+            header={t("admin.workforce_management.date_report.columns.start_time")}
             body={(r) => formatTime(r.Start_Time)}
           />
           <Column
-            header="End Time"
+            header={t("admin.workforce_management.date_report.columns.end_time")}
             body={(r) => formatTime(r.End_Time)}
           />
           <Column
             field="total_trip"
-            header="Trips"
+            header={t("admin.workforce_management.date_report.columns.trips")}
             sortable
           />
           <Column
-            header="Dry (kg)"
+            header={t("admin.workforce_management.date_report.columns.dry")}
             body={(r) => formatNumber(r.dry_weight)}
           />
           <Column
-            header="Wet (kg)"
+            header={t("admin.workforce_management.date_report.columns.wet")}
             body={(r) => formatNumber(r.wet_weight)}
           />
           <Column
-            header="Mixed (kg)"
+            header={t("admin.workforce_management.date_report.columns.mixed")}
             body={(r) => formatNumber(r.mix_weight)}
           />
           <Column
-            header="Net (kg)"
+            header={t("admin.workforce_management.date_report.columns.net")}
             body={(r) => formatNumber(r.total_net_weight)}
             sortable
           />
           <Column
-            header="Avg / Trip"
+            header={t("admin.workforce_management.date_report.columns.avg_trip")}
             body={(r) =>
               Number(r.average_weight_per_trip).toFixed(2)
             }
