@@ -274,7 +274,7 @@ export default function VehicleTracking() {
   const [search, setSearch] = useState("");
   const [selectedVehicle, setSelectedVehicle] = useState("");
   const [focusedVehicleId, setFocusedVehicleId] = useState("");
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
   const [filters, setFilters] = useState<Record<Status, boolean>>({
     Running: true,
     Idle: true,

@@ -1576,6 +1576,7 @@ export default function WasteCollection() {
     const start = (dailyPage - 1) * dailyPageSize;
     return filteredDailyData.slice(start, start + dailyPageSize);
   }, [filteredDailyData, dailyPage, dailyPageSize]);
+  const noDataMessage = t("common.no_items_found", { item: "data" });
 
   useEffect(() => {
     setDailyPage(1);
@@ -1952,47 +1953,55 @@ export default function WasteCollection() {
                     </TableHeader>
 
                     <TableBody>
-                      {paginatedDailyData.map((row, index) => (
-                        <TableRow key={index} className={tableRowHoverClass}>
-                          <TableCell>
-                            {new Date(row.date).toLocaleDateString(locale)}
-                          </TableCell>
-
-                          <TableCell>
-                            <Badge
-                              variant="outline"
-                              className={isDarkMode ? "border-slate-600 text-slate-200" : undefined}
-                            >
-                              {row.zone}
-                            </Badge>
-                          </TableCell>
-
-                          <TableCell className="font-bold text-emerald-700">
-                            {row.wet.toFixed(1)}
-                          </TableCell>
-
-                          <TableCell className="font-bold text-sky-700">
-                            {row.dry.toFixed(1)}
-                          </TableCell>
-
-                          <TableCell className="font-bold text-sky-700">
-                            {row.mix.toFixed(1)}
-                          </TableCell>
-
-                          <TableCell className="font-bold text-indigo-700">
-                            <div className="flex items-center gap-2">
-                              <span>{row.total.toFixed(1)}</span>
-                              <button
-                                type="button"
-                                className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
-                                onClick={() => openVehicleDialog(row)}
-                              >
-                                {t("common.view_all")}
-                              </button>
-                            </div>
+                      {paginatedDailyData.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-6 text-center text-sm text-slate-500">
+                            {noDataMessage}
                           </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        paginatedDailyData.map((row, index) => (
+                          <TableRow key={index} className={tableRowHoverClass}>
+                            <TableCell>
+                              {new Date(row.date).toLocaleDateString(locale)}
+                            </TableCell>
+
+                            <TableCell>
+                              <Badge
+                                variant="outline"
+                                className={isDarkMode ? "border-slate-600 text-slate-200" : undefined}
+                              >
+                                {row.zone}
+                              </Badge>
+                            </TableCell>
+
+                            <TableCell className="font-bold text-emerald-700">
+                              {row.wet.toFixed(1)}
+                            </TableCell>
+
+                            <TableCell className="font-bold text-sky-700">
+                              {row.dry.toFixed(1)}
+                            </TableCell>
+
+                            <TableCell className="font-bold text-sky-700">
+                              {row.mix.toFixed(1)}
+                            </TableCell>
+
+                            <TableCell className="font-bold text-indigo-700">
+                              <div className="flex items-center gap-2">
+                                <span>{row.total.toFixed(1)}</span>
+                                <button
+                                  type="button"
+                                  className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
+                                  onClick={() => openVehicleDialog(row)}
+                                >
+                                  {t("common.view_all")}
+                                </button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
 
@@ -2174,27 +2183,35 @@ export default function WasteCollection() {
                     </TableHeader>
 
                     <TableBody>
-                      {monthlyStats.map((row, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{row.month}</TableCell>
-                          <TableCell>{row.wet.toFixed(1)}</TableCell>
-                          <TableCell>{row.dry.toFixed(1)}</TableCell>
-                          <TableCell>{row.mix.toFixed(1)}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span>{row.total.toFixed(1)}</span>
-                          <button
-                            type="button"
-                            className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
-                            onClick={openMonthlyVehicleDialog}
-                          >
-                            {t("common.view_all")}
-                          </button>
-                        </div>
-                      </TableCell>
-                          <TableCell>{row.avgDaily.toFixed(1)}</TableCell>
+                      {monthlyStats.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="py-6 text-center text-sm text-slate-500">
+                            {noDataMessage}
+                          </TableCell>
                         </TableRow>
-                      ))}
+                      ) : (
+                        monthlyStats.map((row, index) => (
+                          <TableRow key={index}>
+                            <TableCell>{row.month}</TableCell>
+                            <TableCell>{row.wet.toFixed(1)}</TableCell>
+                            <TableCell>{row.dry.toFixed(1)}</TableCell>
+                            <TableCell>{row.mix.toFixed(1)}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <span>{row.total.toFixed(1)}</span>
+                                <button
+                                  type="button"
+                                  className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
+                                  onClick={openMonthlyVehicleDialog}
+                                >
+                                  {t("common.view_all")}
+                                </button>
+                              </div>
+                            </TableCell>
+                            <TableCell>{row.avgDaily.toFixed(1)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </Table>
                 </div>

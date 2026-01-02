@@ -145,6 +145,47 @@
   height: 100%;
 }
 
+.vh-panel-title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.vh-panel-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: color-mix(in srgb, #16a34a 20%, #ffffff);
+  color: #16a34a;
+  border: 1px solid color-mix(in srgb, #16a34a 30%, #ffffff);
+  box-shadow: 0 10px 24px rgba(22, 163, 74, 0.18);
+  animation: vhIconFloat 2.6s ease-in-out infinite;
+}
+
+.vh-panel-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@keyframes vhIconFloat {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.03);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
+}
+
 
 @keyframes vhVehiclePulse {
   0% {

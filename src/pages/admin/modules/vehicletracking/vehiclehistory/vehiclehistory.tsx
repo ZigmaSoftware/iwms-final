@@ -292,7 +292,7 @@ export default function VehicleHistory(): JSX.Element {
   const [vehicleId, setVehicleId] = useState(FALLBACK_VEHICLES[0].id);
   const [track, setTrack] = useState<TrackPoint[]>([]);
   const [historyError, setHistoryError] = useState("");
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackIndex, setPlaybackIndex] = useState(0);
@@ -513,6 +513,9 @@ export default function VehicleHistory(): JSX.Element {
         { closeButton: true, autoPan: true, offset: [0, -8] }
       )
       .addTo(layer);
+    markerRef.current.on("click", () => {
+      setPanelOpen(true);
+    });
   }, [track]);
 
   /* SPEED-AWARE PLAYBACK */
@@ -627,12 +630,22 @@ export default function VehicleHistory(): JSX.Element {
           </button>
           <div className="admin-map-panel__content">
             <div className="admin-map-panel__header">
-              <div>
-                <div className="admin-map-panel__eyebrow">
-                  {t("admin.vehicle_history.filters.vehicle")}
-                </div>
-                <div className="admin-map-panel__title">
-                  {vehicleId || t("dashboard.live_map.placeholder_na")}
+              <div className="vh-panel-title-row">
+                <span className="vh-panel-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect>
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                  </svg>
+                </span>
+                <div>
+                  <div className="admin-map-panel__eyebrow">
+                    {t("admin.vehicle_history.filters.vehicle")}
+                  </div>
+                  <div className="admin-map-panel__title">
+                    {vehicleId || t("dashboard.live_map.placeholder_na")}
+                  </div>
                 </div>
               </div>
             </div>
