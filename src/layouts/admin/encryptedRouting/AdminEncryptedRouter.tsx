@@ -48,7 +48,7 @@ import FuelList from "@/pages/admin/modules/transportMasters/fuel/fuelListPage";
 import FuelForm from "@/pages/admin/modules/transportMasters/fuel/fuelForm";
 import VehicleTypeCreation from "@/pages/admin/modules/transportMasters/vehicleTypecreation/vehicle-typeCreationList";
 import VehicleTypeCreationForm from "@/pages/admin/modules/transportMasters/vehicleTypecreation/vechicle-typeCreationForm";
-import VehicleCreation from "@/pages/admin/modules/transportMasters/vehicleCreation/vehicleCreation";
+import VehicleCreationListPage from "@/pages/admin/modules/transportMasters/vehicleCreation/vehicleCreationListPage";
 import VehicleCreationForm from "@/pages/admin/modules/transportMasters/vehicleCreation/vehicleCreationForm";
 import VehicleTracking from "@/pages/admin/modules/vehicletracking/vehicletrack/vehicletracking";
 import VehicleHistory from "@/pages/admin/modules/vehicletracking/vehiclehistory/vehiclehistory";
@@ -120,7 +120,7 @@ const ROUTES: RouteMap = {
   "transport-master": {
     fuel: { list: FuelList, form: FuelForm },
     "vehicle-type": { list: VehicleTypeCreation, form: VehicleTypeCreationForm },
-    "vehicle-creation": { list: VehicleCreation, form: VehicleCreationForm },
+    "vehicle-creation": { list: VehicleCreationListPage, form: VehicleCreationForm },
   },
   "customer-master": {
     "customer-creation": { list: CustomerCreationList, form: CustomerCreationForm },

@@ -1,19 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 
 import ComponentCard from "@/components/common/ComponentCard";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-
-import {
-  Select,
-  SelectTrigger,
-  SelectValue,
-  SelectContent,
-  SelectItem,
-} from "@/components/ui/select";
-
+import { Textarea } from "@/components/ui/textarea";
+import Label from "@/components/form/Label";
+import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { filterActiveRecords } from "@/utils/customerUtils";
 import { adminApi } from "@/helpers/admin/registry";
@@ -21,12 +14,20 @@ import { useTranslation } from "react-i18next";
 
 const vehicleTypeApi = adminApi.vehicleTypes;
 const fuelTypeApi = adminApi.fuels;
-const stateApi = adminApi.states;
-const districtApi = adminApi.districts;
-const cityApi = adminApi.cities;
-const zoneApi = adminApi.zones;
-const wardApi = adminApi.wards;
-const vehicleApi = adminApi.vehicleCreation;
+const vehicleCreationApi = adminApi.vehicleCreations;
+const FILE_ICON = "/images/pdfimage/download.png";
+
+type VehicleTypeOption = {
+  unique_id: string;
+  vehicleType: string;
+  is_active?: boolean;
+};
+
+type FuelTypeOption = {
+  unique_id: string;
+  fuel_type: string;
+  is_active?: boolean;
+};
 
 export default function VehicleCreationForm() {
   const { t } = useTranslation();
@@ -38,221 +39,316 @@ export default function VehicleCreationForm() {
   const ENC_LIST_PATH = `/${encTransportMaster}/${encVehicleCreation}`;
 
   const [loading, setLoading] = useState(false);
-  const [initialLoad, setInitialLoad] = useState(true);
 
-  /* ---------------- FORM STATE ---------------- */
+  const [vehicleTypes, setVehicleTypes] = useState<VehicleTypeOption[]>([]);
+  const [fuelTypes, setFuelTypes] = useState<FuelTypeOption[]>([]);
+
   const [form, setForm] = useState({
     vehicleNo: "",
-    chaseNo: "",
-    imeiNo: "",
-    driverName: "",
-    driverNo: "",
+    vehicleTypeId: "",
+    fuelTypeId: "",
     capacity: "",
-    fuelEfficiency: "",
-    lastMaintenance: "",
-    vehicleType: "",
-    fuelType: "",
-    state: "",
-    district: "",
-    city: "",
-    zone: "",
-    ward: "",
+    mileagePerLiter: "",
+    serviceRecord: "",
+    vehicleInsurance: "",
+    insuranceExpiryDate: "",
+    vehicleCondition: "NEW",
+    fuelTankCapacity: "",
     isActive: "true",
   });
 
-  const update = (k: string, v: string) =>
-    setForm((p) => ({ ...p, [k]: v }));
+  const [rcFile, setRcFile] = useState<File | null>(null);
+  const [insuranceFile, setInsuranceFile] = useState<File | null>(null);
+  const [existingRcFile, setExistingRcFile] = useState<string | null>(null);
+  const [existingInsuranceFile, setExistingInsuranceFile] = useState<string | null>(null);
+  const [rcPreviewUrl, setRcPreviewUrl] = useState<string>("");
+  const [insurancePreviewUrl, setInsurancePreviewUrl] = useState<string>("");
+  const [isRcPreviewImage, setIsRcPreviewImage] = useState(false);
+  const [isInsurancePreviewImage, setIsInsurancePreviewImage] = useState(false);
+  const [removeRcFile, setRemoveRcFile] = useState(false);
+  const [removeInsuranceFile, setRemoveInsuranceFile] = useState(false);
 
-  /* ---------------- OPTIONS ---------------- */
-  const [vehicleTypes, setVehicleTypes] = useState<any[]>([]);
-  const [fuelTypes, setFuelTypes] = useState<any[]>([]);
-  const [states, setStates] = useState<any[]>([]);
-  const [districts, setDistricts] = useState<any[]>([]);
-  const [cities, setCities] = useState<any[]>([]);
-  const [zones, setZones] = useState<any[]>([]);
-  const [wards, setWards] = useState<any[]>([]);
+  const update = (key: string, value: string) =>
+    setForm((prev) => ({ ...prev, [key]: value }));
 
-  const resolveId = (i: any) =>
-    String(i?.unique_id ?? i?.id ?? i?.value ?? "");
+  const resolveId = (item: { unique_id?: string; id?: string | number }) =>
+    String(item?.unique_id ?? item?.id ?? "");
 
-  /* ---------------- INIT LOAD ---------------- */
   useEffect(() => {
-    Promise.all([
-      vehicleTypeApi.list(),
-      fuelTypeApi.list(),
-      stateApi.list(),
-    ]).then(([vt, ft, st]) => {
-      setVehicleTypes(vt);
-      setFuelTypes(ft);
-      setStates(st);
-    });
+    Promise.all([vehicleTypeApi.list(), fuelTypeApi.list()]).then(
+      ([vehicleRes, fuelRes]) => {
+        setVehicleTypes(vehicleRes);
+        setFuelTypes(fuelRes);
+      }
+    );
+  }, []);
 
-    if (!isEdit) {
-      setInitialLoad(false);
+  useEffect(() => {
+    if (!isEdit) return;
+    vehicleCreationApi
+      .get(id as string)
+      .then((res) => {
+        setForm({
+          vehicleNo: res.vehicle_no ?? "",
+          vehicleTypeId: String(res.vehicle_type_id ?? ""),
+          fuelTypeId: String(res.fuel_type_id ?? ""),
+          capacity: res.capacity ?? "",
+          mileagePerLiter: res.mileage_per_liter ?? "",
+          serviceRecord: res.service_record ?? "",
+          vehicleInsurance: res.vehicle_insurance ?? "",
+          insuranceExpiryDate: res.insurance_expiry_date ?? "",
+          vehicleCondition: res.vehicle_condition ?? "NEW",
+          fuelTankCapacity: res.fuel_tank_capacity ?? "",
+          isActive: String(res.is_active ?? true),
+        });
+        setExistingRcFile(res.rc_upload ?? null);
+        setExistingInsuranceFile(res.vehicle_insurance_file ?? null);
+        if (res.rc_upload) {
+          setRcPreviewUrl(res.rc_upload);
+          setIsRcPreviewImage(isImageUrl(res.rc_upload));
+        }
+        if (res.vehicle_insurance_file) {
+          setInsurancePreviewUrl(res.vehicle_insurance_file);
+          setIsInsurancePreviewImage(isImageUrl(res.vehicle_insurance_file));
+        }
+        setRemoveRcFile(false);
+        setRemoveInsuranceFile(false);
+      })
+      .catch((err) => {
+        console.error("Failed to load vehicle:", err);
+        Swal.fire({
+          icon: "error",
+          title: t("common.load_failed"),
+          text: t("common.request_failed"),
+        });
+      });
+  }, [id, isEdit, t]);
+
+  useEffect(() => {
+    return () => {
+      if (rcPreviewUrl.startsWith("blob:")) URL.revokeObjectURL(rcPreviewUrl);
+      if (insurancePreviewUrl.startsWith("blob:")) URL.revokeObjectURL(insurancePreviewUrl);
+    };
+  }, [rcPreviewUrl, insurancePreviewUrl]);
+
+  const vehicleTypeOptions = useMemo(
+    () =>
+      filterActiveRecords(vehicleTypes, form.vehicleTypeId ? [form.vehicleTypeId] : []).map(
+        (item) => ({ value: resolveId(item), label: item.vehicleType })
+      ),
+    [vehicleTypes, form.vehicleTypeId]
+  );
+
+  const fuelTypeOptions = useMemo(
+    () =>
+      filterActiveRecords(fuelTypes, form.fuelTypeId ? [form.fuelTypeId] : []).map(
+        (item) => ({ value: resolveId(item), label: item.fuel_type })
+      ),
+    [fuelTypes, form.fuelTypeId]
+  );
+
+  const conditionOptions = [
+    { value: "NEW", label: t("admin.vehicle_creation.condition_new") },
+    { value: "SECOND_HAND", label: t("admin.vehicle_creation.condition_second_hand") },
+  ];
+
+  const isImageUrl = (url?: string | null) => {
+    if (!url) return false;
+    const lower = url.toLowerCase();
+    return (
+      lower.endsWith(".jpg") ||
+      lower.endsWith(".jpeg") ||
+      lower.endsWith(".png") ||
+      lower.endsWith(".webp")
+    );
+  };
+
+  const handleFileChange = (
+    file: File | null,
+    setFile: (file: File | null) => void,
+    setPreviewUrl: (url: string) => void,
+    setIsPreviewImage: (value: boolean) => void,
+    existingUrl: string | null,
+    currentPreviewUrl: string,
+  ) => {
+    if (file) {
+      if (currentPreviewUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(currentPreviewUrl);
+      }
+      setFile(file);
+      const objectUrl = URL.createObjectURL(file);
+      setIsPreviewImage(file.type.startsWith("image/"));
+      setPreviewUrl(objectUrl);
       return;
     }
 
-    vehicleApi.get(id as string).then(async (v) => {
-      const maintenanceRaw = v.last_maintenance ?? "";
-      const maintenance =
-        typeof maintenanceRaw === "string"
-          ? maintenanceRaw.split("T")[0]
-          : "";
-      setForm({
-        vehicleNo: v.vehicle_no,
-        chaseNo: v.chase_no,
-        imeiNo: v.imei_no,
-        driverName: v.driver_name,
-        driverNo: v.driver_no,
-        capacity: v.capacity ?? "",
-        fuelEfficiency: v.fuel_efficiency ?? "",
-        lastMaintenance: maintenance,
-        vehicleType: String(v.vehicle_type_id),
-        fuelType: String(v.fuel_type_id),
-        state: String(v.state_id),
-        district: String(v.district_id),
-        city: String(v.city_id),
-        zone: String(v.zone_id),
-        ward: String(v.ward_id),
-        isActive: String(v.is_active),
-      });
+    setFile(null);
+    if (existingUrl) {
+      setPreviewUrl(existingUrl);
+      setIsPreviewImage(isImageUrl(existingUrl));
+    } else {
+      setPreviewUrl("");
+      setIsPreviewImage(false);
+    }
+  };
 
-      const d = await districtApi.list({ params: { state_id: v.state_id } });
-      const c = await cityApi.list({ params: { district_id: v.district_id } });
-      const z = await zoneApi.list({ params: { city_id: v.city_id } });
-      const w = await wardApi.list({ params: { zone_id: v.zone_id } });
+  const clearPreview = (
+    options: {
+      previewUrl: string;
+      setPreviewUrl: (url: string) => void;
+      setFile: (file: File | null) => void;
+      setIsPreviewImage: (value: boolean) => void;
+      setExistingFile?: (value: string | null) => void;
+      setRemoveFlag?: (value: boolean) => void;
+      inputId?: string;
+    },
+  ) => {
+    const {
+      previewUrl,
+      setPreviewUrl,
+      setFile,
+      setIsPreviewImage,
+      setExistingFile,
+      setRemoveFlag,
+      inputId,
+    } = options;
 
-      setDistricts(d);
-      setCities(c);
-      setZones(z);
-      setWards(w);
+    if (previewUrl.startsWith("blob:")) URL.revokeObjectURL(previewUrl);
+    if (inputId) {
+      const input = document.getElementById(inputId) as HTMLInputElement | null;
+      if (input) input.value = "";
+    }
+    setFile(null);
+    setPreviewUrl("");
+    setIsPreviewImage(false);
+    setExistingFile?.(null);
+    setRemoveFlag?.(true);
+  };
 
-      setInitialLoad(false);
-    });
-  }, [id]);
+  const extractFileName = (url: string) => {
+    const cleaned = url.split("?")[0];
+    return cleaned.substring(cleaned.lastIndexOf("/") + 1) || cleaned;
+  };
 
-  /* ---------------- CASCADING ---------------- */
-  useEffect(() => {
-    if (!form.state || (isEdit && initialLoad)) return;
-    districtApi.list({ params: { state_id: form.state } }).then(setDistricts);
-    update("district", "");
-    update("city", "");
-    update("zone", "");
-    update("ward", "");
-    setCities([]); setZones([]); setWards([]);
-  }, [form.state]);
+  const renderFileActions = (
+    previewUrl: string,
+    file: File | null,
+    onPreview: () => void,
+    onRemove: () => void,
+  ) => {
+    if (!previewUrl) return null;
+    const label = file?.name ?? extractFileName(previewUrl);
+    return (
+      <div className="flex gap-2 mt-2">
+        <button
+          type="button"
+          onClick={onPreview}
+          className="bg-blue-600 text-white px-3 py-1 rounded text-sm"
+        >
+          {t("admin.vehicle_creation.preview_label")} ({label})
+        </button>
+        <button
+          type="button"
+          onClick={onRemove}
+          className="bg-red-500 text-white px-3 py-1 rounded text-sm"
+        >
+          {t("common.remove")}
+        </button>
+      </div>
+    );
+  };
 
-  useEffect(() => {
-    if (!form.district || (isEdit && initialLoad)) return;
-    cityApi.list({ params: { district_id: form.district } }).then(setCities);
-    update("city", "");
-    update("zone", "");
-    update("ward", "");
-    setZones([]); setWards([]);
-  }, [form.district]);
+  const buildPayload = () => ({
+    vehicle_no: form.vehicleNo.trim(),
+    vehicle_type_id: form.vehicleTypeId || null,
+    fuel_type_id: form.fuelTypeId || null,
+    capacity: form.capacity || null,
+    mileage_per_liter: form.mileagePerLiter || null,
+    service_record: form.serviceRecord || null,
+    vehicle_insurance: form.vehicleInsurance || null,
+    insurance_expiry_date: form.insuranceExpiryDate || null,
+    vehicle_condition: form.vehicleCondition,
+    fuel_tank_capacity: form.fuelTankCapacity || null,
+    is_active: form.isActive === "true",
+  });
 
-  useEffect(() => {
-    if (!form.city || (isEdit && initialLoad)) return;
-    zoneApi.list({ params: { city_id: form.city } }).then(setZones);
-    update("zone", "");
-    update("ward", "");
-    setWards([]);
-  }, [form.city]);
-
-  useEffect(() => {
-    if (!form.zone || (isEdit && initialLoad)) return;
-    wardApi.list({ params: { zone_id: form.zone } }).then(setWards);
-    update("ward", "");
-  }, [form.zone]);
-
-  /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-     if (!form.vehicleNo || !form.vehicleType || !form.fuelType) {
-    Swal.fire(
-      t("admin.vehicle_creation.missing_fields_title"),
-      t("admin.vehicle_creation.missing_fields_desc"),
-      "warning"
-    );
-    return;
-  }
+    if (!form.vehicleNo.trim()) {
+      Swal.fire({
+        icon: "warning",
+        title: t("admin.vehicle_creation.missing_fields_title"),
+        text: t("admin.vehicle_creation.missing_fields_desc"),
+      });
+      return;
+    }
 
-  if (form.driverNo && !/^\d{10}$/.test(form.driverNo)) {
-    Swal.fire(
-      t("admin.vehicle_creation.invalid_mobile_title"),
-      t("admin.vehicle_creation.invalid_mobile_desc"),
-      "warning"
-    );
-    return;
-  }
-
-    const payload = {
-      vehicle_no: form.vehicleNo,
-      chase_no: form.chaseNo,
-      imei_no: form.imeiNo,
-      driver_name: form.driverName,
-      driver_no: form.driverNo,
-      capacity: form.capacity,
-      fuel_efficiency: form.fuelEfficiency,
-      last_maintenance: form.lastMaintenance || null,
-      vehicle_type_id: form.vehicleType,
-      fuel_type_id: form.fuelType,
-      state_id: form.state,
-      district_id: form.district,
-      city_id: form.city,
-      zone_id: form.zone,
-      ward_id: form.ward,
-      is_active: form.isActive === "true",
-      is_deleted: false,
+    setLoading(true);
+    const payload = buildPayload();
+    const removalPayload = {
+      ...payload,
+      ...(removeRcFile ? { rc_upload: null } : {}),
+      ...(removeInsuranceFile ? { vehicle_insurance_file: null } : {}),
     };
+    const hasFiles = Boolean(rcFile || insuranceFile);
 
     try {
-      setLoading(true);
-      isEdit
-        ? await vehicleApi.update(id as string, payload)
-        : await vehicleApi.create(payload);
+      if (hasFiles) {
+        const formBody = new FormData();
+        Object.entries(payload).forEach(([key, value]) => {
+          if (value === undefined || value === null || value === "") return;
+          formBody.append(key, String(value));
+        });
+        if (rcFile) {
+          formBody.append("rc_upload", rcFile);
+        }
+        if (insuranceFile) {
+          formBody.append("vehicle_insurance_file", insuranceFile);
+        }
 
-      Swal.fire(
-        t("common.success"),
-        t("admin.vehicle_creation.save_success"),
-        "success"
-      );
+        const multipartConfig = {
+          headers: { "Content-Type": "multipart/form-data" },
+        };
+
+        if (isEdit) {
+          await vehicleCreationApi.update(id as string, formBody, multipartConfig);
+        } else {
+          await vehicleCreationApi.create(formBody, multipartConfig);
+        }
+      } else if (isEdit) {
+        await vehicleCreationApi.update(id as string, removalPayload);
+      } else {
+        await vehicleCreationApi.create(payload);
+      }
+
+      Swal.fire({
+        icon: "success",
+        title: t("admin.vehicle_creation.save_success"),
+        timer: 1500,
+        showConfirmButton: false,
+      });
       navigate(ENC_LIST_PATH);
-    } catch (err: any) {
-      Swal.fire(t("common.save_failed"), t("common.save_failed_desc"), "error");
+    } catch (error: any) {
+      console.error("Failed to save vehicle:", error);
+      const data = error?.response?.data;
+      let message = t("common.request_failed");
+      if (typeof data === "object" && data !== null) {
+        message = Object.entries(data)
+          .map(([key, val]) => `${key}: ${(val as string[]).join(", ")}`)
+          .join("\n");
+      } else if (typeof data === "string") {
+        message = data;
+      }
+      Swal.fire({
+        icon: "error",
+        title: t("common.save_failed"),
+        text: message,
+      });
     } finally {
       setLoading(false);
     }
   };
-
-  const vt = filterActiveRecords(vehicleTypes, []);
-  const ft = filterActiveRecords(fuelTypes, []);
-
-  /* ---------------- UI ---------------- */
-  const ShadcnSelect = ({
-    label,
-    value,
-    onChange,
-    options,
-    placeholder,
-  }: any) => (
-    <div>
-      <Label>{label}</Label>
-      <Select value={value || undefined} onValueChange={onChange}>
-        <SelectTrigger>
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {options.map((o: any) => (
-            <SelectItem key={o.value} value={o.value}>
-              {o.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
 
   return (
     <ComponentCard
@@ -262,67 +358,285 @@ export default function VehicleCreationForm() {
           : t("admin.vehicle_creation.title_add")
       }
     >
-      <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <form onSubmit={handleSubmit} noValidate>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <Label htmlFor="vehicleNo">
+              {t("admin.vehicle_creation.vehicle_no")} <span className="text-red-500">*</span>
+            </Label>
+            <Input
+              id="vehicleNo"
+              value={form.vehicleNo}
+              onChange={(e) => update("vehicleNo", e.target.value)}
+              placeholder={t("admin.vehicle_creation.vehicle_no_placeholder")}
+              className="input-validate w-full"
+              required
+            />
+          </div>
 
-          <div><Label>{t("admin.vehicle_creation.vehicle_no")}</Label><Input value={form.vehicleNo} onChange={e=>update("vehicleNo",e.target.value)} /></div>
-          <div><Label>{t("admin.vehicle_creation.chassis_no")}</Label><Input value={form.chaseNo} onChange={e=>update("chaseNo",e.target.value)} /></div>
-          <div><Label>{t("admin.vehicle_creation.imei_no")}</Label><Input value={form.imeiNo} onChange={e=>update("imeiNo",e.target.value)} /></div>
-          <div><Label>{t("admin.vehicle_creation.driver_name")}</Label><Input value={form.driverName} onChange={e=>update("driverName",e.target.value)} /></div>
-          <div><Label>{t("admin.vehicle_creation.driver_mobile")}</Label><Input value={form.driverNo} 
-              maxLength={10}
-               pattern="[0-9]*"
-        onChange={(e) => {
-      const val = e.target.value.replace(/\D/g, "");
-      update("driverNo", val);
-    }} /></div>
+          <div>
+            <Label htmlFor="vehicleType">
+              {t("admin.vehicle_creation.vehicle_type")}
+            </Label>
+            <Select
+              id="vehicleType"
+              value={form.vehicleTypeId}
+              onChange={(value) => update("vehicleTypeId", value)}
+              options={vehicleTypeOptions}
+              placeholder={t("common.select_item_placeholder", {
+                item: t("admin.vehicle_creation.vehicle_type"),
+              })}
+              className="input-validate w-full"
+            />
+          </div>
 
-          <div><Label>{t("admin.vehicle_creation.capacity")}</Label><Input value={form.capacity} onChange={e=>update("capacity",e.target.value)} /></div>
-          <div><Label>{t("admin.vehicle_creation.fuel_efficiency")}</Label><Input value={form.fuelEfficiency} onChange={e=>update("fuelEfficiency",e.target.value)} /></div>
-          <div><Label>{t("admin.vehicle_creation.last_maintenance")}</Label><Input type="date" value={form.lastMaintenance} onChange={e=>update("lastMaintenance",e.target.value)} /></div>
+          <div>
+            <Label htmlFor="fuelType">
+              {t("admin.vehicle_creation.fuel_type")}
+            </Label>
+            <Select
+              id="fuelType"
+              value={form.fuelTypeId}
+              onChange={(value) => update("fuelTypeId", value)}
+              options={fuelTypeOptions}
+              placeholder={t("common.select_item_placeholder", {
+                item: t("admin.vehicle_creation.fuel_type"),
+              })}
+              className="input-validate w-full"
+            />
+          </div>
 
-          <ShadcnSelect label={t("admin.vehicle_creation.vehicle_type")} value={form.vehicleType} onChange={(v:string)=>update("vehicleType",v)}
-            placeholder={t("common.select_item_placeholder", { item: t("admin.vehicle_creation.vehicle_type") })}
-            options={vt.map(v=>({value:resolveId(v),label:v.vehicleType}))} />
+          <div>
+            <Label htmlFor="capacity">
+              {t("admin.vehicle_creation.capacity")}
+            </Label>
+            <Input
+              id="capacity"
+              value={form.capacity}
+              onChange={(e) => update("capacity", e.target.value)}
+              placeholder={t("admin.vehicle_creation.capacity_placeholder")}
+              className="input-validate w-full"
+            />
+          </div>
 
-          <ShadcnSelect label={t("admin.vehicle_creation.fuel_type")} value={form.fuelType} onChange={(v:string)=>update("fuelType",v)}
-            placeholder={t("common.select_item_placeholder", { item: t("admin.vehicle_creation.fuel_type") })}
-            options={ft.map(f=>({value:resolveId(f),label:f.fuel_type}))} />
+          <div>
+            <Label htmlFor="mileagePerLiter">
+              {t("admin.vehicle_creation.mileage_per_liter")}
+            </Label>
+            <Input
+              id="mileagePerLiter"
+              value={form.mileagePerLiter}
+              onChange={(e) => update("mileagePerLiter", e.target.value)}
+              placeholder={t("admin.vehicle_creation.mileage_placeholder")}
+              className="input-validate w-full"
+            />
+          </div>
 
-          <ShadcnSelect label={t("common.state")} value={form.state} onChange={(v:string)=>update("state",v)}
-            placeholder={t("common.select_item_placeholder", { item: t("common.state") })}
-            options={states.map(s=>({value:resolveId(s),label:s.name}))} />
+          <div>
+            <Label htmlFor="fuelTankCapacity">
+              {t("admin.vehicle_creation.fuel_tank_capacity")}
+            </Label>
+            <Input
+              id="fuelTankCapacity"
+              value={form.fuelTankCapacity}
+              onChange={(e) => update("fuelTankCapacity", e.target.value)}
+              placeholder={t("admin.vehicle_creation.fuel_tank_capacity_placeholder")}
+              className="input-validate w-full"
+            />
+          </div>
 
-          <ShadcnSelect label={t("common.district")} value={form.district} onChange={(v:string)=>update("district",v)}
-            placeholder={t("common.select_item_placeholder", { item: t("common.district") })}
-            options={districts.map(d=>({value:resolveId(d),label:d.name}))} />
+          <div className="md:col-span-2">
+            <Label htmlFor="serviceRecord">
+              {t("admin.vehicle_creation.service_record")}
+            </Label>
+            <Textarea
+              id="serviceRecord"
+              value={form.serviceRecord}
+              onChange={(e) => update("serviceRecord", e.target.value)}
+              placeholder={t("admin.vehicle_creation.service_record_placeholder")}
+              className="input-validate w-full"
+            />
+          </div>
 
-          <ShadcnSelect label={t("common.city")} value={form.city} onChange={(v:string)=>update("city",v)}
-            placeholder={t("common.select_item_placeholder", { item: t("common.city") })}
-            options={cities.map(c=>({value:resolveId(c),label:c.name}))} />
+          <div>
+            <Label htmlFor="vehicleInsurance">
+              {t("admin.vehicle_creation.vehicle_insurance")}
+            </Label>
+            <Input
+              id="vehicleInsurance"
+              value={form.vehicleInsurance}
+              onChange={(e) => update("vehicleInsurance", e.target.value)}
+              placeholder={t("admin.vehicle_creation.vehicle_insurance_placeholder")}
+              className="input-validate w-full"
+            />
+          </div>
 
-          <ShadcnSelect label={t("common.zone")} value={form.zone} onChange={(v:string)=>update("zone",v)}
-            placeholder={t("common.select_item_placeholder", { item: t("common.zone") })}
-            options={zones.map(z=>({value:resolveId(z),label:z.name}))} />
+          <div>
+            <Label htmlFor="insuranceExpiryDate">
+              {t("admin.vehicle_creation.insurance_expiry_date")}
+            </Label>
+            <Input
+              id="insuranceExpiryDate"
+              type="date"
+              value={form.insuranceExpiryDate}
+              onChange={(e) => update("insuranceExpiryDate", e.target.value)}
+              className="input-validate w-full"
+            />
+          </div>
 
-          <ShadcnSelect label={t("common.ward")} value={form.ward} onChange={(v:string)=>update("ward",v)}
-            placeholder={t("common.select_item_placeholder", { item: t("common.ward") })}
-            options={wards.map(w=>({value:resolveId(w),label:w.name}))} />
+          <div>
+            <Label htmlFor="vehicleCondition">
+              {t("admin.vehicle_creation.vehicle_condition")}
+            </Label>
+            <Select
+              id="vehicleCondition"
+              value={form.vehicleCondition}
+              onChange={(value) => update("vehicleCondition", value)}
+              options={conditionOptions}
+              placeholder={t("common.select_item_placeholder", {
+                item: t("admin.vehicle_creation.vehicle_condition"),
+              })}
+              className="input-validate w-full"
+            />
+          </div>
 
-          <ShadcnSelect label={t("common.status")} value={form.isActive} onChange={(v:string)=>update("isActive",v)}
-            placeholder={t("common.select_status")}
-            options={[
-              { value: "true", label: t("common.active") },
-              { value: "false", label: t("common.inactive") },
-            ]} />
+          <div>
+            <Label htmlFor="isActive">
+              {t("common.status")}
+            </Label>
+            <Select
+              id="isActive"
+              value={form.isActive}
+              onChange={(value) => update("isActive", value)}
+              options={[
+                { value: "true", label: t("common.active") },
+                { value: "false", label: t("common.inactive") },
+              ]}
+              placeholder={t("common.select_status")}
+              className="input-validate w-full"
+            />
+          </div>
 
+          <div>
+            <Label htmlFor="rcUpload">{t("admin.vehicle_creation.rc_upload")}</Label>
+            <input
+              id="rcUpload"
+              type="file"
+              hidden
+              onChange={(e) => {
+                setRemoveRcFile(false);
+                handleFileChange(
+                  e.target.files?.[0] ?? null,
+                  setRcFile,
+                  setRcPreviewUrl,
+                  setIsRcPreviewImage,
+                  existingRcFile,
+                  rcPreviewUrl
+                );
+              }}
+            />
+            <div
+              className="border rounded p-4 cursor-pointer bg-gray-50"
+              onClick={() => document.getElementById("rcUpload")?.click()}
+            >
+              {rcPreviewUrl ? (
+                <img
+                  src={isRcPreviewImage ? rcPreviewUrl : FILE_ICON}
+                  alt={t("admin.vehicle_creation.rc_upload")}
+                  className="w-full h-24 object-contain"
+                />
+              ) : (
+                <img src={FILE_ICON} className="w-12 h-12 mx-auto opacity-60" />
+              )}
+            </div>
+            {renderFileActions(
+              rcPreviewUrl,
+              rcFile,
+              () => window.open(rcPreviewUrl, "_blank", "noopener,noreferrer"),
+              () =>
+                clearPreview({
+                  previewUrl: rcPreviewUrl,
+                  setPreviewUrl: setRcPreviewUrl,
+                  setFile: setRcFile,
+                  setIsPreviewImage: setIsRcPreviewImage,
+                  setExistingFile: setExistingRcFile,
+                  setRemoveFlag: setRemoveRcFile,
+                  inputId: "rcUpload",
+                })
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="insuranceFile">
+              {t("admin.vehicle_creation.vehicle_insurance_file")}
+            </Label>
+            <input
+              id="insuranceFile"
+              type="file"
+              hidden
+              onChange={(e) => {
+                setRemoveInsuranceFile(false);
+                handleFileChange(
+                  e.target.files?.[0] ?? null,
+                  setInsuranceFile,
+                  setInsurancePreviewUrl,
+                  setIsInsurancePreviewImage,
+                  existingInsuranceFile,
+                  insurancePreviewUrl
+                );
+              }}
+            />
+            <div
+              className="border rounded p-4 cursor-pointer bg-gray-50"
+              onClick={() => document.getElementById("insuranceFile")?.click()}
+            >
+              {insurancePreviewUrl ? (
+                <img
+                  src={isInsurancePreviewImage ? insurancePreviewUrl : FILE_ICON}
+                  alt={t("admin.vehicle_creation.vehicle_insurance_file")}
+                  className="w-full h-24 object-contain"
+                />
+              ) : (
+                <img src={FILE_ICON} className="w-12 h-12 mx-auto opacity-60" />
+              )}
+            </div>
+            {renderFileActions(
+              insurancePreviewUrl,
+              insuranceFile,
+              () => window.open(insurancePreviewUrl, "_blank", "noopener,noreferrer"),
+              () =>
+                clearPreview({
+                  previewUrl: insurancePreviewUrl,
+                  setPreviewUrl: setInsurancePreviewUrl,
+                  setFile: setInsuranceFile,
+                  setIsPreviewImage: setIsInsurancePreviewImage,
+                  setExistingFile: setExistingInsuranceFile,
+                  setRemoveFlag: setRemoveInsuranceFile,
+                  inputId: "insuranceFile",
+                })
+            )}
+          </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
-          <button type="submit" disabled={loading} className="bg-green-custom text-white px-4 py-2 rounded">
-            {loading ? t("common.saving") : isEdit ? t("common.update") : t("common.save")}
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-green-custom text-white px-4 py-2 rounded disabled:opacity-50 transition-colors"
+          >
+            {loading
+              ? isEdit
+                ? t("common.updating")
+                : t("common.saving")
+              : isEdit
+                ? t("common.update")
+                : t("common.save")}
           </button>
-          <button type="button" onClick={()=>navigate(ENC_LIST_PATH)} className="bg-red-400 text-white px-4 py-2 rounded">
+          <button
+            type="button"
+            onClick={() => navigate(ENC_LIST_PATH)}
+            className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
+          >
             {t("common.cancel")}
           </button>
         </div>

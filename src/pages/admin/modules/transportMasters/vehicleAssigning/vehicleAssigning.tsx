@@ -19,7 +19,7 @@ import { Switch } from "@/components/ui/switch";
 import { adminApi } from "@/helpers/admin/registry";
 import { useTranslation } from "react-i18next";
 
-const vehicleApi = adminApi.vehicleCreation;
+const vehicleApi = adminApi.vehicleAssigning;
 
 type Vehicles = {
   unique_id: string;
@@ -40,7 +40,7 @@ type Vehicles = {
   is_active: boolean;
 };
 
-export default function VehicleCreation() {
+export default function vehicleAssigningList() {
   const { t } = useTranslation();
   const [vehicles, setVehicles] = useState<Vehicles[]>([]);
   const [loading, setLoading] = useState(true);

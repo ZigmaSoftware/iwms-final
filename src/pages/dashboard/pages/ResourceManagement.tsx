@@ -466,6 +466,11 @@ export default function ResourceManagement() {
                       <span className="font-medium">{emp.vehicle}</span>
                     </div>
 
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Ward:</span>
+                      <span className="font-medium">{emp.ward}</span>
+                    </div>
+
                     <div className="text-xs text-muted-foreground">
                       {t("dashboard.resources.labels.joined")}: {emp.joinDate}
                     </div>
