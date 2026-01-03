@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Pie } from "react-chartjs-2";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import type { ChartData } from "chart.js";
@@ -93,6 +93,13 @@ type MonthlyVehicleDialogRange = {
   monthKey: string;
 };
 
+type MonthlyDailyDialogRange = {
+  fromDate: string;
+  toDate: string;
+  label: string;
+  monthKey: string;
+};
+
 type DailyRow = {
   date: string;
   zone: string;
@@ -105,7 +112,7 @@ type DailyRow = {
 };
 
 type MonthlyStat = {
-  month: string;
+  monthKey: string;
   wet: number;
   dry: number;
   mix: number;
@@ -113,12 +120,13 @@ type MonthlyStat = {
   avgDaily: number;
 };
 
+type MonthlyFilterMode = "all" | "selected";
+
 // ---------------------- Fallback Samples ----------------------
-const todayKey = new Date().toISOString().slice(0, 10);
-const currentMonthLabel = new Date().toLocaleString("en-US", {
-  month: "long",
-  year: "numeric",
-});
+const getLocalDateKey = (date = new Date()) =>
+  date.toLocaleDateString("en-CA");
+
+const todayKey = getLocalDateKey();
 
 const FALLBACK_DAILY_DATA: DailyRow[] = [
   {
@@ -143,16 +151,7 @@ const ZONE_WASTE_SUMMARY: Record<
   "Zone Y": { household: 90, ewaste: 7, medical: 4 },
 };
 
-const FALLBACK_MONTHLY_STATS: MonthlyStat[] = [
-  {
-    month: currentMonthLabel,
-    wet: 245,
-    dry: 156,
-    total: 401,
-    avgDaily: 13.4,
-    mix: 0,
-  },
-];
+const ALL_MONTHS_START = "2000-01-01";
 
 // ---------------------- Utility ----------------------
 const toTons = (v: number | undefined | null) =>
@@ -194,6 +193,31 @@ const toNumber = (value: unknown) => {
   const parsed = Number(cleaned);
   return Number.isNaN(parsed) ? 0 : parsed;
 };
+
+const getRowWeightsKg = (row: Record<string, any>) => {
+  const wetKg = toNumber(row.wet_weight);
+  const dryKg = toNumber(row.dry_weight);
+  const mixKg = toNumber(row.mix_weight);
+  let totalKg = toNumber(row.total_net_weight);
+  if (!totalKg) totalKg = wetKg + dryKg + mixKg;
+  return { wetKg, dryKg, mixKg, totalKg };
+};
+
+const getActiveWasteRows = (
+  rows: ApiWasteRow[],
+  fromDate: string,
+  toDate: string
+) =>
+  rows
+    .map((row) => ({
+      row,
+      dateKey: getCollectionDateKey(row as Record<string, any>),
+    }))
+    .filter(({ dateKey }) => {
+      if (!dateKey) return false;
+      if (dateKey < fromDate || dateKey > toDate) return false;
+      return true;
+    });
 
 const getCollectionDateKey = (row: Record<string, any>) =>
   toDateKey(
@@ -1046,12 +1070,6 @@ const PROPERTY_COLLECTION_DATA: Record<
     ],
   },
 };
-const getYesterdayISO = () => {
-  const d = new Date();
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10); // YYYY-MM-DD
-};
-
 const getMonthDateRange = (monthKey: string) => {
   const [yearStr, monthStr] = monthKey.split("-");
   const year = Number(yearStr);
@@ -1072,8 +1090,9 @@ export default function WasteCollection() {
   const { t, i18n } = useTranslation();
   // Core data states
   const [dailyData, setDailyData] = useState<DailyRow[]>(FALLBACK_DAILY_DATA);
-  const [monthlyStats, setMonthlyStats] = useState<MonthlyStat[]>(
-    FALLBACK_MONTHLY_STATS
+  const [monthlyStats, setMonthlyStats] = useState<MonthlyStat[]>([]);
+  const [selectedMonthStat, setSelectedMonthStat] = useState<MonthlyStat | null>(
+    null
   );
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -1138,9 +1157,14 @@ export default function WasteCollection() {
     useState<WasteCategoryKey>("household");
   const [dailyPage, setDailyPage] = useState(1);
   const [dailyPageSize, setDailyPageSize] = useState(10);
+  const [monthlyPage, setMonthlyPage] = useState(1);
+  const [monthlyRowsPerPage, setMonthlyRowsPerPage] = useState(10);
+  const [monthlyFilterMode, setMonthlyFilterMode] =
+    useState<MonthlyFilterMode>("all");
   const [dailyDateFilter, setDailyDateFilter] = useState("");
-  const [selectedMonth, setSelectedMonth] = useState(
-    new Date().toISOString().slice(0, 7)
+  const [selectedMonth, setSelectedMonth] = useState(getLocalDateKey().slice(0, 7));
+  const [monthlySelectedMonth, setMonthlySelectedMonth] = useState(
+    getLocalDateKey().slice(0, 7)
   );
   const [vehicleDialogOpen, setVehicleDialogOpen] = useState(false);
   const [vehicleDialogRange, setVehicleDialogRange] =
@@ -1155,9 +1179,47 @@ export default function WasteCollection() {
     useState<VehicleCollectionSummary[]>([]);
   const [monthlyVehicleLoading, setMonthlyVehicleLoading] = useState(false);
   const [monthlyVehicleError, setMonthlyVehicleError] = useState("");
+  const [monthlyDailyDialogOpen, setMonthlyDailyDialogOpen] = useState(false);
+  const [monthlyDailyDialogRange, setMonthlyDailyDialogRange] =
+    useState<MonthlyDailyDialogRange | null>(null);
+  const [monthlyDailyRows, setMonthlyDailyRows] = useState<DailyRow[]>([]);
+  const [monthlyDailyLoading, setMonthlyDailyLoading] = useState(false);
+  const [monthlyDailyError, setMonthlyDailyError] = useState("");
   const monthlyVehicleCache = useRef(new Map<string, VehicleCollectionSummary[]>());
+  const monthlyDailyCache = useRef(new Map<string, DailyRow[]>());
   const dailyDateRef = useRef<HTMLInputElement | null>(null);
   const monthPickerRef = useRef<HTMLInputElement | null>(null);
+
+  const buildDailyRows = useCallback((
+    rows: ApiWasteRow[],
+    fromDate: string,
+    toDate: string
+  ) => {
+    const activeRows = getActiveWasteRows(rows, fromDate, toDate);
+    const zoneLabel = selectedCity || t("dashboard.waste_collection.all_zones");
+    return activeRows
+      .map(({ row, dateKey }) => {
+        const weights = getRowWeightsKg(row as Record<string, any>);
+        const wet = toTons(weights.wetKg);
+        const dry = toTons(weights.dryKg);
+        const mix = toTons(weights.mixKg);
+        const total = toTons(weights.totalKg);
+
+        return {
+          date: dateKey,
+          zone: zoneLabel,
+          wet,
+          dry,
+          total,
+          mix,
+          target: Number((total * 1.05).toFixed(2)),
+          households: Number(row.no_of_household ?? 0),
+        };
+      })
+      .sort(
+        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+      );
+  }, [selectedCity, t]);
 
   // ---------------------- Fetch block (same as your old code) ----------------------
   useEffect(() => {
@@ -1174,7 +1236,7 @@ export default function WasteCollection() {
       const ok = await fetchWaste(range.start, range.end);
       if (!ok) {
         setDailyData([]);
-        setMonthlyStats([]);
+        setSelectedMonthStat(null);
       }
     };
 
@@ -1191,60 +1253,25 @@ export default function WasteCollection() {
       const rows: ApiWasteRow[] = Array.isArray(result.rows) ? result.rows : [];
       if (!rows.length) return false;
 
-      const activeRows = rows
-        .map((row) => ({
-          row,
-          dateKey: getCollectionDateKey(row as Record<string, any>),
-        }))
-        .filter(({ dateKey }) => {
-          if (!dateKey) return false;
-          if (dateKey < fromDate || dateKey > toDate) return false;
-          return true;
-        });
+      const activeRows = getActiveWasteRows(rows, fromDate, toDate);
+      const formatted = buildDailyRows(rows, fromDate, toDate);
 
-      // Daily
-      const formatted = activeRows
-        .map(({ row, dateKey }) => {
-          const wet = toTons(row.wet_weight);
-          const dry = toTons(row.dry_weight);
-          const mix = toTons(row.mix_weight);
-          const total = row.total_net_weight
-            ? toTons(row.total_net_weight)
-            : wet + dry + mix;
-
-          return {
-            date: dateKey,
-            zone: t("dashboard.waste_collection.all_zones"),
-            wet,
-            dry,
-            total,
-            mix,
-            target: Number((total * 1.05).toFixed(2)),
-            households: Number(row.no_of_household ?? 0),
-          };
-        })
-        .sort(
-          (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-        );
-
-      if (formatted.length) {
-        setDailyData(formatted);
-      } else {
-        setDailyData([]);
-      }
+      if (formatted.length) setDailyData(formatted);
+      else setDailyData([]);
 
       // Monthly
       if (!activeRows.length) {
-        setMonthlyStats([]);
+        setSelectedMonthStat(null);
         return true;
       }
 
       const totals = activeRows.reduce(
         (a, r) => {
-          a.wet += toNumber(r.row.wet_weight);
-          a.dry += toNumber(r.row.dry_weight);
-          a.mix += toNumber(r.row.mix_weight);
-          a.total += toNumber(r.row.total_net_weight);
+          const weights = getRowWeightsKg(r.row as Record<string, any>);
+          a.wet += weights.wetKg;
+          a.dry += weights.dryKg;
+          a.mix += weights.mixKg;
+          a.total += weights.totalKg;
           return a;
         },
         { wet: 0, dry: 0, total: 0, mix: 0 }
@@ -1256,26 +1283,91 @@ export default function WasteCollection() {
         activeRows.length ||
         1;
 
-      setMonthlyStats([
-        {
-          month: formatMonthLabel(
-            fromDate,
-            locale,
-            t("dashboard.waste_collection.current_month"),
-          ),
-          wet: toTons(totals.wet),
-          dry: toTons(totals.dry),
-          mix: toTons(totals.mix),
-          total: toTons(totals.total),
-          avgDaily: toTons(totals.total / actDays),
-        },
-      ]);
+      setSelectedMonthStat({
+        monthKey: fromDate.slice(0, 7),
+        wet: toTons(totals.wet),
+        dry: toTons(totals.dry),
+        mix: toTons(totals.mix),
+        total: toTons(totals.total),
+        avgDaily: toTons(totals.total / actDays),
+      });
 
       return true;
     } catch {
       return false;
     }
   };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadMonthlyStats = async () => {
+      const endDate = getLocalDateKey();
+      try {
+        const result = await fetchWasteReport<ApiWasteRow>(
+          "date_wise_data",
+          ALL_MONTHS_START,
+          endDate
+        );
+        const rows: ApiWasteRow[] = Array.isArray(result.rows) ? result.rows : [];
+
+        const monthMap = new Map<
+          string,
+          { wetKg: number; dryKg: number; mixKg: number; totalKg: number; days: Set<string> }
+        >();
+
+        rows.forEach((row) => {
+          const dateKey = getCollectionDateKey(row as Record<string, any>);
+          if (!dateKey) return;
+          if (dateKey < ALL_MONTHS_START || dateKey > endDate) return;
+          const monthKey = dateKey.slice(0, 7);
+          const weights = getRowWeightsKg(row as Record<string, any>);
+          const entry = monthMap.get(monthKey) ?? {
+            wetKg: 0,
+            dryKg: 0,
+            mixKg: 0,
+            totalKg: 0,
+            days: new Set<string>(),
+          };
+
+          entry.wetKg += weights.wetKg;
+          entry.dryKg += weights.dryKg;
+          entry.mixKg += weights.mixKg;
+          entry.totalKg += weights.totalKg;
+          entry.days.add(dateKey);
+          monthMap.set(monthKey, entry);
+        });
+
+        const stats = Array.from(monthMap.entries())
+          .map(([monthKey, totals]) => {
+            const days = totals.days.size || 1;
+            return {
+              monthKey,
+              wet: toTons(totals.wetKg),
+              dry: toTons(totals.dryKg),
+              mix: toTons(totals.mixKg),
+              total: toTons(totals.totalKg),
+              avgDaily: toTons(totals.totalKg / days),
+            };
+          })
+          .sort((a, b) => b.monthKey.localeCompare(a.monthKey));
+
+        if (!cancelled) {
+          setMonthlyStats(stats);
+        }
+      } catch {
+        if (!cancelled) {
+          setMonthlyStats([]);
+        }
+      }
+    };
+
+    loadMonthlyStats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const wardBaseData = useMemo(() => {
     if (!selectedZone || !selectedWard) return null;
@@ -1515,11 +1607,11 @@ export default function WasteCollection() {
     setVehicleDialogOpen(true);
   };
 
-  const openMonthlyVehicleDialog = () => {
-    const range = getMonthDateRange(selectedMonth);
+  const openMonthlyVehicleDialog = (monthKey: string) => {
+    const range = getMonthDateRange(monthKey);
     if (!range) return;
     const monthLabel = formatMonthLabel(
-      `${selectedMonth}-01`,
+      `${monthKey}-01`,
       locale,
       t("dashboard.waste_collection.current_month"),
     );
@@ -1527,9 +1619,9 @@ export default function WasteCollection() {
       fromDate: range.start,
       toDate: range.end,
       label: monthLabel,
-      monthKey: selectedMonth,
+      monthKey,
     });
-    const cached = monthlyVehicleCache.current.get(selectedMonth);
+    const cached = monthlyVehicleCache.current.get(monthKey);
     if (cached) {
       setMonthlyVehicleSummary(cached);
       setMonthlyVehicleError(
@@ -1544,6 +1636,35 @@ export default function WasteCollection() {
     setMonthlyVehicleDialogOpen(true);
   };
 
+  const openMonthlyDailyDialog = (monthKey: string) => {
+    const range = getMonthDateRange(monthKey);
+    if (!range) return;
+    const monthLabel = formatMonthLabel(
+      `${monthKey}-01`,
+      locale,
+      t("dashboard.waste_collection.current_month"),
+    );
+    setMonthlyDailyDialogRange({
+      fromDate: range.start,
+      toDate: range.end,
+      label: monthLabel,
+      monthKey,
+    });
+    const cached = monthlyDailyCache.current.get(monthKey);
+    if (cached) {
+      setMonthlyDailyRows(cached);
+      setMonthlyDailyError(
+        cached.length
+          ? ""
+          : t("common.no_items_found", { item: t("common.date") })
+      );
+    } else {
+      setMonthlyDailyRows([]);
+      setMonthlyDailyError("");
+    }
+    setMonthlyDailyDialogOpen(true);
+  };
+
   const openNativePicker = (node: HTMLInputElement | null) => {
     if (!node) return;
     const picker = node as HTMLInputElement & { showPicker?: () => void };
@@ -1556,10 +1677,14 @@ export default function WasteCollection() {
   //   () => (dailyData.length ? dailyData[0] : null),
   //   [dailyData]
   // );
-  const monthStat = useMemo(
-    () => (monthlyStats.length ? monthlyStats[0] : null),
-    [monthlyStats]
-  );
+  const monthStat = useMemo(() => {
+    if (selectedMonthStat) return selectedMonthStat;
+    if (!monthlyStats.length) return null;
+    const selected = monthlyStats.find(
+      (stat) => stat.monthKey === selectedMonth
+    );
+    return selected ?? monthlyStats[0];
+  }, [monthlyStats, selectedMonth, selectedMonthStat]);
   const filteredDailyData = useMemo(() => {
     if (!dailyDateFilter) return dailyData;
     return dailyData.filter(
@@ -1577,10 +1702,27 @@ export default function WasteCollection() {
     return filteredDailyData.slice(start, start + dailyPageSize);
   }, [filteredDailyData, dailyPage, dailyPageSize]);
   const noDataMessage = t("common.no_items_found", { item: "data" });
+  const monthlyFilteredStats = useMemo(() => {
+    if (monthlyFilterMode === "all") return monthlyStats;
+    const selected = monthlyStats.filter(
+      (stat) => stat.monthKey === monthlySelectedMonth
+    );
+    return selected;
+  }, [monthlyStats, monthlyFilterMode, monthlySelectedMonth]);
+  const totalMonthlyPages =
+    Math.ceil(monthlyFilteredStats.length / monthlyRowsPerPage) || 1;
+  const paginatedMonthlyStats = useMemo(() => {
+    const start = (monthlyPage - 1) * monthlyRowsPerPage;
+    return monthlyFilteredStats.slice(start, start + monthlyRowsPerPage);
+  }, [monthlyFilteredStats, monthlyPage, monthlyRowsPerPage]);
 
   useEffect(() => {
     setDailyPage(1);
   }, [dailyPageSize, dailyDateFilter]);
+
+  useEffect(() => {
+    setMonthlyPage(1);
+  }, [monthlyRowsPerPage, monthlyStats.length, monthlyFilterMode, monthlySelectedMonth]);
 
   useEffect(() => {
     if (!vehicleDialogOpen || !vehicleDialogRange) return;
@@ -1676,9 +1818,62 @@ export default function WasteCollection() {
   }, [monthlyVehicleDialogOpen, monthlyVehicleDialogRange, t]);
 
   useEffect(() => {
-    const range = getMonthDateRange(selectedMonth);
+    if (!monthlyDailyDialogOpen || !monthlyDailyDialogRange) return;
+    const { fromDate, toDate, monthKey } = monthlyDailyDialogRange;
+    const cached = monthlyDailyCache.current.get(monthKey);
+    if (cached) {
+      setMonthlyDailyRows(cached);
+      setMonthlyDailyLoading(false);
+      setMonthlyDailyError(
+        cached.length
+          ? ""
+          : t("common.no_items_found", { item: t("common.date") })
+      );
+      return;
+    }
+
+    let cancelled = false;
+    const loadMonthlyDaily = async () => {
+      setMonthlyDailyLoading(true);
+      setMonthlyDailyError("");
+      try {
+        const result = await fetchWasteReport<ApiWasteRow>(
+          "date_wise_data",
+          fromDate,
+          toDate
+        );
+        const rows: ApiWasteRow[] = Array.isArray(result.rows)
+          ? result.rows
+          : [];
+        const formatted = buildDailyRows(rows, fromDate, toDate);
+        if (cancelled) return;
+        monthlyDailyCache.current.set(monthKey, formatted);
+        setMonthlyDailyRows(formatted);
+        if (!formatted.length) {
+          setMonthlyDailyError(
+            t("common.no_items_found", { item: t("common.date") })
+          );
+        }
+      } catch {
+        if (!cancelled) {
+          setMonthlyDailyRows([]);
+          setMonthlyDailyError(t("common.load_failed"));
+        }
+      } finally {
+        if (!cancelled) setMonthlyDailyLoading(false);
+      }
+    };
+
+    loadMonthlyDaily();
+    return () => {
+      cancelled = true;
+    };
+  }, [monthlyDailyDialogOpen, monthlyDailyDialogRange, buildDailyRows, t]);
+
+  useEffect(() => {
+    const range = getMonthDateRange(monthlySelectedMonth);
     if (!range) return;
-    if (monthlyVehicleCache.current.has(selectedMonth)) return;
+    if (monthlyVehicleCache.current.has(monthlySelectedMonth)) return;
     let cancelled = false;
 
     const prefetchMonthlyVehicles = async () => {
@@ -1693,7 +1888,7 @@ export default function WasteCollection() {
           : [];
         const summary = buildVehicleSummary(rows, range.start, range.end);
         if (cancelled) return;
-        monthlyVehicleCache.current.set(selectedMonth, summary);
+        monthlyVehicleCache.current.set(monthlySelectedMonth, summary);
       } catch {
         // Leave cache empty so the dialog can retry on demand.
       }
@@ -1703,16 +1898,16 @@ export default function WasteCollection() {
     return () => {
       cancelled = true;
     };
-  }, [selectedMonth]);
+  }, [monthlySelectedMonth]);
   const latestEntry = useMemo(
     () => (dailyData.length ? dailyData[0] : null),
     [dailyData]
   );
-  const yesterdayEntry = useMemo(() => {
-    const yesterday = getYesterdayISO();
+  const todayEntry = useMemo(() => {
+    const today = getLocalDateKey();
     return (
       dailyData.find(
-        (row) => row.date.slice(0, 10) === yesterday
+        (row) => row.date.slice(0, 10) === today
       ) || null
     );
   }, [dailyData]);
@@ -1752,8 +1947,8 @@ export default function WasteCollection() {
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {yesterdayEntry
-                  ? formatTons(yesterdayEntry.total, tonsLabel)
+                {todayEntry
+                  ? formatTons(todayEntry.total, tonsLabel)
                   : "--"}
               </div>
               <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
@@ -1771,8 +1966,8 @@ export default function WasteCollection() {
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {yesterdayEntry
-                  ? formatTons(yesterdayEntry.wet, tonsLabel)
+                {todayEntry
+                  ? formatTons(todayEntry.wet, tonsLabel)
                   : "--"}
               </div>
               <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
@@ -1790,8 +1985,8 @@ export default function WasteCollection() {
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {yesterdayEntry
-                  ? formatTons(yesterdayEntry.dry, tonsLabel)
+                {todayEntry
+                  ? formatTons(todayEntry.dry, tonsLabel)
                   : "--"}
               </div>
               <div className="p-2 bg-white/60 dark:bg-slate-900/60 rounded-lg">
@@ -1807,8 +2002,8 @@ export default function WasteCollection() {
             </CardHeader>
             <CardContent className="flex items-center justify-between">
               <div className="text-3xl font-bold text-slate-900 dark:text-slate-100">
-                {yesterdayEntry
-                  ? formatTons(yesterdayEntry.mix, tonsLabel)
+                {todayEntry
+                  ? formatTons(todayEntry.mix, tonsLabel)
                   : "--"}
               </div>
               <div className="p-2 bg-white/70 dark:bg-slate-900/60 rounded-lg">
@@ -1949,13 +2144,14 @@ export default function WasteCollection() {
                         <TableHead>{t("dashboard.waste_collection.headers.dry", { unit: tonsLabel })}</TableHead>
                         <TableHead>{t("dashboard.waste_collection.headers.mixed", { unit: tonsLabel })}</TableHead>
                         <TableHead>{t("dashboard.waste_collection.headers.total", { unit: tonsLabel })}</TableHead>
+                        <TableHead>{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
 
                     <TableBody>
                       {paginatedDailyData.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="py-6 text-center text-sm text-slate-500">
+                          <TableCell colSpan={7} className="py-6 text-center text-sm text-slate-500">
                             {noDataMessage}
                           </TableCell>
                         </TableRow>
@@ -1988,16 +2184,16 @@ export default function WasteCollection() {
                             </TableCell>
 
                             <TableCell className="font-bold text-indigo-700">
-                              <div className="flex items-center gap-2">
-                                <span>{row.total.toFixed(1)}</span>
-                                <button
-                                  type="button"
-                                  className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
-                                  onClick={() => openVehicleDialog(row)}
-                                >
-                                  {t("common.view_all")}
-                                </button>
-                              </div>
+                              {row.total.toFixed(1)}
+                            </TableCell>
+                            <TableCell>
+                              <button
+                                type="button"
+                                className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
+                                onClick={() => openVehicleDialog(row)}
+                              >
+                                {t("common.view_all")}
+                              </button>
                             </TableCell>
                           </TableRow>
                         ))
@@ -2058,82 +2254,6 @@ export default function WasteCollection() {
                   </div>
                 </div>
 
-                <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
-                  <DialogContent
-                    className={cn(
-                      "max-h-[80vh] overflow-y-auto lg:max-w-4xl",
-                      isDarkMode ? "bg-slate-950 text-slate-100" : ""
-                    )}
-                  >
-                    <DialogHeader>
-                      <DialogTitle>
-                        {t("dashboard.waste_collection.daily_title")}
-                      </DialogTitle>
-                      <p className="text-sm text-slate-500">
-                        {vehicleDialogRange
-                          ? `${vehicleDialogRange.label}${
-                              vehicleDialogRange.zone
-                                ? ` · ${vehicleDialogRange.zone}`
-                                : ""
-                            }`
-                          : ""}
-                      </p>
-                    </DialogHeader>
-
-                    <div className="mt-4 space-y-4">
-                      {vehicleLoading && (
-                        <div className="text-sm text-slate-500">
-                          {t("common.loading")}
-                        </div>
-                      )}
-
-                      {!vehicleLoading && vehicleError && (
-                        <div className="text-sm text-red-500">{vehicleError}</div>
-                      )}
-
-                      {!vehicleLoading && !vehicleError && (
-                        <div className="rounded-xl border overflow-hidden">
-                          <Table>
-                            <TableHeader>
-                              <TableRow className={tableHeadClass}>
-                                <TableHead>{t("dashboard.live_map.labels.vehicle")}</TableHead>
-                        <TableHead>{t("common.trips")}</TableHead>
-                        <TableHead>
-                          {t("dashboard.waste_collection.headers.wet", { unit: tonsLabel })}
-                        </TableHead>
-                        <TableHead>
-                          {t("dashboard.waste_collection.headers.dry", { unit: tonsLabel })}
-                        </TableHead>
-                        <TableHead>
-                          {t("dashboard.waste_collection.headers.mixed", { unit: tonsLabel })}
-                                </TableHead>
-                                <TableHead>
-                                  {t("dashboard.waste_collection.headers.total", { unit: tonsLabel })}
-                                </TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {vehicleSummary.map((row) => (
-                                <TableRow key={row.vehicle} className={tableRowHoverClass}>
-                                  <TableCell className="font-semibold">
-                                    {row.vehicle}
-                                  </TableCell>
-                                  <TableCell>{row.trips}</TableCell>
-                                  <TableCell>{row.wet.toFixed(1)}</TableCell>
-                                  <TableCell>{row.dry.toFixed(1)}</TableCell>
-                                  <TableCell>{row.mixed.toFixed(1)}</TableCell>
-                                  <TableCell className="font-semibold">
-                                    {row.total.toFixed(1)}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                    </div>
-                  </DialogContent>
-                </Dialog>
               </div>
             </TabsContent>
 
@@ -2145,26 +2265,51 @@ export default function WasteCollection() {
                   <h3 className="text-xl font-bold">
                     {t("dashboard.waste_collection.monthly_title")}
                   </h3>
-                  <div className="flex items-center gap-2">
-                    <Label className="text-sm text-slate-500">
-                      {t("dashboard.waste_collection.headers.month")}
-                    </Label>
-                    <div className="relative">
-                      <Input
-                        type="month"
-                        value={selectedMonth}
-                        onChange={(e) => setSelectedMonth(e.target.value)}
-                        className="w-40 pr-9 [&::-webkit-calendar-picker-indicator]:opacity-0"
-                        ref={monthPickerRef}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => openNativePicker(monthPickerRef.current)}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:text-slate-700"
-                        aria-label={t("dashboard.waste_collection.headers.month")}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm text-slate-500">
+                        {t("dashboard.waste_collection.headers.month")}
+                      </Label>
+                      <div className="relative">
+                        <Input
+                          type="month"
+                          value={monthlySelectedMonth}
+                          onChange={(e) => setMonthlySelectedMonth(e.target.value)}
+                          className="w-40 pr-9 [&::-webkit-calendar-picker-indicator]:opacity-0"
+                          ref={monthPickerRef}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => openNativePicker(monthPickerRef.current)}
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 hover:text-slate-700"
+                          aria-label={t("dashboard.waste_collection.headers.month")}
+                        >
+                          <Calendar className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm text-slate-500">
+                        {t("dashboard.waste_collection.month_filter_label")}
+                      </Label>
+                      <Select
+                        value={monthlyFilterMode}
+                        onValueChange={(value) =>
+                          setMonthlyFilterMode(value as MonthlyFilterMode)
+                        }
                       >
-                        <Calendar className="h-4 w-4" />
-                      </button>
+                        <SelectTrigger className="w-40">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">
+                            {t("dashboard.waste_collection.month_filter_all")}
+                          </SelectItem>
+                          <SelectItem value="selected">
+                            {t("dashboard.waste_collection.month_filter_selected")}
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
                   </div>
                 </div>
@@ -2179,41 +2324,98 @@ export default function WasteCollection() {
                         <TableHead>{t("dashboard.waste_collection.headers.mixed", { unit: tonsLabel })}</TableHead>
                         <TableHead>{t("dashboard.waste_collection.headers.total", { unit: tonsLabel })}</TableHead>
                         <TableHead>{t("dashboard.waste_collection.headers.avg_daily")}</TableHead>
+                        <TableHead>{t("common.actions")}</TableHead>
                       </TableRow>
                     </TableHeader>
 
                     <TableBody>
-                      {monthlyStats.length === 0 ? (
+                      {monthlyFilteredStats.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="py-6 text-center text-sm text-slate-500">
-                            {noDataMessage}
+                          <TableCell colSpan={7} className="py-6 text-center text-sm text-slate-500">
+                            {monthlyFilterMode === "selected"
+                              ? t("dashboard.waste_collection.no_data_month")
+                              : noDataMessage}
                           </TableCell>
                         </TableRow>
                       ) : (
-                        monthlyStats.map((row, index) => (
+                        paginatedMonthlyStats.map((row, index) => (
                           <TableRow key={index}>
-                            <TableCell>{row.month}</TableCell>
+                            <TableCell>
+                              <button
+                                type="button"
+                                className="text-left font-semibold text-indigo-700 underline-offset-2 hover:underline"
+                                onClick={() => openMonthlyDailyDialog(row.monthKey)}
+                              >
+                                {formatMonthLabel(
+                                  `${row.monthKey}-01`,
+                                  locale,
+                                  t("dashboard.waste_collection.current_month"),
+                                )}
+                              </button>
+                            </TableCell>
                             <TableCell>{row.wet.toFixed(1)}</TableCell>
                             <TableCell>{row.dry.toFixed(1)}</TableCell>
                             <TableCell>{row.mix.toFixed(1)}</TableCell>
                             <TableCell>
-                              <div className="flex items-center gap-2">
-                                <span>{row.total.toFixed(1)}</span>
-                                <button
-                                  type="button"
-                                  className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
-                                  onClick={openMonthlyVehicleDialog}
-                                >
-                                  {t("common.view_all")}
-                                </button>
-                              </div>
+                              {row.total.toFixed(1)}
                             </TableCell>
                             <TableCell>{row.avgDaily.toFixed(1)}</TableCell>
+                            <TableCell>
+                              <button
+                                type="button"
+                                className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
+                                onClick={() => openMonthlyVehicleDialog(row.monthKey)}
+                              >
+                                {t("common.view_all")}
+                              </button>
+                            </TableCell>
                           </TableRow>
                         ))
                       )}
                     </TableBody>
                   </Table>
+                </div>
+
+                <div className="flex justify-between items-center mt-4">
+                  <div className="flex items-center gap-2 text-sm">
+                    {t("dashboard.waste_collection.rows_per_page")}
+                    <select
+                      value={monthlyRowsPerPage}
+                      onChange={(e) => setMonthlyRowsPerPage(Number(e.target.value))}
+                      className="border rounded px-2 py-1 bg-white dark:bg-slate-950 dark:border-slate-700"
+                    >
+                      {[10, 20, 50].map((n) => (
+                        <option key={n} value={n}>
+                          {n}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={monthlyPage === 1}
+                      onClick={() => setMonthlyPage((p) => Math.max(1, p - 1))}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {t("dashboard.waste_collection.page_of", {
+                      page: monthlyPage,
+                      totalPages: totalMonthlyPages,
+                    })}
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      disabled={monthlyPage >= totalMonthlyPages}
+                      onClick={() =>
+                        setMonthlyPage((p) => Math.min(totalMonthlyPages, p + 1))
+                      }
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
 
                 <Dialog
@@ -2281,6 +2483,97 @@ export default function WasteCollection() {
                                   <TableCell>{row.mixed.toFixed(1)}</TableCell>
                                   <TableCell className="font-semibold">
                                     {row.total.toFixed(1)}
+                                  </TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </div>
+                      )}
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
+                <Dialog
+                  open={monthlyDailyDialogOpen}
+                  onOpenChange={setMonthlyDailyDialogOpen}
+                >
+                  <DialogContent
+                    className={cn(
+                      "max-h-[80vh] overflow-y-auto lg:max-w-4xl",
+                      isDarkMode ? "bg-slate-950 text-slate-100" : ""
+                    )}
+                  >
+                    <DialogHeader>
+                      <DialogTitle>
+                        {t("dashboard.waste_collection.daily_title")}
+                      </DialogTitle>
+                      <p className="text-sm text-slate-500">
+                        {monthlyDailyDialogRange?.label ?? ""}
+                      </p>
+                    </DialogHeader>
+
+                    <div className="mt-4 space-y-4">
+                      {monthlyDailyLoading && (
+                        <div className="text-sm text-slate-500">
+                          {t("common.loading")}
+                        </div>
+                      )}
+
+                      {monthlyDailyError && (
+                        <div className="text-sm text-rose-500">
+                          {monthlyDailyError}
+                        </div>
+                      )}
+
+                      {!monthlyDailyLoading && !monthlyDailyError && (
+                        <div className={tableContainerClass}>
+                          <Table>
+                            <TableHeader>
+                              <TableRow className={tableHeadClass}>
+                                <TableHead>{t("dashboard.waste_collection.headers.date")}</TableHead>
+                                <TableHead>{t("dashboard.waste_collection.headers.zone")}</TableHead>
+                                <TableHead>{t("dashboard.waste_collection.headers.wet", { unit: tonsLabel })}</TableHead>
+                                <TableHead>{t("dashboard.waste_collection.headers.dry", { unit: tonsLabel })}</TableHead>
+                                <TableHead>{t("dashboard.waste_collection.headers.mixed", { unit: tonsLabel })}</TableHead>
+                                <TableHead>{t("dashboard.waste_collection.headers.total", { unit: tonsLabel })}</TableHead>
+                                <TableHead>{t("common.actions")}</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {monthlyDailyRows.map((row, idx) => (
+                                <TableRow key={`${row.date}-${idx}`} className={tableRowHoverClass}>
+                                  <TableCell>
+                                    {new Date(row.date).toLocaleDateString(locale)}
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant="outline"
+                                      className={isDarkMode ? "border-slate-600 text-slate-200" : undefined}
+                                    >
+                                      {row.zone}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="font-bold text-emerald-700">
+                                    {row.wet.toFixed(1)}
+                                  </TableCell>
+                                  <TableCell className="font-bold text-sky-700">
+                                    {row.dry.toFixed(1)}
+                                  </TableCell>
+                                  <TableCell className="font-bold text-sky-700">
+                                    {row.mix.toFixed(1)}
+                                  </TableCell>
+                                  <TableCell className="font-bold text-indigo-700">
+                                    {row.total.toFixed(1)}
+                                  </TableCell>
+                                  <TableCell>
+                                    <button
+                                      type="button"
+                                      className="text-xs font-semibold text-indigo-600 underline-offset-2 hover:underline"
+                                    onClick={() => openVehicleDialog(row)}
+                                    >
+                                      {t("common.view_all")}
+                                    </button>
                                   </TableCell>
                                 </TableRow>
                               ))}
@@ -2701,6 +2994,82 @@ export default function WasteCollection() {
               </div>
             </TabsContent>
           </Tabs>
+          <Dialog open={vehicleDialogOpen} onOpenChange={setVehicleDialogOpen}>
+            <DialogContent
+              className={cn(
+                "max-h-[80vh] overflow-y-auto lg:max-w-4xl",
+                isDarkMode ? "bg-slate-950 text-slate-100" : ""
+              )}
+            >
+              <DialogHeader>
+                <DialogTitle>
+                  {t("dashboard.waste_collection.daily_title")}
+                </DialogTitle>
+                <p className="text-sm text-slate-500">
+                  {vehicleDialogRange
+                    ? `${vehicleDialogRange.label}${
+                        vehicleDialogRange.zone
+                          ? ` · ${vehicleDialogRange.zone}`
+                          : ""
+                      }`
+                    : ""}
+                </p>
+              </DialogHeader>
+
+              <div className="mt-4 space-y-4">
+                {vehicleLoading && (
+                  <div className="text-sm text-slate-500">
+                    {t("common.loading")}
+                  </div>
+                )}
+
+                {!vehicleLoading && vehicleError && (
+                  <div className="text-sm text-red-500">{vehicleError}</div>
+                )}
+
+                {!vehicleLoading && !vehicleError && (
+                  <div className="rounded-xl border overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow className={tableHeadClass}>
+                          <TableHead>{t("dashboard.live_map.labels.vehicle")}</TableHead>
+                          <TableHead>{t("common.trips")}</TableHead>
+                          <TableHead>
+                            {t("dashboard.waste_collection.headers.wet", { unit: tonsLabel })}
+                          </TableHead>
+                          <TableHead>
+                            {t("dashboard.waste_collection.headers.dry", { unit: tonsLabel })}
+                          </TableHead>
+                          <TableHead>
+                            {t("dashboard.waste_collection.headers.mixed", { unit: tonsLabel })}
+                          </TableHead>
+                          <TableHead>
+                            {t("dashboard.waste_collection.headers.total", { unit: tonsLabel })}
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {vehicleSummary.map((row) => (
+                          <TableRow key={row.vehicle} className={tableRowHoverClass}>
+                            <TableCell className="font-semibold">
+                              {row.vehicle}
+                            </TableCell>
+                            <TableCell>{row.trips}</TableCell>
+                            <TableCell>{row.wet.toFixed(1)}</TableCell>
+                            <TableCell>{row.dry.toFixed(1)}</TableCell>
+                            <TableCell>{row.mixed.toFixed(1)}</TableCell>
+                            <TableCell className="font-semibold">
+                              {row.total.toFixed(1)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </Card>
       </div>
     </div>

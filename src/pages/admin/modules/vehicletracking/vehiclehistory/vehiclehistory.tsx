@@ -201,17 +201,29 @@ const createHistoryIcon = (status: StatusKey, isFocused: boolean) => {
   });
 };
 
-const buildHistoryPopup = (statusLabel: string, speedKmph: number, showSpeed: boolean) => {
+type HistoryPopupLabels = {
+  title: string;
+  status: string;
+  speed: string;
+  unit: string;
+};
+
+const buildHistoryPopup = (
+  labels: HistoryPopupLabels,
+  statusLabel: string,
+  speedKmph: number,
+  showSpeed: boolean
+) => {
   const speedLine = showSpeed
-    ? `<div class="vh-popup-row"><span>Speed:</span><strong>${speedKmph.toFixed(
+    ? `<div class="vh-popup-row"><span>${labels.speed}:</span><strong>${speedKmph.toFixed(
         1
-      )} km/h</strong></div>`
+      )} ${labels.unit}</strong></div>`
     : "";
 
   return `
     <div class="vh-popup">
-      <div class="vh-popup-title">Status</div>
-      <div class="vh-popup-row"><span>State:</span><strong>${statusLabel}</strong></div>
+      <div class="vh-popup-title">${labels.title}</div>
+      <div class="vh-popup-row"><span>${labels.status}:</span><strong>${statusLabel}</strong></div>
       ${speedLine}
     </div>
   `;
@@ -310,6 +322,15 @@ export default function VehicleHistory(): JSX.Element {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const trackLayerRef = useRef<L.LayerGroup | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const popupLabels = useMemo(
+    () => ({
+      title: t("dashboard.live_map.popup_status"),
+      status: t("dashboard.live_map.labels.status"),
+      speed: t("dashboard.live_map.popup_speed"),
+      unit: t("dashboard.live_map.units.kmh"),
+    }),
+    [t]
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -509,14 +530,14 @@ export default function VehicleHistory(): JSX.Element {
       icon: createHistoryIcon(initial.statusKey, true),
     })
       .bindPopup(
-        buildHistoryPopup(initial.statusLabel, initial.speedKmph, shouldShowSpeed),
+        buildHistoryPopup(popupLabels, initial.statusLabel, initial.speedKmph, shouldShowSpeed),
         { closeButton: true, autoPan: true, offset: [0, -8] }
       )
       .addTo(layer);
     markerRef.current.on("click", () => {
       setPanelOpen(true);
     });
-  }, [track]);
+  }, [popupLabels, track]);
 
   /* SPEED-AWARE PLAYBACK */
   useEffect(() => {
@@ -546,7 +567,7 @@ export default function VehicleHistory(): JSX.Element {
 
     const shouldShowSpeed = p.statusKey === "running";
     markerRef.current.bindPopup(
-      buildHistoryPopup(p.statusLabel, p.speedKmph, shouldShowSpeed),
+      buildHistoryPopup(popupLabels, p.statusLabel, p.speedKmph, shouldShowSpeed),
       { closeButton: true, autoPan: true, offset: [0, -8] }
     );
 
@@ -555,7 +576,7 @@ export default function VehicleHistory(): JSX.Element {
     } else {
       markerRef.current.closePopup();
     }
-  }, [playbackIndex, t]);
+  }, [playbackIndex, popupLabels, t]);
 
   const activePoint = track[playbackIndex] ?? null;
   const placeholderDash = t("dashboard.live_map.placeholder_dash");

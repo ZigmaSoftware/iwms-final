@@ -140,6 +140,12 @@
   display: flex;
   align-items: flex-start;
   gap: 10px;
+  flex: 1 1 auto;
+  min-width: min-content;
+}
+
+.admin-map-panel__title-row > div {
+  min-width: 0;
 }
 
 .admin-map-panel__icon--house {

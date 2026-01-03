@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -86,10 +86,8 @@ const statusStyles = {
 ========================================================= */
 export default function Weighbridge() {
   const { t } = useTranslation();
-  const formatDate = (date: Date) => date.toISOString().split("T")[0];
+  const formatDate = (date: Date) => date.toLocaleDateString("en-CA");
   const today = formatDate(new Date());
-  const fallbackAppliedRef = useRef(false);
-  const initialLoadRef = useRef(true);
 
   const [fromDate, setFromDate] = useState(today);
   const [toDate, setToDate] = useState(today);
@@ -109,19 +107,8 @@ export default function Weighbridge() {
         const rows = Array.isArray(json.data) ? json.data : [];
         if (!rows.length) {
           setData([]);
-          if (
-            initialLoadRef.current &&
-            !fallbackAppliedRef.current &&
-            fromDate === today &&
-            toDate === today
-          ) {
-            const yesterday = new Date();
-            yesterday.setDate(yesterday.getDate() - 1);
-            const fallbackDate = formatDate(yesterday);
-            fallbackAppliedRef.current = true;
-            setFromDate(fallbackDate);
-            setToDate(fallbackDate);
-          }
+          setPage(1);
+          setActiveStatus("all");
           return;
         }
 
@@ -151,10 +138,7 @@ export default function Weighbridge() {
         setPage(1);
         setActiveStatus("all");
       })
-      .catch(() => setData([]))
-      .finally(() => {
-        initialLoadRef.current = false;
-      });
+      .catch(() => setData([]));
   }, [fromDate, toDate]);
 
   const filtered =
