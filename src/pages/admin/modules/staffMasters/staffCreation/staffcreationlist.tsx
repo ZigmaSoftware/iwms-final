@@ -54,10 +54,10 @@ export default function StaffCreationList() {
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
-  const { encMasters, encStaffCreation } = getEncryptedRoute();
-  const ENC_NEW_PATH = `/${encMasters}/${encStaffCreation}/new`;
+  const { encStaffMasters, encStaffCreation } = getEncryptedRoute();
+  const ENC_NEW_PATH = `/${encStaffMasters}/${encStaffCreation}/new`;
   const ENC_EDIT_PATH = (unique_id: number) =>
-    `/${encMasters}/${encStaffCreation}/${unique_id}/edit`;
+    `/${encStaffMasters}/${encStaffCreation}/${unique_id}/edit`;
 
   const globalFilterFields = [
     "employee_name",
