@@ -25,6 +25,7 @@ import {
   CheckCircle2,
   Sparkles,
   ShieldAlert,
+  type LucideIcon,
 } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -36,6 +37,22 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
 import { cn } from "@/lib/utils";
 
+type SummaryFilter = "none" | "priority_high" | "in_progress";
+type SummaryTab = "all" | "new" | "open" | "resolved";
+
+type SummaryCard = {
+  label: string;
+  value: number;
+  subtext: string;
+  gradient: string;
+  border: string;
+  iconColor: string;
+  iconBg: string;
+  Icon: LucideIcon;
+  tab: SummaryTab;
+  filter: SummaryFilter;
+};
+
 export default function Grievances() {
   const { t, i18n } = useTranslation();
   const [complaints, setComplaints] = useState<Grievance[]>([]);
@@ -43,7 +60,8 @@ export default function Grievances() {
   const [error, setError] = useState<string | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
+  const [activeTab, setActiveTab] = useState<SummaryTab>("all");
+  const [summaryFilter, setSummaryFilter] = useState<SummaryFilter>("none");
 
   const [openDialog, setOpenDialog] = useState(false);
   const [selectedComplaint, setSelectedComplaint] = useState<Grievance | null>(null);
@@ -94,6 +112,16 @@ export default function Grievances() {
     return `${dd}-${mm}-${yyyy} ${h}.${m} ${ampm}`;
   };
 
+  const normalizeStatus = (raw?: string | null) =>
+    (raw ?? "").toLowerCase().trim();
+
+  const normalizePriority = (raw?: unknown) => {
+    const value = String(raw ?? "").toLowerCase();
+    if (value.includes("high") || value.includes("critical")) return "High";
+    if (value.includes("low")) return "Low";
+    return "Medium";
+  };
+
   const getDateOnly = (value?: string | null) =>
     value ? value.split("T")[0] : null;
 
@@ -125,7 +153,7 @@ export default function Grievances() {
   ).length;
 
   const openCount = complaints.filter((g) => {
-    const st = g.status?.toLowerCase() ?? "";
+    const st = normalizeStatus(g.status);
     const created = getDateOnly(g.created) ?? "";
     if (st === "open") return true;
 
@@ -139,7 +167,7 @@ export default function Grievances() {
   }).length;
 
   const inProgressCount = complaints.filter((g) => {
-    const st = g.status?.toLowerCase() ?? "";
+    const st = normalizeStatus(g.status);
     const created = getDateOnly(g.created) ?? "";
 
     return (
@@ -149,13 +177,22 @@ export default function Grievances() {
   }).length;
 
   const resolvedCount = complaints.filter((g) =>
-    ["resolved", "closed"].includes(g.status?.toLowerCase() ?? "")
+    ["resolved", "closed"].includes(normalizeStatus(g.status))
   ).length;
+
+  const highPriorityCount = complaints.filter((g) => {
+    const st = normalizeStatus(g.status);
+    if (["resolved", "closed"].includes(st)) return false;
+    const priority = normalizePriority(
+      (g as any).priority ?? (g as any).risk ?? (g as any).severity
+    );
+    return priority === "High";
+  }).length;
 
   // TAB FILTERING
   const tabFiltered = (tab: string) => {
     return filtered.filter((g) => {
-      const st = g.status?.toLowerCase() ?? "";
+      const st = normalizeStatus(g.status);
       const created = getDateOnly(g.created) ?? "";
 
       if (tab === "new") return created === todayISO;
@@ -172,6 +209,32 @@ export default function Grievances() {
 
       return true;
     });
+  };
+
+  const applySummaryFilter = (rows: Grievance[]) => {
+    if (summaryFilter === "priority_high") {
+      return rows.filter((g) => {
+        const st = normalizeStatus(g.status);
+        if (["resolved", "closed"].includes(st)) return false;
+        const priority = normalizePriority(
+          (g as any).priority ?? (g as any).risk ?? (g as any).severity
+        );
+        return priority === "High";
+      });
+    }
+
+    if (summaryFilter === "in_progress") {
+      return rows.filter((g) => {
+        const st = normalizeStatus(g.status);
+        const created = getDateOnly(g.created) ?? "";
+        return (
+          ["processing", "progressing", "in-progress"].includes(st) &&
+          created === todayISO
+        );
+      });
+    }
+
+    return rows;
   };
 
   const statusTokens: Record<
@@ -291,7 +354,7 @@ export default function Grievances() {
     isDarkMode ? "bg-slate-900/70 border border-slate-800" : "bg-slate-100"
   );
 
-  const summaryCards = [
+  const summaryCards: SummaryCard[] = [
     {
       label: t("dashboard.grievances.summary_total"),
       value: complaints.length,
@@ -301,6 +364,8 @@ export default function Grievances() {
       iconColor: "text-sky-600 dark:text-sky-200",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
       Icon: MessageSquare,
+      tab: "all",
+      filter: "none",
     },
     {
       label: t("dashboard.grievances.summary_open"),
@@ -311,26 +376,20 @@ export default function Grievances() {
       iconColor: "text-rose-600 dark:text-rose-200",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
       Icon: ShieldAlert,
+      tab: "open",
+      filter: "none",
     },
     {
-      label: t("dashboard.grievances.summary_new"),
-      value: todayNewCount,
-      subtext: t("dashboard.grievances.summary_new_subtext"),
-      gradient: "bg-gradient-to-br from-white via-blue-50 to-blue-100 dark:from-slate-950 dark:via-blue-950/20 dark:to-slate-900",
-      border: "border-blue-200/80 dark:border-blue-500/40",
-      iconColor: "text-blue-600 dark:text-blue-200",
+      label: t("dashboard.grievances.summary_priority"),
+      value: highPriorityCount,
+      subtext: t("dashboard.grievances.summary_priority_subtext"),
+      gradient: "bg-gradient-to-br from-white via-fuchsia-50 to-fuchsia-100 dark:from-slate-950 dark:via-fuchsia-950/20 dark:to-slate-900",
+      border: "border-fuchsia-200/80 dark:border-fuchsia-500/40",
+      iconColor: "text-fuchsia-600 dark:text-fuchsia-200",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
-      Icon: Sparkles,
-    },
-    {
-      label: t("dashboard.grievances.summary_in_progress"),
-      value: inProgressCount,
-      subtext: t("dashboard.grievances.summary_in_progress_subtext"),
-      gradient: "bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:from-slate-950 dark:via-amber-950/20 dark:to-slate-900",
-      border: "border-amber-200/80 dark:border-amber-500/40",
-      iconColor: "text-amber-600 dark:text-amber-200",
-      iconBg: "bg-white/70 dark:bg-slate-900/60",
-      Icon: Clock,
+      Icon: ShieldAlert,
+      tab: "all",
+      filter: "priority_high",
     },
     {
       label: t("dashboard.grievances.summary_resolved"),
@@ -341,8 +400,44 @@ export default function Grievances() {
       iconColor: "text-emerald-600 dark:text-emerald-200",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
       Icon: CheckCircle2,
+      tab: "resolved",
+      filter: "none",
+    },
+    {
+      label: t("dashboard.grievances.summary_new"),
+      value: todayNewCount,
+      subtext: t("dashboard.grievances.summary_new_subtext"),
+      gradient: "bg-gradient-to-br from-white via-blue-50 to-blue-100 dark:from-slate-950 dark:via-blue-950/20 dark:to-slate-900",
+      border: "border-blue-200/80 dark:border-blue-500/40",
+      iconColor: "text-blue-600 dark:text-blue-200",
+      iconBg: "bg-white/70 dark:bg-slate-900/60",
+      Icon: Sparkles,
+      tab: "new",
+      filter: "none",
+    },
+    {
+      label: t("dashboard.grievances.summary_in_progress"),
+      value: inProgressCount,
+      subtext: t("dashboard.grievances.summary_in_progress_subtext"),
+      gradient: "bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:from-slate-950 dark:via-amber-950/20 dark:to-slate-900",
+      border: "border-amber-200/80 dark:border-amber-500/40",
+      iconColor: "text-amber-600 dark:text-amber-200",
+      iconBg: "bg-white/70 dark:bg-slate-900/60",
+      Icon: Clock,
+      tab: "all",
+      filter: "in_progress",
     },
   ];
+
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab as SummaryTab);
+    setSummaryFilter("none");
+  };
+
+  const handleSummaryClick = (tab: SummaryTab, filter: SummaryFilter) => {
+    setActiveTab(tab);
+    setSummaryFilter(filter);
+  };
 
   // MAIN UI --------------------------------------------------------
   return (
@@ -365,37 +460,43 @@ export default function Grievances() {
           </Button>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-6">
           {summaryCards.map((card) => {
             const Icon = card.Icon;
             return (
-              <Card
+              <button
                 key={card.label}
-                className={cn(
-                  surfaceCardClass,
-                  card.gradient,
-                  card.border,
-                  "text-slate-900 dark:text-slate-100 hover:-translate-y-1"
-                )}
+                type="button"
+                onClick={() => handleSummaryClick(card.tab, card.filter)}
+                className="text-left"
               >
-                <div className="pointer-events-none absolute inset-0">
-                  <div className="card-shimmer absolute -right-10 top-10 h-24 w-24 rounded-full bg-white/40 dark:bg-white/5 blur-3xl" />
-                </div>
-                <CardHeader className="relative z-10 flex flex-row items-start justify-between space-y-0 pb-2">
-                  <div>
-                    <CardTitle className="text-base font-semibold">{card.label}</CardTitle>
-                    <CardDescription className="text-xs text-muted-foreground">
-                      {card.subtext}
-                    </CardDescription>
+                <Card
+                  className={cn(
+                    surfaceCardClass,
+                    card.gradient,
+                    card.border,
+                    "text-slate-900 dark:text-slate-100 hover:-translate-y-1"
+                  )}
+                >
+                  <div className="pointer-events-none absolute inset-0">
+                    <div className="card-shimmer absolute -right-10 top-10 h-24 w-24 rounded-full bg-white/40 dark:bg-white/5 blur-3xl" />
                   </div>
-                  <div className={cn("p-2 rounded-xl shadow-inner", card.iconBg)}>
-                    <Icon className={cn("h-5 w-5", card.iconColor)} />
-                  </div>
-                </CardHeader>
-                <CardContent className="relative z-10">
-                  <p className="text-4xl font-bold">{card.value}</p>
-                </CardContent>
-              </Card>
+                  <CardHeader className="relative z-10 flex flex-row items-start justify-between space-y-0 pb-2">
+                    <div>
+                      <CardTitle className="text-base font-semibold">{card.label}</CardTitle>
+                      <CardDescription className="text-xs text-muted-foreground">
+                        {card.subtext}
+                      </CardDescription>
+                    </div>
+                    <div className={cn("p-2 rounded-xl shadow-inner", card.iconBg)}>
+                      <Icon className={cn("h-5 w-5", card.iconColor)} />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="relative z-10">
+                    <p className="text-4xl font-bold">{card.value}</p>
+                  </CardContent>
+                </Card>
+              </button>
             );
           })}
         </div>
@@ -431,7 +532,7 @@ export default function Grievances() {
           </Card>
         )}
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
           <TabsList className={tabsListClass}>
             {["all", "new", "open", "resolved"].map((tab) => (
               <TabsTrigger
@@ -445,7 +546,7 @@ export default function Grievances() {
           </TabsList>
 
           {["all", "new", "open", "resolved"].map((tab) => {
-            const tabItems = tabFiltered(tab);
+            const tabItems = applySummaryFilter(tabFiltered(tab));
             return (
               <TabsContent key={tab} value={tab} className="space-y-4">
                 {tabItems.length === 0 ? (
@@ -468,7 +569,6 @@ export default function Grievances() {
                           )}
                           style={{ animationDelay: `${index * 0.03}s` }}
                         >
-                          <div className={cn("pointer-events-none absolute inset-x-6 top-2 h-1 rounded-full opacity-60", statusStyles.glow)} />
                           <div className="relative grid gap-4 text-sm md:grid-cols-5">
                             <InfoField label={t("dashboard.grievances.fields.id")} value={g.unique_id} />
                             <InfoField

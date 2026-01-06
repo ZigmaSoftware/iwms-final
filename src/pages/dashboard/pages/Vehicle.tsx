@@ -433,7 +433,7 @@ export default function Vehicle() {
                   onClick={() => setStatusFilter(stat.filterValue ?? "all")}
                   className={`relative overflow-hidden rounded-2xl border ${
                     stat.border ?? "border-border/40 dark:border-border/50"
-                  } bg-white/80 dark:bg-slate-950/70 backdrop-blur p-4 w-full transition-transform duration-500 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:dark:ring-offset-slate-900 ${
+                  } bg-white/80 dark:bg-slate-950/70 backdrop-blur p-4 w-full lg:max-w-[320px] lg:mx-auto transition-transform duration-500 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-white focus-visible:dark:ring-offset-slate-900 ${
                     stat.backgroundClass ?? ""
                   } ${activeRing} text-left`}
                 >

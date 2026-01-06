@@ -135,15 +135,15 @@ export default function StaffTemplateList() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold text-gray-800">
-            Staff Template List
+            {t("admin.staff_template.list_title")}
           </h1>
           <p className="text-sm text-gray-500">
-            Driver & Operator assignment templates
+            {t("admin.staff_template.list_subtitle")}
           </p>
         </div>
 
         <Button
-          label="Create Template"
+          label={t("admin.staff_template.create_button")}
           icon="pi pi-plus"
           className="p-button-success p-button-sm"
           onClick={() => navigate(ENC_NEW_PATH)}
@@ -156,7 +156,7 @@ export default function StaffTemplateList() {
           <InputText
             value={globalFilterValue}
             onChange={onGlobalFilterChange}
-            placeholder="Search templates"
+            placeholder={t("admin.staff_template.search_placeholder")}
             className="border-none text-sm"
           />
         </div>
@@ -185,40 +185,40 @@ export default function StaffTemplateList() {
         stripedRows
         showGridlines
         className="p-datatable-sm"
-        emptyMessage="No staff templates found"
+        emptyMessage={t("admin.staff_template.empty_message")}
       >
-        <Column header="S.No" body={indexTemplate} style={{ width: 70 }} />
+        <Column header={t("common.s_no")} body={indexTemplate} style={{ width: 70 }} />
 
         <Column
           field="unique_id"
-          header="Template ID"
+          header={t("admin.staff_template.columns.template_id")}
           sortable
         />
 
         <Column
-          header="Primary Driver"
+          header={t("admin.staff_template.columns.primary_driver")}
           body={(r: StaffTemplate) => r.primary_driver_name}
           sortable
         />
 
         <Column
-          header="Secondary Driver"
+          header={t("admin.staff_template.columns.secondary_driver")}
           body={(r: StaffTemplate) => r.secondary_driver_name || "-"}
         />
 
         <Column
-          header="Primary Operator"
+          header={t("admin.staff_template.columns.primary_operator")}
           body={(r: StaffTemplate) => r.primary_operator_name}
           sortable
         />
 
         <Column
-          header="Secondary Operator"
+          header={t("admin.staff_template.columns.secondary_operator")}
           body={(r: StaffTemplate) => r.secondary_operator_name || "-"}
         />
 
         <Column
-          header="Extra Staff"
+          header={t("admin.staff_template.columns.extra_staff")}
           body={(r: StaffTemplate) =>
             r.extra_staff_ids?.length ?? 0
           }
@@ -226,27 +226,27 @@ export default function StaffTemplateList() {
         />
 
         <Column
-          header="Status"
+          header={t("common.status")}
           body={statusTemplate}
           style={{ width: 120 }}
         />
 
         <Column
-          header="Created At"
+          header={t("admin.staff_template.columns.created_at")}
           body={(r: StaffTemplate) =>
             new Date(r.created_at).toLocaleDateString()
           }
         />
 
         <Column
-            header="Updated At"
+            header={t("admin.staff_template.columns.updated_at")}
             body={(r: StaffTemplate)=>
                 new Date(r.updated_at).toLocaleDateString()
             }
         />
 
         <Column
-          header="Actions"
+          header={t("common.actions")}
           body={actionTemplate}
           style={{ width: 120 }}
         />

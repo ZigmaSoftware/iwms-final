@@ -208,8 +208,6 @@ export function HomeDashboard() {
 
             <div className="space-y-4">
               <WastePieChart />
-              <AttendanceMonitor />
-              <RecentActivityTimeline />
               <DataCard
                 title={t("dashboard.home.household_status_title")}
                 compact
@@ -250,6 +248,8 @@ export function HomeDashboard() {
                   </div>
                 </div>
               </DataCard>
+               <AttendanceMonitor />
+              <RecentActivityTimeline />
             </div>
 
           </div>

@@ -7,7 +7,6 @@ import { useTranslation } from "react-i18next";
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
-import { Switch } from "@/components/ui/switch";
 
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { staffTemplateApi, userCreationApi } from "@/helpers/admin";
@@ -55,6 +54,10 @@ export default function StaffTemplateForm() {
 
   const { encStaffMasters, encStaffTemplate } = getEncryptedRoute();
   const ENC_LIST_PATH = `/${encStaffMasters}/${encStaffTemplate}`;
+  const statusOptions = [
+    { value: "true", label: t("common.active") },
+    { value: "false", label: t("common.inactive") },
+  ];
 
   /* ================= LOAD STAFF OPTIONS ================= */
 
@@ -137,7 +140,7 @@ export default function StaffTemplateForm() {
     ) {
       Swal.fire(
         t("common.error"),
-        "Primary Driver and Primary Operator cannot be the same",
+        t("admin.staff_template.error_primary_role_duplicate"),
         "warning"
       );
       return;
@@ -253,13 +256,16 @@ export default function StaffTemplateForm() {
             </div>
 
             {/* STATUS */}
-            <div className="flex items-center gap-3">
+            <div>
               <Label>{t("common.status")}</Label>
-              <Switch
-                checked={formData.is_active}
-                onCheckedChange={(v) =>
-                  setFormData((p) => ({ ...p, is_active: v }))
+              <Select
+                value={formData.is_active ? "true" : "false"}
+                onChange={(v) =>
+                  setFormData((p) => ({ ...p, is_active: v === "true" }))
                 }
+                options={statusOptions}
+                placeholder={t("common.select_status")}
+                required
                 disabled={fetching}
               />
             </div>

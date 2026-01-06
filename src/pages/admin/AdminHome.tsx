@@ -49,6 +49,8 @@ import {
 import { MetricCard } from "./MetricCard";
 import { DashboardSection } from "./DashboardSection";
 
+const RADIAN = Math.PI / 180;
+
 /* -----------------------------------------
    TYPES
 ----------------------------------------- */
@@ -214,6 +216,32 @@ export default function AdminHome() {
   const hasUserPieData = userPie.some((d) => d.value > 0);
   const hasMasterBarData = masterBar.some((d) => d.value > 0);
   const hasOpsLineData = opsLine.some((d) => d.value > 0);
+  const renderUserPieLabel = (props: any) => {
+    const { cx, cy, midAngle, outerRadius, value } = props;
+    if (value === 0 || value === undefined || value === null) return null;
+
+    const radius = outerRadius + 18;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const textAnchor = x > cx ? "start" : "end";
+
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor={textAnchor}
+        dominantBaseline="central"
+        fontSize={14}
+        fontWeight={700}
+        fill="#0f172a"
+        stroke="#ffffff"
+        strokeWidth={3}
+        paintOrder="stroke"
+      >
+        {value}
+      </text>
+    );
+  };
 
   /* -----------------------------------------
      UI
@@ -247,8 +275,15 @@ export default function AdminHome() {
         <ChartCard title={t("admin.home.chart_user_distribution")} icon="pie_chart">
           {hasUserPieData ? (
             <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={userPie} dataKey="value" nameKey="name" outerRadius={80} label>
+              <PieChart margin={{ top: 16, right: 18, bottom: 16, left: 18 }}>
+                <Pie
+                  data={userPie}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={80}
+                  labelLine={{ stroke: "#94a3b8", strokeWidth: 1 }}
+                  label={renderUserPieLabel}
+                >
                   <Cell fill="#22c55e" />
                   <Cell fill="#3b82f6" />
                 </Pie>

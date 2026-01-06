@@ -3,6 +3,27 @@
 .map-wrapper {
   position: relative;
   width: 100%;
+  border-radius: 18px;
+  border: 1px solid var(--admin-border, #e2e8f0);
+  background: var(--admin-surfaceAlt, #ffffff);
+  overflow: hidden;
+}
+
+.map-wrapper .map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.map-wrapper .map-canvas.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+.map-wrapper .admin-map-panel {
+  z-index: 10;
 }
 
 .map-household-summary {
@@ -113,6 +134,48 @@
 .map-status-pill.not-collected {
   color: #b91c1c;
   background: #fee2e2;
+}
+
+.admin-map-panel__title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: min-content;
+}
+
+.admin-map-panel__title-row > div {
+  min-width: 0;
+}
+
+.admin-map-panel__icon--house {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--admin-primarySoft, #dbeafe);
+  color: var(--admin-primary, #1d4ed8);
+  border: 1px solid var(--admin-border, #bfdbfe);
+  box-shadow: 0 10px 24px rgba(30, 64, 175, 0.15);
+  animation: houseFloat 2.6s ease-in-out infinite;
+}
+
+.admin-map-panel__icon--house svg {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes houseFloat {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.03);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
 }
 
 .vehicle-list {

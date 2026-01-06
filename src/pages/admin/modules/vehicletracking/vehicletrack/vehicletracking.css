@@ -21,11 +21,22 @@
   width: 100%;
   height: 55vh;
   min-height: 420px;
+  border-radius: 18px;
+  border: 1px solid var(--admin-border, #e2e8f0);
+  background: var(--admin-surfaceAlt, #ffffff);
+  overflow: hidden;
 }
 
-.map-wrap #map {
+.map-wrap .map-canvas {
+  position: absolute;
+  inset: 0;
   height: 100%;
   width: 100%;
+  z-index: 0;
+}
+
+.map-wrap .admin-map-panel {
+  z-index: 10;
 }
 
 /* ================= STATUS FILTER ================= */

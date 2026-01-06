@@ -467,7 +467,7 @@ export default function ResourceManagement() {
                     </div>
 
                     <div className="flex justify-between">
-                      <span className="text-muted-foreground">Ward:</span>
+                      <span className="text-muted-foreground">{t("common.ward")}:</span>
                       <span className="font-medium">{emp.ward}</span>
                     </div>
 

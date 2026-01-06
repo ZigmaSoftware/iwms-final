@@ -164,8 +164,8 @@ export default function StaffCreationForm() {
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
 
-  const { encMasters, encStaffCreation } = getEncryptedRoute();
-  const ENC_LIST_PATH = `/${encMasters}/${encStaffCreation}`;
+  const { encStaffMasters, encStaffCreation } = getEncryptedRoute();
+  const ENC_LIST_PATH = `/${encStaffMasters}/${encStaffCreation}`;
   const backendOrigin =
     desktopApi.defaults.baseURL?.replace(/\/api\/desktop\/?$/, "") || "";
 
