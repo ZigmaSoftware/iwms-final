@@ -9,6 +9,7 @@ import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 import { useTranslation } from "react-i18next";
+import { Truck } from "lucide-react";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -129,10 +130,13 @@ export default function MonthlyDistance() {
   const [vehicles, setVehicles] = useState<VehicleOption[]>(FALLBACK_VEHICLES);
   const [monthInput, setMonthInput] = useState(formatMonthInput(new Date()));
   const [selectedMonth, setSelectedMonth] = useState(monthInput);
+  const [loadingVehicles, setLoadingVehicles] = useState(true);
+  const [loadingFleet, setLoadingFleet] = useState(false);
 
   const [fleetRows, setFleetRows] = useState<VehicleDistanceRow[]>([]);
   const [rosterError, setRosterError] = useState("");
   const [fetchError, setFetchError] = useState("");
+  const isLoading = loadingVehicles || loadingFleet;
 
   /* ===== PrimeReact Filters ===== */
 
@@ -165,6 +169,7 @@ export default function MonthlyDistance() {
   /* ================= LOAD VEHICLES ================= */
 
   useEffect(() => {
+    setLoadingVehicles(true);
     fetch(TRACKING_API_URL)
       .then((r) => r.json())
       .then((res) => {
@@ -184,17 +189,26 @@ export default function MonthlyDistance() {
       .catch(() => {
         setVehicles(FALLBACK_VEHICLES);
         setRosterError("admin.reports.monthly_distance.error_unavailable");
+      })
+      .finally(() => {
+        setLoadingVehicles(false);
       });
   }, []);
 
   /* ================= FETCH MONTH DATA (FAST) ================= */
 
   const fetchFleetData = useCallback(async () => {
-    if (!vehicles.length || !monthDays.length) return;
-
     const requestId = ++requestIdRef.current;
+    if (!vehicles.length || !monthDays.length) {
+      if (requestId === requestIdRef.current) {
+        setLoadingFleet(false);
+      }
+      return;
+    }
+
     setFleetRows([]);
     setFetchError("");
+    setLoadingFleet(true);
 
     const [y, m] = selectedMonth.split("-").map(Number);
     const from = new Date(y, m - 1, 1).getTime();
@@ -213,53 +227,59 @@ export default function MonthlyDistance() {
       });
     };
 
-    await runWithConcurrency(vehicles, CHUNK_SIZE, async (v) => {
-      if (requestId !== requestIdRef.current) return;
-      const cacheKey = `${selectedMonth}_${v.id}`;
+    try {
+      await runWithConcurrency(vehicles, CHUNK_SIZE, async (v) => {
+        if (requestId !== requestIdRef.current) return;
+        const cacheKey = `${selectedMonth}_${v.id}`;
 
-      if (cacheRef.current[cacheKey]) {
-        commitRow(cacheRef.current[cacheKey]);
-        return;
-      }
+        if (cacheRef.current[cacheKey]) {
+          commitRow(cacheRef.current[cacheKey]);
+          return;
+        }
 
-      try {
-        const url = `${TRIP_SUMMARY_ENDPOINT}?vehicleId=${v.id}&fromDateUTC=${from}&toDateUTC=${to}&userId=${TRIP_SUMMARY_USER_ID}&duration=0`;
-        const res = await fetch(url);
-        const json = await res.json();
+        try {
+          const url = `${TRIP_SUMMARY_ENDPOINT}?vehicleId=${v.id}&fromDateUTC=${from}&toDateUTC=${to}&userId=${TRIP_SUMMARY_USER_ID}&duration=0`;
+          const res = await fetch(url);
+          const json = await res.json();
 
-        const history: HistoryRow[] =
-          json?.data?.historyConsilated || [];
+          const history: HistoryRow[] =
+            json?.data?.historyConsilated || [];
 
-        const totals: Record<string, number> = {};
-        monthDays.forEach((d) => (totals[d.iso] = 0));
+          const totals: Record<string, number> = {};
+          monthDays.forEach((d) => (totals[d.iso] = 0));
 
-        for (const h of history) {
-          const ts = parseTripTimestamp(h.startTime ?? h.endTime);
-          if (!ts) continue;
-          const key = IST_DAY_KEY.format(ts);
-          if (key in totals) {
-            totals[key] += Number(h.tripDistance || 0);
+          for (const h of history) {
+            const ts = parseTripTimestamp(h.startTime ?? h.endTime);
+            if (!ts) continue;
+            const key = IST_DAY_KEY.format(ts);
+            if (key in totals) {
+              totals[key] += Number(h.tripDistance || 0);
+            }
+          }
+
+          const total = Object.values(totals).reduce((a, b) => a + b, 0);
+
+          const row: VehicleDistanceRow = {
+            vehicleId: v.id,
+            vehicleName: v.label,
+            distances: totals,
+            total,
+          };
+
+          cacheRef.current[cacheKey] = row;
+
+          commitRow(row);
+        } catch {
+          if (requestId === requestIdRef.current) {
+            setFetchError("admin.reports.monthly_distance.error_partial");
           }
         }
-
-        const total = Object.values(totals).reduce((a, b) => a + b, 0);
-
-        const row: VehicleDistanceRow = {
-          vehicleId: v.id,
-          vehicleName: v.label,
-          distances: totals,
-          total,
-        };
-
-        cacheRef.current[cacheKey] = row;
-
-        commitRow(row);
-      } catch {
-        if (requestId === requestIdRef.current) {
-          setFetchError("admin.reports.monthly_distance.error_partial");
-        }
+      });
+    } finally {
+      if (requestId === requestIdRef.current) {
+        setLoadingFleet(false);
       }
-    });
+    }
   }, [vehicles, monthDays, selectedMonth]);
 
   useEffect(() => {
@@ -360,20 +380,41 @@ export default function MonthlyDistance() {
 
         {rosterError && <div className="p-2 text-blue-600">{t(rosterError)}</div>}
         {fetchError && <div className="p-2 text-red-600">{t(fetchError)}</div>}
-
-        <DataTable
-          value={fleetRows}
-          paginator
-          rows={10}
-          rowsPerPageOptions={[5, 10, 25, 50]}
-          filters={filters}
-          header={renderHeader()}
-          stripedRows
-          showGridlines
-          responsiveLayout="scroll"
-          globalFilterFields={["vehicleId"]}
-          className="p-datatable-sm"
-        >
+        <div className="relative">
+          {isLoading ? (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/70 backdrop-blur-sm">
+              <div className="flex items-center gap-3 rounded-2xl border border-sky-200 bg-white px-4 py-3 shadow-lg">
+                <div className="relative h-7 w-7">
+                  <Truck className="h-6 w-6 text-sky-600 animate-bounce" />
+                  <span className="absolute -bottom-1 left-0 right-0 h-1 rounded-full bg-sky-200 animate-pulse" />
+                </div>
+                <div className="text-sm">
+                  <div className="font-semibold text-slate-800">
+                    {loadingFleet
+                      ? t("admin.reports.monthly_distance.loading_distances")
+                      : t("admin.reports.monthly_distance.loading_vehicles")}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("admin.reports.monthly_distance.title")}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
+          <DataTable
+            value={fleetRows}
+            loading={false}
+            paginator
+            rows={10}
+            rowsPerPageOptions={[5, 10, 25, 50]}
+            filters={filters}
+            header={renderHeader()}
+            stripedRows
+            showGridlines
+            responsiveLayout="scroll"
+            globalFilterFields={["vehicleId"]}
+            className="p-datatable-sm"
+          >
           <Column
             header={t("admin.reports.monthly_distance.columns.index")}
             body={(_, o) => o.rowIndex + 1}
@@ -401,7 +442,8 @@ export default function MonthlyDistance() {
             body={(r: VehicleDistanceRow) => formatCellValue(r.total)}
             style={{ width: "120px" }}
           />
-        </DataTable>
+          </DataTable>
+        </div>
       
     </div>
   );
