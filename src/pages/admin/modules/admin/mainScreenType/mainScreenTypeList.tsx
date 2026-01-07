@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -24,6 +25,7 @@ import type { MainScreenType } from "../types/admin.types";
 
 
 export default function MainScreenTypeList() {
+  const { t } = useTranslation();
   const [mainScreenTypes, setMainScreenTypes] = useState<MainScreenType[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,13 +64,13 @@ export default function MainScreenTypeList() {
 
   const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
-      title: "Are you sure?",
-      text: "This userType will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: t("common.confirm_delete_button"),
     });
 
     if (!confirmDelete.isConfirmed) return;
@@ -77,7 +79,7 @@ export default function MainScreenTypeList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -99,7 +101,7 @@ export default function MainScreenTypeList() {
   const actionTemplate = (row: MainScreenType) => (
     <div className="flex gap-2 justify-center">
       <button
-        title="Edit"
+        title={t("common.edit")}
         className="text-blue-600 hover:text-blue-800"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
       >
@@ -142,7 +144,9 @@ export default function MainScreenTypeList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search user types..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.nav.main_screen_type"),
+          })}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -155,12 +159,20 @@ export default function MainScreenTypeList() {
         {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">MainScreen Types</h1>
-            <p className="text-gray-500 text-sm">Manage your mainscreen type records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              {t("admin.nav.main_screen_type")}
+            </h1>
+            <p className="text-gray-500 text-sm">
+              {t("common.manage_item_records", {
+                item: t("admin.nav.main_screen_type"),
+              })}
+            </p>
           </div>
 
           <Button
-            label="Add Screen Type"
+            label={t("common.add_item", {
+              item: t("admin.nav.main_screen_type"),
+            })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -176,15 +188,22 @@ export default function MainScreenTypeList() {
           rowsPerPageOptions={[5, 10, 25, 50]}
           globalFilterFields={["type_name"]}
           header={header}
-          emptyMessage="No main screen types found."
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.nav.main_screen_type"),
+          })}
           stripedRows
           showGridlines
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
-          <Column field="type_name" header="MainScreen Type" sortable style={{ minWidth: "200px" }} />
-          <Column header="Status" body={statusTemplate} style={{ width: "150px" }} />
-          <Column header="Actions" body={actionTemplate} style={{ width: "150px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "80px" }} />
+          <Column
+            field="type_name"
+            header={t("admin.nav.main_screen_type")}
+            sortable
+            style={{ minWidth: "200px" }}
+          />
+          <Column header={t("common.status")} body={statusTemplate} style={{ width: "150px" }} />
+          <Column header={t("common.actions")} body={actionTemplate} style={{ width: "150px" }} />
         </DataTable>
  
     </div>

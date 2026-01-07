@@ -16,10 +16,12 @@ import {
 import ComponentCard from "@/components/common/ComponentCard";
 
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 const { encCitizenGrivence, encMainComplaintCategory } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encCitizenGrivence}/${encMainComplaintCategory}`;
 
 export function MainComplaintCategoryForm() {
+  const { t } = useTranslation();
   const [mainCategoryName, setMainCategoryName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -41,7 +43,7 @@ export function MainComplaintCategoryForm() {
         .catch(() => {
           Swal.fire({
             icon: "error",
-            title: "Failed to load record",
+            title: t("admin.citizen_grievance.main_category_form.load_failed"),
           });
         });
     }
@@ -56,8 +58,8 @@ export function MainComplaintCategoryForm() {
     if (!name) {
       Swal.fire({
         icon: "warning",
-        title: "Missing category name",
-        text: "Please enter a main category name.",
+        title: t("admin.citizen_grievance.main_category_form.missing_title"),
+        text: t("admin.citizen_grievance.main_category_form.missing_message"),
       });
       setLoading(false);
       return;
@@ -70,7 +72,7 @@ export function MainComplaintCategoryForm() {
         await mobileApi.put(`main-category/${id}/`, payload);
         Swal.fire({
           icon: "success",
-          title: "Updated successfully!",
+          title: t("admin.citizen_grievance.main_category_form.updated"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -78,7 +80,7 @@ export function MainComplaintCategoryForm() {
         await mobileApi.post("main-category/", payload);
         Swal.fire({
           icon: "success",
-          title: "Added successfully!",
+          title: t("admin.citizen_grievance.main_category_form.added"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -97,8 +99,8 @@ export function MainComplaintCategoryForm() {
                 Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
               )
               .join("\n")
-            : "Unable to save data";
-      Swal.fire("Error", message, "error");
+            : t("admin.citizen_grievance.main_category_form.save_failed");
+      Swal.fire(t("common.error"), message, "error");
     } finally {
       setLoading(false);
     }
@@ -106,7 +108,11 @@ export function MainComplaintCategoryForm() {
 
   return (
     <ComponentCard
-      title={isEdit ? "Edit Main Complaint Category" : "Add Main Complaint Category"}
+      title={
+        isEdit
+          ? t("admin.citizen_grievance.main_category_form.title_edit")
+          : t("admin.citizen_grievance.main_category_form.title_add")
+      }
     >
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -114,7 +120,8 @@ export function MainComplaintCategoryForm() {
           {/* Category Name */}
           <div>
             <Label htmlFor="mainCategoryName">
-              Category Name <span className="text-red-500">*</span>
+              {t("admin.citizen_grievance.main_category_form.category_name")}{" "}
+              <span className="text-red-500">*</span>
             </Label>
             <Input
               id="mainCategoryName"
@@ -122,7 +129,7 @@ export function MainComplaintCategoryForm() {
               required
               value={mainCategoryName}
               onChange={(e) => setMainCategoryName(e.target.value)}
-              placeholder="Enter category name"
+              placeholder={t("admin.citizen_grievance.main_category_form.category_placeholder")}
               className="input-validate w-full"
             />
           </div>
@@ -130,18 +137,19 @@ export function MainComplaintCategoryForm() {
           {/* Active Status */}
           <div>
             <Label htmlFor="isActive">
-              Active Status <span className="text-red-500">*</span>
+              {t("admin.citizen_grievance.main_category_form.active_status")}{" "}
+              <span className="text-red-500">*</span>
             </Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(val) => setIsActive(val === "true")}
             >
               <SelectTrigger className="input-validate w-full" id="isActive">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("admin.citizen_grievance.main_category_form.status_placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -153,15 +161,15 @@ export function MainComplaintCategoryForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("admin.citizen_grievance.main_category_form.updating")
+                : t("admin.citizen_grievance.main_category_form.saving")
               : isEdit
-                ? "Update"
-                : "Save"}
+                ? t("common.update")
+                : t("common.save")}
           </Button>
 
           <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

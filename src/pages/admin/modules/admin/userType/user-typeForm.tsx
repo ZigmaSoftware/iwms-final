@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useTranslation } from "react-i18next";
 
 import { Input } from "@/components/ui/input";
 import { getEncryptedRoute } from "@/utils/routeCache";
@@ -10,6 +11,7 @@ const { encAdmins, encUserType } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encAdmins}/${encUserType}`;
 
 export default function UserTypeForm() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -35,8 +37,8 @@ export default function UserTypeForm() {
       } catch {
         Swal.fire({
           icon: "error",
-          title: "Failed to load user type",
-          text: "Something went wrong!",
+          title: t("common.error"),
+          text: t("common.load_failed"),
         });
       }
     };
@@ -62,7 +64,7 @@ export default function UserTypeForm() {
         await userTypeApi.update(userTypeId as string, payload);
         Swal.fire({
           icon: "success",
-          title: "Updated successfully!",
+          title: t("common.updated_success"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -71,7 +73,7 @@ export default function UserTypeForm() {
         await userTypeApi.create(payload);
         Swal.fire({
           icon: "success",
-          title: "Added successfully!",
+          title: t("common.added_success"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -82,11 +84,11 @@ export default function UserTypeForm() {
       const message =
         error?.response?.data?.name?.[0] ||
         error?.response?.data?.detail ||
-        "Unable to save user type.";
+        t("common.save_failed_desc");
 
       Swal.fire({
         icon: "error",
-        title: "Save failed",
+        title: t("common.save_failed"),
         text: message,
       });
     } finally {
@@ -102,7 +104,9 @@ export default function UserTypeForm() {
       <div className=" mx-auto bg-white rounded-xl shadow-sm border">
         <div className="px-6 py-4 border-b">
           <h2 className="text-lg font-semibold text-gray-800">
-            {isEdit ? "Edit User Type" : "Add User Type"}
+            {isEdit
+              ? t("common.edit_item", { item: t("admin.nav.user_type") })
+              : t("common.add_item", { item: t("admin.nav.user_type") })}
           </h2>
         </div>
 
@@ -113,12 +117,15 @@ export default function UserTypeForm() {
             {/* User Type Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                User Type Name <span className="text-red-500">*</span>
+                {t("common.item_name", { item: t("admin.nav.user_type") })}{" "}
+                <span className="text-red-500">*</span>
               </label>
 
               <Input
                 type="text"
-                placeholder="Enter user type name"
+                placeholder={t("common.enter_item_name", {
+                  item: t("admin.nav.user_type"),
+                })}
                 value={name}
                 required
                 onChange={(e) => setName(e.target.value)}
@@ -128,16 +135,16 @@ export default function UserTypeForm() {
             {/* Active Status */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Active Status <span className="text-red-500">*</span>
+                {t("common.status")} <span className="text-red-500">*</span>
               </label>
 
               <select
-                value={isActive ? "Active" : "Inactive"}
-                onChange={(e) => setIsActive(e.target.value === "Active")}
+                value={isActive ? "true" : "false"}
+                onChange={(e) => setIsActive(e.target.value === "true")}
                 className="w-full px-3 py-2 border border-green-400 rounded-sm focus:outline-none focus:ring-2 focus:ring-green-200"
               >
-                <option value="Active">Active</option>
-                <option value="Inactive">Inactive</option>
+                <option value="true">{t("common.active")}</option>
+                <option value="false">{t("common.inactive")}</option>
               </select>
             </div>
 
@@ -150,7 +157,7 @@ export default function UserTypeForm() {
               disabled={loading}
               className="bg-green-600 text-white font-medium px-6 py-2 rounded hover:bg-green-700 transition disabled:opacity-50"
             >
-              {loading ? "Saving..." : "Save"}
+              {loading ? t("common.saving") : t("common.save")}
             </button>
 
             <button
@@ -158,7 +165,7 @@ export default function UserTypeForm() {
               onClick={() => navigate(ENC_LIST_PATH)}
               className="bg-red-500 text-white font-medium px-6 py-2 rounded hover:bg-red-600 transition"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
 

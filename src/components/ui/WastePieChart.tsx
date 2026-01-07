@@ -9,6 +9,7 @@ import {
 } from "recharts";
 import { DataCard } from "../ui/DataCard";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 
 const API_BASE =
     "https://zigma.in/d2d/folders/waste_collected_summary_report/test_waste_collected_data_api.php";
@@ -24,11 +25,23 @@ export function WastePieChart() {
     const { encDashboardWasteCollection } = getEncryptedRoute();
     const wasteCollectionPath = `/dashboard/${encDashboardWasteCollection}`;
 
+    const { t } = useTranslation();
     const [data, setData] = useState([
-        { name: "Wet Waste", value: 0 },
-        { name: "Dry Waste", value: 0 },
-        { name: "Mixed Waste", value: 0 },
+        { key: "wet", value: 0 },
+        { key: "dry", value: 0 },
+        { key: "mixed", value: 0 },
     ]);
+
+    const labels = {
+        wet: t("dashboard.home.waste_wet"),
+        dry: t("dashboard.home.waste_dry"),
+        mixed: t("dashboard.home.waste_mixed"),
+    };
+
+    const chartData = data.map((item) => ({
+        ...item,
+        name: labels[item.key as keyof typeof labels],
+    }));
 
     const total = data.reduce((sum, i) => sum + i.value, 0);
     const fallbackAppliedRef = useRef(false);
@@ -55,9 +68,9 @@ export function WastePieChart() {
                         return;
                     }
                     setData([
-                        { name: "Wet Waste", value: 0 },
-                        { name: "Dry Waste", value: 0 },
-                        { name: "Mixed Waste", value: 0 },
+                        { key: "wet", value: 0 },
+                        { key: "dry", value: 0 },
+                        { key: "mixed", value: 0 },
                     ]);
                     return;
                 }
@@ -73,18 +86,18 @@ export function WastePieChart() {
                 );
 
                 setData([
-                    { name: "Wet Waste", value: totals.wet / 1000 },
-                    { name: "Dry Waste", value: totals.dry / 1000 },
-                    { name: "Mixed Waste", value: totals.mix / 1000 },
+                    { key: "wet", value: totals.wet / 1000 },
+                    { key: "dry", value: totals.dry / 1000 },
+                    { key: "mixed", value: totals.mix / 1000 },
                 ]);
             } catch (error) {
                 if ((error as { name?: string })?.name === "AbortError") {
                     return;
                 }
                 setData([
-                    { name: "Wet Waste", value: 0 },
-                    { name: "Dry Waste", value: 0 },
-                    { name: "Mixed Waste", value: 0 },
+                    { key: "wet", value: 0 },
+                    { key: "dry", value: 0 },
+                    { key: "mixed", value: 0 },
                 ]);
             }
         }
@@ -106,7 +119,8 @@ export function WastePieChart() {
                         {item.name}
                     </div>
                     <div className="text-gray-600 dark:text-gray-400">
-                        {formatTons(item.value)} tons ({total ? ((item.value / total) * 100).toFixed(1) : "0.0"}%)
+                        {formatTons(item.value)} {t("common.tons")} (
+                        {total ? ((item.value / total) * 100).toFixed(1) : "0.0"}%)
                     </div>
                 </div>
 
@@ -120,14 +134,14 @@ export function WastePieChart() {
 
     return (
         <DataCard
-            title="Daily Waste Collection"
+            title={t("dashboard.home.daily_waste_collection_title")}
             compact
             action={
                 <Link
                     to={wasteCollectionPath}
                     className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
                 >
-                    View all
+                    {t("common.view_all")}
                 </Link>
             }
         >
@@ -140,14 +154,14 @@ export function WastePieChart() {
                         <ResponsiveContainer>
                             <PieChart>
                                 <Pie
-                                    data={data}
+                                    data={chartData}
                                     dataKey="value"
                                     innerRadius={45}
                                     outerRadius={70}
                                     strokeWidth={0}
                                     paddingAngle={3}
                                 >
-                                    {data.map((_, i) => (
+                                    {chartData.map((_, i) => (
                                         <Cell key={i} fill={COLORS[i]} />
                                     ))}
                                 </Pie>
@@ -162,7 +176,7 @@ export function WastePieChart() {
                                 {formatTons(total)}
                             </span>
                             <span className="text-[10px] text-gray-500 dark:text-gray-400">
-                                Total (tons)
+                                {t("dashboard.home.total_unit_label", { unit: t("common.tons") })}
                             </span>
                         </div>
                     </div>
@@ -170,7 +184,7 @@ export function WastePieChart() {
 
                 {/* KPI RIGHT */}   
                 <div className="w-32 flex flex-col justify-center pl-3 gap-2">
-                    {data.map((item, i) => (
+                    {chartData.map((item, i) => (
                         <div
                             key={i}
                             className="p-2 rounded-md border border-gray-200 dark:border-gray-700"
@@ -193,7 +207,7 @@ export function WastePieChart() {
                             </div>
 
                             <div className="text-sm font-bold text-gray-900 dark:text-gray-100 mt-1">
-                                {formatTons(item.value)} tons
+                                {formatTons(item.value)} {t("common.tons")}
                             </div>
                         </div>
                     ))}

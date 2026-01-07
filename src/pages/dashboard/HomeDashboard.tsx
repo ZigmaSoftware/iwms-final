@@ -6,7 +6,6 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { GIcon } from "@/components/ui/gicon";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
 const routesData = [
   { route: "North Zone – R1", status: "On time", completion: 78 },
@@ -61,7 +60,6 @@ const HomeDashboard: React.FC = () => {
             />
             {t("dashboard.refresh")}
           </Button>
-          <LanguageSwitcher />
         </div>
       </div>
 

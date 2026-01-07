@@ -5,6 +5,7 @@ import Swal from "sweetalert2";
 import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import { Input } from "@/components/ui/input";
+import { useTranslation } from "react-i18next";
 
 import { getEncryptedRoute } from "@/utils/routeCache";
 
@@ -25,6 +26,7 @@ const ENC_LIST_PATH = `/${encMasters}/${encSubProperties}`;
 
 
 export default function SubPropertyForm() {
+  const { t } = useTranslation();
   const [subPropertyName, setSubPropertyName] = useState("");
   const [propertyId, setPropertyId] = useState<string>(""); // ALWAYS controlled
   const [properties, setProperties] = useState<
@@ -47,7 +49,7 @@ export default function SubPropertyForm() {
     } catch (error) {
       Swal.fire({
         icon: "error",
-        title: "Failed to load properties",
+        title: t("common.error"),
       });
     }
   };
@@ -71,8 +73,8 @@ export default function SubPropertyForm() {
         .catch((err) => {
           Swal.fire({
             icon: "error",
-            title: "Unable to load record",
-            text: err.response?.data?.detail || "Something went wrong!",
+            title: t("common.error"),
+            text: err.response?.data?.detail || t("common.load_failed"),
           });
         });
     }
@@ -87,8 +89,8 @@ export default function SubPropertyForm() {
     if (!subPropertyName || !propertyId) {
       Swal.fire({
         icon: "warning",
-        title: "Missing Fields",
-        text: "Select a property and enter sub property name.",
+        title: t("common.warning"),
+        text: t("common.all_fields_required"),
       });
       return;
     }
@@ -106,7 +108,7 @@ export default function SubPropertyForm() {
         await subPropertiesApi.update(id as string, payload);
         Swal.fire({
           icon: "success",
-          title: "Updated successfully!",
+          title: t("common.updated_success"),
           timer: 1400,
           showConfirmButton: false,
         });
@@ -114,7 +116,7 @@ export default function SubPropertyForm() {
         await subPropertiesApi.create(payload);
         Swal.fire({
           icon: "success",
-          title: "Added successfully!",
+          title: t("common.added_success"),
           timer: 1400,
           showConfirmButton: false,
         });
@@ -123,7 +125,7 @@ export default function SubPropertyForm() {
       navigate(ENC_LIST_PATH);
     } catch (error: any) {
       const data = error.response?.data;
-      let message = "Failed to save.";
+      let message = t("common.save_failed_desc");
 
       if (typeof data === "object" && data !== null) {
         message = Object.entries(data)
@@ -133,7 +135,7 @@ export default function SubPropertyForm() {
 
       Swal.fire({
         icon: "error",
-        title: "Save Failed",
+        title: t("common.save_failed"),
         text: message,
       });
     } finally {
@@ -146,24 +148,36 @@ export default function SubPropertyForm() {
   // ---------------------------------------------------
 
   return (
-    <ComponentCard title={isEdit ? "Edit Sub Property" : "Add Sub Property"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.sub_property") })
+          : t("common.add_item", { item: t("admin.nav.sub_property") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Property dropdown */}
           <div>
-            <Label htmlFor="property">Parent Property *</Label>
+            <Label htmlFor="property">
+              {t("admin.nav.property")} *
+            </Label>
 
             <Select
               value={propertyId || ""}
               onValueChange={(val) => setPropertyId(val)}
             >
               <SelectTrigger id="property" className="input-validate w-full">
-                <SelectValue placeholder="Select Property" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.property"),
+                  })}
+                />
               </SelectTrigger>
 
               <SelectContent>
                 {properties
-                  .filter((p) => p.is_active === true) // 🔥 Only active properties
+                  .filter((p) => p.is_active === true) // Only active properties
                   .map((p) => (
                     <SelectItem key={p.unique_id} value={p.unique_id}>
                       {p.property_name}
@@ -175,12 +189,16 @@ export default function SubPropertyForm() {
 
           {/* Sub-property Name */}
           <div>
-            <Label htmlFor="subPropertyName">Sub Property Name *</Label>
+            <Label htmlFor="subPropertyName">
+              {t("common.item_name", { item: t("admin.nav.sub_property") })} *
+            </Label>
             <Input
               id="subPropertyName"
               type="text"
               className="input-validate w-full"
-              placeholder="Enter Sub Property name"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.sub_property"),
+              })}
               value={subPropertyName}
               onChange={(e) => setSubPropertyName(e.target.value)}
             />
@@ -188,19 +206,19 @@ export default function SubPropertyForm() {
 
           {/* Status */}
           <div>
-            <Label htmlFor="isActive">Status *</Label>
+            <Label htmlFor="isActive">{t("common.status")} *</Label>
 
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(val) => setIsActive(val === "true")}
             >
               <SelectTrigger id="isActive" className="input-validate w-full">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
 
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -215,11 +233,11 @@ export default function SubPropertyForm() {
           >
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-              ? "Update"
-              : "Save"}
+              ? t("common.update")
+              : t("common.save")}
           </button>
 
           <button
@@ -227,7 +245,7 @@ export default function SubPropertyForm() {
             onClick={() => navigate(ENC_LIST_PATH)}
             className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

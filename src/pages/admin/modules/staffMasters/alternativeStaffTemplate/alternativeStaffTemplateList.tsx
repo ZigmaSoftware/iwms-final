@@ -1,0 +1,169 @@
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
+import { useTranslation } from "react-i18next";
+
+import { DataTable } from "primereact/datatable";
+import { Column } from "primereact/column";
+import { Button } from "primereact/button";
+import { InputText } from "primereact/inputtext";
+import { FilterMatchMode } from "primereact/api";
+
+import { alternativeStaffTemplateApi } from "@/helpers/admin";
+import { getEncryptedRoute } from "@/utils/routeCache";
+
+type AlternativeStaffTemplate = {
+  id: number;
+  unique_id: string;
+  staff_template: string;
+  effective_date: string;
+  driver: string;
+  operator: string;
+  extra_operator?: string | null;
+  change_reason: string;
+  change_remarks?: string;
+  approval_status: string;
+  created_at: string;
+};
+
+export default function AlternativeStaffTemplateList() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+
+  const [records, setRecords] = useState<AlternativeStaffTemplate[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [globalFilterValue, setGlobalFilterValue] = useState("");
+  const [datatableFilters, setDatatableFilters] = useState<any>({
+    global: { value: null, matchMode: FilterMatchMode.CONTAINS },
+  });
+
+  const { encStaffMasters, encAlternativeStaffTemplate } = getEncryptedRoute();
+  const ENC_NEW_PATH = `/${encStaffMasters}/${encAlternativeStaffTemplate}/new`;
+  const ENC_EDIT_PATH = (id: number) =>
+    `/${encStaffMasters}/${encAlternativeStaffTemplate}/${id}/edit`;
+
+  const fetchRecords = async () => {
+    setLoading(true);
+    try {
+      const payload: any = await alternativeStaffTemplateApi.list();
+      const data =
+        Array.isArray(payload)
+          ? payload
+          : Array.isArray(payload?.data)
+          ? payload.data
+          : payload?.data?.results ?? [];
+      setRecords(data);
+    } catch {
+      Swal.fire(t("common.error"), t("common.load_failed"), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchRecords();
+  }, []);
+
+  const onGlobalFilterChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setGlobalFilterValue(value);
+    setDatatableFilters({
+      global: { value, matchMode: FilterMatchMode.CONTAINS },
+    });
+  };
+
+  const header = (
+    <div className="space-y-4">
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">
+            {t("admin.alternative_staff_template.list_title")}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {t("admin.alternative_staff_template.list_subtitle")}
+          </p>
+        </div>
+
+        <Button
+          label={t("admin.alternative_staff_template.create_button")}
+          icon="pi pi-plus"
+          className="p-button-success p-button-sm"
+          onClick={() => navigate(ENC_NEW_PATH)}
+        />
+      </div>
+
+      <div className="flex justify-end">
+        <div className="flex items-center gap-2 border rounded-full px-3 py-1 bg-white">
+          <i className="pi pi-search text-gray-500" />
+          <InputText
+            value={globalFilterValue}
+            onChange={onGlobalFilterChange}
+            placeholder={t("admin.alternative_staff_template.search_placeholder")}
+            className="border-none text-sm"
+          />
+        </div>
+      </div>
+    </div>
+  );
+
+  const indexTemplate = (_: AlternativeStaffTemplate, { rowIndex }: any) =>
+    rowIndex + 1;
+
+  const actionTemplate = (row: AlternativeStaffTemplate) => (
+    <div className="flex justify-center">
+      <button
+        title={t("common.edit")}
+        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        className="text-blue-600 hover:text-blue-800"
+      >
+        <i className="pi pi-pencil" />
+      </button>
+    </div>
+  );
+
+  return (
+    <div className="p-3">
+      <DataTable
+        value={records}
+        paginator
+        rows={10}
+        loading={loading}
+        filters={datatableFilters}
+        globalFilterFields={[
+          "unique_id",
+          "staff_template",
+          "driver",
+          "operator",
+          "change_reason",
+          "approval_status",
+        ]}
+        header={header}
+        stripedRows
+        showGridlines
+        className="p-datatable-sm"
+        emptyMessage={t("admin.alternative_staff_template.empty_message")}
+      >
+        <Column header={t("common.s_no")} body={indexTemplate} style={{ width: 70 }} />
+        <Column field="unique_id" header={t("admin.alternative_staff_template.columns.template_id")} sortable />
+        <Column field="staff_template" header={t("admin.alternative_staff_template.columns.staff_template")} />
+        <Column field="effective_date" header={t("admin.alternative_staff_template.columns.effective_date")} />
+        <Column field="driver" header={t("admin.alternative_staff_template.columns.driver")} />
+        <Column field="operator" header={t("admin.alternative_staff_template.columns.operator")} />
+        <Column field="extra_operator" header={t("admin.alternative_staff_template.columns.extra_operator")} />
+        <Column field="change_reason" header={t("admin.alternative_staff_template.columns.change_reason")} />
+        <Column field="approval_status" header={t("admin.alternative_staff_template.columns.approval_status")} />
+        <Column
+          header={t("common.created_at")}
+          body={(r: AlternativeStaffTemplate) =>
+            r.created_at ? new Date(r.created_at).toLocaleDateString() : "-"
+          }
+        />
+        <Column
+          header={t("common.actions")}
+          body={actionTemplate}
+          style={{ width: 120 }}
+        />
+      </DataTable>
+    </div>
+  );
+}

@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 
 import { ThemeToggleButton } from "@/components/common/ThemeToggleButton";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import NotificationDropdown from "@/components/header/NotificationDropdown";
 import UserDropdown from "@/components/header/UserDropdown";
 import { useTheme } from "@/contexts/ThemeContext";
@@ -21,6 +23,7 @@ const AppHeader: React.FC = () => {
   const { theme } = useTheme();
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -164,7 +167,7 @@ const AppHeader: React.FC = () => {
                           : "bg-gradient-to-r from-gray-900 via-blue-900 to-gray-900 bg-clip-text text-transparent"
                       )}
                     >
-                      Admin Panel
+                      {t("admin.panel_title")}
                     </span>
                   </div>
                 </motion.div>
@@ -232,8 +235,19 @@ const AppHeader: React.FC = () => {
                   : "border border-gray-200 bg-white text-blue-700 hover:bg-gray-50"
               )}
             >
-              Dashboard View
+              {t("common.dashboard_view")}
             </motion.button>
+
+            <LanguageSwitcher
+              variant="select"
+              className="w-[150px]"
+              triggerClassName={cn(
+                "h-11 rounded-full px-4 text-xs font-semibold",
+                isDark
+                  ? "border-white/15 bg-white/5 text-white focus-visible:ring-white/30"
+                  : "border-[var(--admin-border)] bg-white/90 text-[var(--admin-text)] shadow-[0_10px_24px_rgba(9,74,141,0.08)] focus-visible:ring-[var(--admin-primarySoft)]",
+              )}
+            />
 
             {/* Theme Toggle */}
             <ThemeToggleButton />

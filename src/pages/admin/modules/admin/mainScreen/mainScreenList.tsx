@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -20,6 +21,7 @@ import { mainScreenApi } from "@/helpers/admin";
 import type { MainScreen } from "../types/admin.types"; // Correct import
 
 export default function MainScreenList() {
+  const { t } = useTranslation();
   const [records, setRecords] = useState<MainScreen[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -65,13 +67,13 @@ export default function MainScreenList() {
   ------------------------------ */
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This main screen will be deleted permanently.",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete!",
+      confirmButtonText: t("common.confirm_delete_button"),
     });
 
     if (!confirm.isConfirmed) return;
@@ -80,7 +82,7 @@ export default function MainScreenList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       showConfirmButton: false,
       timer: 1200,
     });
@@ -114,7 +116,7 @@ export default function MainScreenList() {
   const actionTemplate = (row: MainScreen) => (
     <div className="flex gap-2 justify-center">
       <button
-        title="Edit"
+        title={t("common.edit")}
         className="text-blue-600 hover:text-blue-800"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
       >
@@ -153,7 +155,7 @@ export default function MainScreenList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search..."
+          placeholder={t("common.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -166,15 +168,17 @@ export default function MainScreenList() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Main Screens
+              {t("admin.nav.main_screen")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage main screen configurations
+              {t("common.manage_item_records", {
+                item: t("admin.nav.main_screen"),
+              })}
             </p>
           </div>
 
           <Button
-            label="Add Main Screen"
+            label={t("common.add_item", { item: t("admin.nav.main_screen") })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -197,29 +201,39 @@ export default function MainScreenList() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No records found"
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.nav.main_screen"),
+          })}
           className="p-datatable-sm"
         >
           <Column
-            header="S.No"
+            header={t("common.s_no")}
             body={(_, { rowIndex }) => rowIndex + 1}
             style={{ width: 80 }}
           />
 
-          <Column field="mainscreen_name" header="MainScreen Name" sortable />
-          <Column field="mainscreentype_name" header="Type" sortable />
-          <Column field="icon_name" header="Icon" sortable />
-          <Column field="order_no" header="Order No" sortable />
-          <Column field="description" header="Description" sortable />
+          <Column
+            field="mainscreen_name"
+            header={t("common.item_name", { item: t("admin.nav.main_screen") })}
+            sortable
+          />
+          <Column
+            field="mainscreentype_name"
+            header={t("admin.nav.main_screen_type")}
+            sortable
+          />
+          <Column field="icon_name" header={t("common.icon_name")} sortable />
+          <Column field="order_no" header={t("common.order_no")} sortable />
+          <Column field="description" header={t("common.description")} sortable />
 
           <Column
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: 120 }}
           />
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: 150 }}
           />

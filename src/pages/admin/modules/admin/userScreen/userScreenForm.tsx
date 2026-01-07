@@ -13,6 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 
 import { encryptSegment } from "@/utils/routeCrypto";
 
@@ -37,6 +38,7 @@ import {
     FORM COMPONENT
 ========================================= */
 export default function UserScreenForm() {
+    const { t } = useTranslation();
     /* FORM FIELDS */
     const [mainscreenId, setMainscreenId] = useState("");
     const [userScreenName, setUserScreenName] = useState("");
@@ -74,7 +76,11 @@ export default function UserScreenForm() {
 
                 setMainScreens(mapped);
             } catch (err) {
-                Swal.fire("Error", "Failed to load mainscreens", "error");
+                Swal.fire(
+                    t("common.error"),
+                    t("common.load_failed"),
+                    "error"
+                );
             }
         })();
     }, []);
@@ -97,7 +103,11 @@ export default function UserScreenForm() {
                 setDescription(data.description ?? "");
                 setIsActive(Boolean(data.is_active));
             } catch (err) {
-                Swal.fire("Error", "Unable to load record.", "error");
+                Swal.fire(
+                    t("common.error"),
+                    t("common.load_failed"),
+                    "error"
+                );
             }
         })();
     }, [id, isEdit]);
@@ -109,7 +119,11 @@ export default function UserScreenForm() {
         e.preventDefault();
 
         if (!mainscreenId || !userScreenName.trim() || !folderName.trim()) {
-            Swal.fire("Missing Fields", "Please fill all required fields.", "warning");
+            Swal.fire(
+                t("common.warning"),
+                t("common.missing_fields"),
+                "warning"
+            );
             return;
         }
 
@@ -128,15 +142,19 @@ export default function UserScreenForm() {
 
             if (isEdit && id) {
                 await userScreenApi.update(id, payload);
-                Swal.fire("Success", "Updated successfully!", "success");
+                Swal.fire(t("common.success"), t("common.updated_success"), "success");
             } else {
                 await userScreenApi.create(payload);
-                Swal.fire("Success", "Added successfully!", "success");
+                Swal.fire(t("common.success"), t("common.added_success"), "success");
             }
 
             navigate(ENC_LIST_PATH);
         } catch (err: any) {
-            Swal.fire("Save failed", "Unable to save record.", "error");
+            Swal.fire(
+                t("common.save_failed"),
+                t("common.save_failed_desc"),
+                "error"
+            );
         } finally {
             setLoading(false);
         }
@@ -147,20 +165,28 @@ export default function UserScreenForm() {
     ========================================= */
     return (
         <ComponentCard
-            title={isEdit ? "Edit User Screen" : "Add User Screen"}
+            title={
+                isEdit
+                    ? t("common.edit_item", { item: t("admin.nav.user_screen") })
+                    : t("common.add_item", { item: t("admin.nav.user_screen") })
+            }
         >
             <form onSubmit={handleSubmit} noValidate>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                     {/* Mainscreen */}
                     <div>
-                        <Label>Main Screen *</Label>
+                        <Label>{t("admin.nav.main_screen")} *</Label>
                         <Select
                             value={mainscreenId}
                             onValueChange={(val) => setMainscreenId(val)}
                         >
                             <SelectTrigger className="input-validate w-full">
-                                <SelectValue placeholder="Select main screen" />
+                                <SelectValue
+                                    placeholder={t("common.select_item_placeholder", {
+                                        item: t("admin.nav.main_screen"),
+                                    })}
+                                />
                             </SelectTrigger>
 
                             <SelectContent>
@@ -175,11 +201,18 @@ export default function UserScreenForm() {
 
                     {/* User Screen Name */}
                     <div>
-                        <Label>User Screen Name *</Label>
+                        <Label>
+                            {t("common.item_name", {
+                                item: t("admin.nav.user_screen"),
+                            })}{" "}
+                            *
+                        </Label>
                         <Input
                             value={userScreenName}
                             onChange={(e) => setUserScreenName(e.target.value)}
-                            placeholder="Enter screen name"
+                            placeholder={t("common.enter_item_name", {
+                                item: t("admin.nav.user_screen"),
+                            })}
                             required
                             className="input-validate w-full"
                         />
@@ -187,11 +220,11 @@ export default function UserScreenForm() {
 
                     {/* Folder Name */}
                     <div>
-                        <Label>Folder Path *</Label>
+                        <Label>{t("common.folder_path")} *</Label>
                         <Input
                             value={folderName}
                             onChange={(e) => setFolderName(e.target.value)}
-                            placeholder="/your-path"
+                            placeholder={t("common.folder_path_placeholder")}
                             required
                             className="input-validate w-full"
                         />
@@ -199,52 +232,56 @@ export default function UserScreenForm() {
 
                     {/* Icon Name */}
                     <div>
-                        <Label>Icon Name</Label>
+                        <Label>{t("common.icon_name")}</Label>
                         <Input
                             value={iconName}
                             onChange={(e) => setIconName(e.target.value)}
-                            placeholder="Enter icon name"
+                            placeholder={t("common.enter_icon_name")}
                             className="input-validate w-full"
                         />
                     </div>
 
                     {/* Order No */}
                     <div>
-                        <Label>Order No</Label>
+                        <Label>{t("common.order_no")}</Label>
                         <Input
                             type="number"
                             value={orderNo}
                             onChange={(e) => setOrderNo(e.target.value)}
-                            placeholder="Enter display order"
+                            placeholder={t("common.order_no_placeholder")}
                             className="input-validate w-full"
                         />
                     </div>
 
                     {/* Description */}
                     <div className="md:col-span-2">
-                        <Label>Description</Label>
+                        <Label>{t("common.description")}</Label>
                         <Input
                             value={description}
                             onChange={(e) => setDescription(e.target.value)}
-                            placeholder="Description (optional)"
+                            placeholder={t("common.description_optional")}
                             className="input-validate w-full"
                         />
                     </div>
 
                     {/* Status */}
                     <div>
-                        <Label>Status *</Label>
+                        <Label>{t("common.status")} *</Label>
                         <Select
                             value={isActive ? "true" : "false"}
                             onValueChange={(v) => setIsActive(v === "true")}
                         >
                             <SelectTrigger className="input-validate w-full">
-                                <SelectValue placeholder="Select status" />
+                                <SelectValue placeholder={t("common.select_status")} />
                             </SelectTrigger>
 
                             <SelectContent>
-                                <SelectItem value="true">Active</SelectItem>
-                                <SelectItem value="false">Inactive</SelectItem>
+                                <SelectItem value="true">
+                                    {t("common.active")}
+                                </SelectItem>
+                                <SelectItem value="false">
+                                    {t("common.inactive")}
+                                </SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -255,11 +292,11 @@ export default function UserScreenForm() {
                     <Button type="submit" disabled={loading}>
                         {loading
                             ? isEdit
-                                ? "Updating..."
-                                : "Saving..."
+                                ? t("common.updating")
+                                : t("common.saving")
                             : isEdit
-                                ? "Update"
-                                : "Save"}
+                                ? t("common.update")
+                                : t("common.save")}
                     </Button>
 
                     <Button
@@ -267,7 +304,7 @@ export default function UserScreenForm() {
                         variant="destructive"
                         onClick={() => navigate(ENC_LIST_PATH)}
                     >
-                        Cancel
+                        {t("common.cancel")}
                     </Button>
                 </div>
             </form>

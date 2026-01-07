@@ -8,6 +8,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import ReactDOM from "react-dom/client";
 import QRCode from "react-qr-code";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -51,6 +52,7 @@ const ENC_EDIT_PATH = (id: string) =>
 /* ================= COMPONENT ================= */
 
 export default function BinList() {
+  const { t } = useTranslation();
   const [bins, setBins] = useState<Bin[]>([]);
   const [loading, setLoading] = useState(false);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -72,7 +74,7 @@ export default function BinList() {
       console.log(data);
       setBins(data);
     } catch {
-      Swal.fire("Error", "Failed to fetch bins", "error");
+      Swal.fire(t("common.error"), t("common.fetch_failed"), "error");
     } finally {
       setLoading(false);
     }
@@ -107,7 +109,7 @@ export default function BinList() {
         });
         fetchBins();
       } catch {
-        Swal.fire("Error", "Failed to update status", "error");
+        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
       }
     };
 
@@ -126,7 +128,7 @@ export default function BinList() {
       <button
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
-        title="Edit"
+        title={t("common.edit")}
       >
         <PencilIcon className="size-5" />
       </button>
@@ -145,7 +147,9 @@ export default function BinList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search bins..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.nav.bin_master"),
+          })}
           className="p-inputtext-sm border-0 shadow-none"
         />
       </div>
@@ -168,7 +172,7 @@ export default function BinList() {
 
   const openQrPopup = (payload: any) => {
     Swal.fire({
-      title: "Bin QR",
+      title: t("admin.bin.qr_title"),
       html: `<div id="bin-qr-holder" class="flex justify-center"></div>`,
       width: 350,
       didOpen: () => {
@@ -187,7 +191,7 @@ export default function BinList() {
       <button
         className="p-1 border rounded bg-white shadow-sm hover:bg-gray-50"
         onClick={() => openQrPopup(payload)}
-        title="Show QR"
+        title={t("admin.bin.qr_show")}
       >
         <QRCode value={JSON.stringify(payload)} size={45} />
       </button>
@@ -202,15 +206,15 @@ export default function BinList() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-3xl font-bold text-gray-800">
-            Bins
+            {t("admin.nav.bin_master")}
           </h1>
           <p className="text-gray-500 text-sm">
-            Manage bin records
+            {t("common.manage_item_records", { item: t("admin.nav.bin_master") })}
           </p>
         </div>
 
         <Button
-          label="Add Bin"
+          label={t("common.add_item", { item: t("admin.nav.bin_creation") })}
           icon="pi pi-plus"
           className="p-button-success"
           onClick={() => navigate(ENC_NEW_PATH)}
@@ -233,42 +237,42 @@ export default function BinList() {
         className="p-datatable-sm"
       >
         <Column
-          header="S.No"
+          header={t("common.s_no")}
           body={indexTemplate}
           style={{ width: "80px" }}
         />
 
         <Column
           field="bin_name"
-          header="Bin Name"
+          header={t("common.item_name", { item: t("admin.nav.bin_master") })}
           sortable
           style={{ minWidth: "200px" }}
         />
 
         <Column
           field="capacity_liters"
-          header="Capacity (L)"
+          header={t("common.capacity_liters")}
           sortable
           style={{ minWidth: "150px" }}
         />
         <Column
           field="ward_name"
-          header="Ward"
+          header={t("admin.nav.ward")}
           body={(row: Bin) => row.ward_name || row.ward || "-"}
           sortable
           style={{ minWidth: "120px" }}
         />
 
-        <Column header="QR" body={qrTemplate} style={{ width: "100px" }} />
+        <Column header={t("admin.bin.qr_label")} body={qrTemplate} style={{ width: "100px" }} />
 
         <Column
-          header="Status"
+          header={t("common.status")}
           body={statusBodyTemplate}
           style={{ width: "150px", textAlign: "center" }}
         />
 
         <Column
-          header="Actions"
+          header={t("common.actions")}
           body={actionBodyTemplate}
           style={{ width: "150px", textAlign: "center" }}
         />

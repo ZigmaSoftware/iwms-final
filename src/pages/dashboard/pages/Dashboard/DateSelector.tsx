@@ -1,8 +1,10 @@
 import { Calendar } from 'lucide-react';
 import { DataCard } from "@/components/ui/DataCard";
+import { useTranslation } from "react-i18next";
 
 export function DateSelector() {
-  const today = new Date().toLocaleDateString('en-US', {
+  const { i18n } = useTranslation();
+  const today = new Date().toLocaleDateString(i18n.language, {
     weekday: 'short',
     year: 'numeric',
     month: 'short',

@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 
 import { encryptSegment } from "@/utils/routeCrypto";
 
@@ -27,20 +28,11 @@ const encAdmins = encryptSegment("admins");
 const encUserScreenAction = encryptSegment("userscreen-action");
 const ENC_LIST_PATH = `/${encAdmins}/${encUserScreenAction}`;
 
-/* ------------------------------
-    UTILITIES
------------------------------- */
-const extractError = (error: any): string => {
-  if (error?.response?.data?.action_name) return error.response.data.action_name[0];
-  if (error?.response?.data?.variable_name) return error.response.data.variable_name[0];
-  if (error?.response?.data?.detail) return error.response.data.detail;
-  return "Unexpected error!";
-};
-
 /* ==========================================================
     COMPONENT START
 ========================================================== */
 export default function UserScreenActionForm() {
+  const { t } = useTranslation();
   const [actionName, setActionName] = useState("");
   const [variableName, setVariableName] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -65,7 +57,7 @@ export default function UserScreenActionForm() {
         setVariableName(data.variable_name || "");
         setIsActive(Boolean(data.is_active));
       } catch (err) {
-        Swal.fire("Error", "Failed to load record", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
       }
     })();
   }, [id, isEdit]);
@@ -77,7 +69,7 @@ export default function UserScreenActionForm() {
     e.preventDefault();
 
     if (!actionName.trim() || !variableName.trim()) {
-      Swal.fire("Validation", "All fields are mandatory.", "warning");
+      Swal.fire(t("common.warning"), t("common.all_fields_required"), "warning");
       return;
     }
 
@@ -92,15 +84,28 @@ export default function UserScreenActionForm() {
     try {
       if (isEdit && id) {
         await userScreenActionApi.update(id, payload);
-        Swal.fire("Success", "Updated successfully!", "success");
+        Swal.fire(t("common.success"), t("common.updated_success"), "success");
       } else {
         await userScreenActionApi.create(payload);
-        Swal.fire("Success", "Added successfully!", "success");
+        Swal.fire(t("common.success"), t("common.added_success"), "success");
       }
 
       navigate(ENC_LIST_PATH);
     } catch (err) {
-      Swal.fire("Save failed", extractError(err), "error");
+      const extractError = (error: any): string => {
+        if (error?.response?.data?.action_name) {
+          return error.response.data.action_name[0];
+        }
+        if (error?.response?.data?.variable_name) {
+          return error.response.data.variable_name[0];
+        }
+        if (error?.response?.data?.detail) {
+          return error.response.data.detail;
+        }
+        return t("common.unexpected_error");
+      };
+
+      Swal.fire(t("common.save_failed"), extractError(err), "error");
     } finally {
       setLoading(false);
     }
@@ -110,18 +115,24 @@ export default function UserScreenActionForm() {
       JSX
   ========================================================== */
   return (
-    <ComponentCard title={isEdit ? "Edit User Screen Action" : "Add User Screen Action"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.user_screen_action") })
+          : t("common.add_item", { item: t("admin.nav.user_screen_action") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Action Name */}
           <div>
-            <Label>Action Name *</Label>
+            <Label>{t("common.action_name")} *</Label>
             <Input
               value={actionName}
               onChange={(e) => setActionName(e.target.value)}
-              placeholder="Enter action name (e.g., add, edit, view)"
+              placeholder={t("admin.user_screen_action.action_placeholder")}
               required
               className="input-validate w-full"
             />
@@ -129,11 +140,11 @@ export default function UserScreenActionForm() {
 
           {/* Variable Name */}
           <div>
-            <Label>Variable Name *</Label>
+            <Label>{t("common.variable_name")} *</Label>
             <Input
               value={variableName}
               onChange={(e) => setVariableName(e.target.value)}
-              placeholder="Enter variable name (e.g., premAdd)"
+              placeholder={t("admin.user_screen_action.variable_placeholder")}
               required
               className="input-validate w-full"
             />
@@ -141,17 +152,17 @@ export default function UserScreenActionForm() {
 
           {/* Status */}
           <div>
-            <Label>Active Status *</Label>
+            <Label>{t("common.status")} *</Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(v) => setIsActive(v === "true")}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -163,11 +174,11 @@ export default function UserScreenActionForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-              ? "Update"
-              : "Save"}
+              ? t("common.update")
+              : t("common.save")}
           </Button>
 
           <Button
@@ -175,7 +186,7 @@ export default function UserScreenActionForm() {
             variant="destructive"
             onClick={() => navigate(ENC_LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
 

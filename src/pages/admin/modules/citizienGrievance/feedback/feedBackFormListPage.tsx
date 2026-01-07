@@ -17,6 +17,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 
 import { Switch } from "@/components/ui/switch";
 import { adminApi } from "@/helpers/admin/registry";
+import { useTranslation } from "react-i18next";
 
 type feedback = {
   unique_id: string;
@@ -46,6 +47,7 @@ type feedback = {
 const feedbackApi = adminApi.feedbacks;
 
 export default function FeedBackFormList() {
+  const { t } = useTranslation();
   const [feedbacks, setFeedbacks] = useState<feedback[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -80,13 +82,13 @@ export default function FeedBackFormList() {
 
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This feedback will be permanently deleted!",
+      title: t("admin.citizen_grievance.feedback.confirm_title"),
+      text: t("admin.citizen_grievance.feedback.confirm_message"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: t("admin.citizen_grievance.feedback.confirm_button"),
     });
 
     if (!confirm.isConfirmed) return;
@@ -95,7 +97,7 @@ export default function FeedBackFormList() {
       await feedbackApi.remove(id);
       Swal.fire({
         icon: "success",
-        title: "Deleted successfully!",
+        title: t("admin.citizen_grievance.feedback.deleted"),
         timer: 1500,
         showConfirmButton: false,
       });
@@ -103,8 +105,8 @@ export default function FeedBackFormList() {
     } catch {
       Swal.fire({
         icon: "error",
-        title: "Error deleting record",
-        text: "Something went wrong.",
+        title: t("admin.citizen_grievance.feedback.delete_failed_title"),
+        text: t("admin.citizen_grievance.feedback.delete_failed_message"),
       });
     }
   };
@@ -123,7 +125,7 @@ export default function FeedBackFormList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search feedback..."
+          placeholder={t("admin.citizen_grievance.feedback.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -174,7 +176,7 @@ export default function FeedBackFormList() {
   const cap = (str?: string) =>
     str ? str.charAt(0).toUpperCase() + str.slice(1).toLowerCase() : "";
 
-  if (loading) return <div className="p-6">Loading Feedbacks...</div>;
+  if (loading) return <div className="p-6">{t("admin.citizen_grievance.feedback.loading")}</div>;
 
   return (
     <div className="p-6">
@@ -183,13 +185,15 @@ export default function FeedBackFormList() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Feedbacks
+              {t("admin.citizen_grievance.feedback.title")}
             </h1>
-            <p className="text-gray-500 text-sm">Manage all feedback records</p>
+            <p className="text-gray-500 text-sm">
+              {t("admin.citizen_grievance.feedback.subtitle")}
+            </p>
           </div>
 
           <Button
-            label="Add New"
+            label={t("common.add_new")}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -214,14 +218,18 @@ export default function FeedBackFormList() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No feedback records found."
+          emptyMessage={t("admin.citizen_grievance.feedback.empty_message")}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column
+            header={t("admin.citizen_grievance.feedback.columns.s_no")}
+            body={indexTemplate}
+            style={{ width: "80px" }}
+          />
 
           <Column
             field="customer"
-            header="Customer ID"
+            header={t("admin.citizen_grievance.feedback.columns.customer_id")}
             sortable
             body={(row: feedback) =>
               row.customer ||
@@ -232,35 +240,35 @@ export default function FeedBackFormList() {
 
           <Column
             field="customer_name"
-            header="Customer Name"
+            header={t("admin.citizen_grievance.feedback.columns.customer_name")}
             sortable
             body={(row: feedback) => cap(row.customer_name)}
           />
 
           <Column
             field="category"
-            header="Category"
+            header={t("admin.citizen_grievance.feedback.columns.category")}
             sortable
             body={(row: feedback) => cap(row.category)}
           />
 
           <Column
             field="feedback_details"
-            header="Feedback Details"
+            header={t("admin.citizen_grievance.feedback.columns.feedback_details")}
             sortable
             body={(row: feedback) => cap(row.feedback_details)}
           />
 
           <Column
             field="zone_name"
-            header="Zone"
+            header={t("common.zone")}
             sortable
             body={(row: feedback) => cap(row.zone_name)}
           />
 
           <Column
             field="city_name"
-            header="City"
+            header={t("common.city")}
             sortable
             body={(row: feedback) => cap(row.city_name)}
           />
@@ -268,7 +276,7 @@ export default function FeedBackFormList() {
           {/* Status column removed per request */}
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px" }}
           />

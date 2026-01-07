@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -22,6 +23,7 @@ import type { UserType } from "../types/admin.types";
 import { userTypeApi } from "@/helpers/admin";
 
 export default function UserTypePage() {
+  const { t } = useTranslation();
   const [userTypes, setUserTypes] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,13 +61,13 @@ export default function UserTypePage() {
 
   const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
-      title: "Are you sure?",
-      text: "This userType will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: t("common.confirm_delete_button"),
     });
 
     if (!confirmDelete.isConfirmed) return;
@@ -74,7 +76,7 @@ export default function UserTypePage() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -96,7 +98,7 @@ export default function UserTypePage() {
   const actionTemplate = (row: UserType) => (
     <div className="flex gap-2 justify-center">
       <button
-        title="Edit"
+        title={t("common.edit")}
         className="text-blue-600 hover:text-blue-800"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
       >
@@ -133,7 +135,9 @@ export default function UserTypePage() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search user types..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.nav.user_type"),
+          })}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -146,15 +150,17 @@ export default function UserTypePage() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              User Types
+              {t("admin.nav.user_type")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage your user type records
+              {t("common.manage_item_records", {
+                item: t("admin.nav.user_type"),
+              })}
             </p>
           </div>
 
           <Button
-            label="Add User Type"
+            label={t("common.add_item", { item: t("admin.nav.user_type") })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -170,29 +176,31 @@ export default function UserTypePage() {
           rowsPerPageOptions={[5, 10, 25, 50]}
           globalFilterFields={["name"]}
           header={header}
-          emptyMessage="No user types found."
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.nav.user_type"),
+          })}
           stripedRows
           showGridlines
           className="p-datatable-sm"
         >
           <Column
-            header="S.No"
+            header={t("common.s_no")}
             body={indexTemplate}
             style={{ width: "80px" }}
           />
           <Column
             field="name"
-            header="User Type"
+            header={t("admin.nav.user_type")}
             sortable
             style={{ minWidth: "200px" }}
           />
           <Column
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "150px" }}
           />
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px" }}
           />

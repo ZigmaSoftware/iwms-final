@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -23,6 +24,7 @@ import {
 import type { UserScreenAction } from "../types/admin.types"; 
 
 export default function UserScreenActionList() {
+  const { t } = useTranslation();
   const [records, setRecords] = useState<UserScreenAction[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,13 +64,13 @@ export default function UserScreenActionList() {
 
   const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
-      title: "Are you sure?",
-      text: "This action will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: t("common.confirm_delete_button"),
     });
 
     if (!confirmDelete.isConfirmed) return;
@@ -77,7 +79,7 @@ export default function UserScreenActionList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -101,7 +103,7 @@ export default function UserScreenActionList() {
   const actionButtonsTemplate = (row: UserScreenAction) => (
     <div className="flex gap-2 justify-center">
       <button
-        title="Edit"
+        title={t("common.edit")}
         className="text-blue-600 hover:text-blue-800"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
       >
@@ -141,7 +143,9 @@ export default function UserScreenActionList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search actions..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.user_screen_action.action_label"),
+          })}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -155,15 +159,19 @@ export default function UserScreenActionList() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              User Screen Actions
+              {t("admin.nav.user_screen_action")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage your user screen action records
+              {t("common.manage_item_records", {
+                item: t("admin.nav.user_screen_action"),
+              })}
             </p>
           </div>
 
           <Button
-            label="Add Action"
+            label={t("common.add_item", {
+              item: t("admin.user_screen_action.action_label"),
+            })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -180,31 +188,33 @@ export default function UserScreenActionList() {
           rowsPerPageOptions={[5, 10, 25, 50]}
           globalFilterFields={["action_name", "variable_name"]}
           header={header}
-          emptyMessage="No actions found."
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.user_screen_action.action_label"),
+          })}
           stripedRows
           showGridlines
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "80px" }} />
           <Column
             field="action_name"
-            header="Action Name"
+            header={t("common.action_name")}
             sortable
             style={{ minWidth: "200px" }}
           />
           <Column
             field="variable_name"
-            header="Variable Name"
+            header={t("common.variable_name")}
             sortable
             style={{ minWidth: "200px" }}
           />
           <Column
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "150px" }}
           />
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionButtonsTemplate}
             style={{ width: "150px" }}
           />

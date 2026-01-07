@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import L from "leaflet";
 import type { LatLngTuple } from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./vehiclehistory.css";
+import "../../../../../components/map/adminMapPanel.css";
 import { FiCalendar, FiAlertTriangle } from "react-icons/fi";
+import { useTranslation } from "react-i18next";
 
 type RawRecord = Record<string, any>;
 type StatusKey = "running" | "idle" | "stopped" | "no_data";
@@ -21,7 +23,8 @@ type TrackPoint = {
   lat: number;
   lng: number;
   speedKmph: number;
-  status: string;
+  statusKey: StatusKey;
+  statusLabel: string;
   address: string;
   timestamp: string;
 };
@@ -54,11 +57,11 @@ const FALLBACK_VEHICLES: VehicleOption[] = [
   { id: "UP16KT1739", label: "UP16KT1739", status: "stopped", lat: 28.48, lng: 77.01 }
 ];
 
-const STATUS_META: Record<StatusKey, { label: string; color: string }> = {
-  running: { label: "Running", color: "#22c55e" },
-  idle: { label: "Idle", color: "#f59e0b" },
-  stopped: { label: "Stopped", color: "#2563eb" },
-  no_data: { label: "No Data", color: "#f87171" },
+const STATUS_META: Record<StatusKey, { labelKey: string; color: string }> = {
+  running: { labelKey: "dashboard.live_map.status_running", color: "#22c55e" },
+  idle: { labelKey: "dashboard.live_map.status_idle", color: "#f59e0b" },
+  stopped: { labelKey: "dashboard.live_map.status_stopped", color: "#2563eb" },
+  no_data: { labelKey: "dashboard.live_map.status_no_data", color: "#f87171" },
 };
 
 const pad = (v: number) => String(v).padStart(2, "0");
@@ -157,6 +160,91 @@ const HISTORY_TIMESTAMP_KEYS = [
   "_ts", "date", "dateSec", "lastComunicationTime",
 ];
 
+const mapHistoryStatus = (rawStatus: string, speed: number): StatusKey => {
+  const normalized = rawStatus.toLowerCase();
+  if (normalized.includes("no data") || normalized.includes("nodata")) return "no_data";
+  if (normalized.includes("run") || normalized.includes("moving")) return "running";
+  if (normalized.includes("idle")) return "idle";
+  if (normalized.includes("stop") || normalized.includes("park") || normalized.includes("off")) {
+    return "stopped";
+  }
+  if (speed > 2) return "running";
+  if (speed > 0) return "idle";
+  if (speed === 0) return "stopped";
+  return "no_data";
+};
+
+const createHistoryIcon = (status: StatusKey, isFocused: boolean) => {
+  const size = isFocused ? 40 : 34;
+  const pulseSize = Math.round(size * 1.2);
+
+  return L.divIcon({
+    className: "",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+    html: `
+      <div class="vh-vehicle-marker status-${status} ${isFocused ? "focused" : ""}" style="width:${size}px;height:${size}px;">
+        ${
+          isFocused
+            ? `<span class="vh-vehicle-pulse" style="width:${pulseSize}px;height:${pulseSize}px;"></span>`
+            : ""
+        }
+        <svg class="vh-vehicle-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect>
+          <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+          <circle cx="5.5" cy="18.5" r="2.5"></circle>
+          <circle cx="18.5" cy="18.5" r="2.5"></circle>
+        </svg>
+      </div>
+    `,
+  });
+};
+
+type HistoryPopupLabels = {
+  title: string;
+  status: string;
+  speed: string;
+  unit: string;
+};
+
+const buildHistoryPopup = (
+  labels: HistoryPopupLabels,
+  statusLabel: string,
+  speedKmph: number,
+  showSpeed: boolean
+) => {
+  const speedLine = showSpeed
+    ? `<div class="vh-popup-row"><span>${labels.speed}:</span><strong>${speedKmph.toFixed(
+        1
+      )} ${labels.unit}</strong></div>`
+    : "";
+
+  return `
+    <div class="vh-popup">
+      <div class="vh-popup-title">${labels.title}</div>
+      <div class="vh-popup-row"><span>${labels.status}:</span><strong>${statusLabel}</strong></div>
+      ${speedLine}
+    </div>
+  `;
+};
+
+const toRad = (value: number) => (value * Math.PI) / 180;
+
+const haversineKm = (a: TrackPoint, b: TrackPoint) => {
+  const R = 6371;
+  const dLat = toRad(b.lat - a.lat);
+  const dLng = toRad(b.lng - a.lng);
+  const lat1 = toRad(a.lat);
+  const lat2 = toRad(b.lat);
+
+  const h =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+  return R * c;
+};
+
 function parseTs(value: any): Date | null {
   if (!value) return null;
 
@@ -211,10 +299,12 @@ function normalizeHistory(rec: RawRecord[]) {
 }
 
 export default function VehicleHistory(): JSX.Element {
+  const { t, i18n } = useTranslation();
   const [vehicles, setVehicles] = useState<VehicleOption[]>(FALLBACK_VEHICLES);
   const [vehicleId, setVehicleId] = useState(FALLBACK_VEHICLES[0].id);
   const [track, setTrack] = useState<TrackPoint[]>([]);
   const [historyError, setHistoryError] = useState("");
+  const [panelOpen, setPanelOpen] = useState(false);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackIndex, setPlaybackIndex] = useState(0);
@@ -232,6 +322,15 @@ export default function VehicleHistory(): JSX.Element {
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const trackLayerRef = useRef<L.LayerGroup | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const popupLabels = useMemo(
+    () => ({
+      title: t("dashboard.live_map.popup_status"),
+      status: t("dashboard.live_map.labels.status"),
+      speed: t("dashboard.live_map.popup_speed"),
+      unit: t("dashboard.live_map.units.kmh"),
+    }),
+    [t]
+  );
 
   useEffect(() => {
     const load = async () => {
@@ -295,7 +394,7 @@ export default function VehicleHistory(): JSX.Element {
     setTrack([]);
 
     if (!vehicleId) {
-      setHistoryError("Select a vehicle to load history.");
+      setHistoryError("admin.vehicle_history.error_select_vehicle");
       return;
     }
 
@@ -304,12 +403,12 @@ export default function VehicleHistory(): JSX.Element {
       const toMs = new Date(toDate).getTime();
 
       if (Number.isNaN(fromMs) || Number.isNaN(toMs)) {
-        setHistoryError("Invalid date range selected.");
+        setHistoryError("admin.vehicle_history.error_invalid_range");
         return;
       }
 
       if (fromMs >= toMs) {
-        setHistoryError("From date must be earlier than To date.");
+        setHistoryError("admin.vehicle_history.error_from_after_to");
         return;
       }
 
@@ -353,7 +452,7 @@ export default function VehicleHistory(): JSX.Element {
       ];
 
       let normalized: any[] = [];
-      let lastError = "";
+      const lastError = "admin.vehicle_history.error_no_history";
 
       for (const strat of strategies) {
         const params = new URLSearchParams(strat.params as Record<string, string>);
@@ -373,40 +472,38 @@ export default function VehicleHistory(): JSX.Element {
 
           normalized = normalizeHistory(source);
           if (normalized.length) {
-            lastError = "";
             break;
           }
-          lastError = `No data returned (${strat.label})`;
         } catch (err) {
-          lastError = `Strategy ${strat.label} failed: ${
-            err instanceof Error ? err.message : String(err)
-          }`;
           continue;
         }
       }
 
-      const pts: TrackPoint[] = normalized.map((p) => ({
-        lat: p.lat,
-        lng: p.lng,
-        speedKmph: p.speedKmph,
-        status: STATUS_META.running.label,
-        address: p.address,
-        timestamp: p._ts.toISOString(),
-      }));
+      const pts: TrackPoint[] = normalized.map((p) => {
+        const statusKey = mapHistoryStatus(p.statusCode ?? "", p.speedKmph ?? 0);
+        return {
+          lat: p.lat,
+          lng: p.lng,
+          speedKmph: p.speedKmph,
+          statusKey,
+          statusLabel: t(STATUS_META[statusKey].labelKey),
+          address: p.address,
+          timestamp: p._ts.toISOString(),
+        };
+      });
 
       setTrack(pts);
       setPlaybackIndex(0);
       setIsPlaying(false);
 
       if (!pts.length) {
-        setHistoryError(lastError || "No history available in this range.");
+        setHistoryError(lastError);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to load vehicle history.";
       console.error("History fetch failed:", err);
-      setHistoryError(message);
+      setHistoryError("admin.vehicle_history.error_load_failed");
     }
-  }, [vehicleId, fromDate, toDate]);
+  }, [vehicleId, fromDate, toDate, t]);
 
   useEffect(() => {
     fetchHistory();
@@ -427,8 +524,20 @@ export default function VehicleHistory(): JSX.Element {
     mapRef.current.fitBounds(poly.getBounds(), { padding: [40, 40] });
 
     if (markerRef.current) markerRef.current.remove();
-    markerRef.current = L.marker(coords[0]).addTo(layer);
-  }, [track]);
+    const initial = track[0];
+    const shouldShowSpeed = initial.statusKey === "running";
+    markerRef.current = L.marker(coords[0], {
+      icon: createHistoryIcon(initial.statusKey, true),
+    })
+      .bindPopup(
+        buildHistoryPopup(popupLabels, initial.statusLabel, initial.speedKmph, shouldShowSpeed),
+        { closeButton: true, autoPan: true, offset: [0, -8] }
+      )
+      .addTo(layer);
+    markerRef.current.on("click", () => {
+      setPanelOpen(true);
+    });
+  }, [popupLabels, track]);
 
   /* SPEED-AWARE PLAYBACK */
   useEffect(() => {
@@ -454,14 +563,39 @@ export default function VehicleHistory(): JSX.Element {
     if (!p || !markerRef.current) return;
 
     markerRef.current.setLatLng([p.lat, p.lng]);
-    markerRef.current.bindPopup(p.address || "Location");
-  }, [playbackIndex]);
+    markerRef.current.setIcon(createHistoryIcon(p.statusKey, true));
 
+    const shouldShowSpeed = p.statusKey === "running";
+    markerRef.current.bindPopup(
+      buildHistoryPopup(popupLabels, p.statusLabel, p.speedKmph, shouldShowSpeed),
+      { closeButton: true, autoPan: true, offset: [0, -8] }
+    );
+
+    if (p.statusKey !== "no_data") {
+      markerRef.current.openPopup();
+    } else {
+      markerRef.current.closePopup();
+    }
+  }, [playbackIndex, popupLabels, t]);
+
+  const activePoint = track[playbackIndex] ?? null;
+  const placeholderDash = t("dashboard.live_map.placeholder_dash");
+  const activeTimestamp = activePoint
+    ? new Date(activePoint.timestamp).toLocaleString(i18n.language || "en-US")
+    : t("dashboard.live_map.placeholder_na");
+  const totalDistanceKm = useMemo(() => {
+    if (track.length < 2) return null;
+    let total = 0;
+    for (let i = 1; i < track.length; i += 1) {
+      total += haversineKm(track[i - 1], track[i]);
+    }
+    return total;
+  }, [track]);
   return (
     <div className="vh-container fade-in">
       <div className="vh-filter-bar slide-up">
         <div className="vh-filter-item">
-          <label>Vehicle</label>
+          <label>{t("admin.vehicle_history.filters.vehicle")}</label>
           <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
             {vehicles.map((v) => (
               <option key={v.id} value={v.id}>
@@ -472,7 +606,7 @@ export default function VehicleHistory(): JSX.Element {
         </div>
 
         <div className="vh-filter-item">
-          <label>From</label>
+          <label>{t("admin.vehicle_history.filters.from")}</label>
           <input
             type="datetime-local"
             value={fromDate}
@@ -481,7 +615,7 @@ export default function VehicleHistory(): JSX.Element {
         </div>
 
         <div className="vh-filter-item">
-          <label>To</label>
+          <label>{t("admin.vehicle_history.filters.to")}</label>
           <input
             type="datetime-local"
             value={toDate}
@@ -490,19 +624,134 @@ export default function VehicleHistory(): JSX.Element {
         </div>
 
         <button className="vh-go-btn" onClick={fetchHistory}>
-          Go
+          {t("common.go")}
         </button>
       </div>
 
       <h2 className="vh-title slide-up">
-        History for <span>{vehicleId}</span>
+        {t("admin.vehicle_history.title", { vehicleId })}
       </h2>
 
-      <div className="vh-map-wrapper fade-in" ref={mapDivRef}></div>
+      <div className="vh-map-wrapper fade-in">
+        <div className="vh-map-canvas" ref={mapDivRef}></div>
+        <div className={`admin-map-panel ${panelOpen ? "is-open" : ""}`}>
+          <button
+            type="button"
+            className="admin-map-panel__toggle"
+            onClick={() => setPanelOpen((prev) => !prev)}
+          >
+            {panelOpen ? "<" : ">"}
+          </button>
+          <button
+            type="button"
+            className="admin-map-panel__close"
+            onClick={() => setPanelOpen(false)}
+          >
+            x
+          </button>
+          <div className="admin-map-panel__content">
+            <div className="admin-map-panel__header">
+              <div className="vh-panel-title-row">
+                <span className="vh-panel-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect>
+                    <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                    <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                    <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                  </svg>
+                </span>
+                <div>
+                  <div className="admin-map-panel__eyebrow">
+                    {t("admin.vehicle_history.filters.vehicle")}
+                  </div>
+                  <div className="admin-map-panel__title">
+                    {vehicleId || t("dashboard.live_map.placeholder_na")}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="admin-map-panel__section">
+              <div className="admin-map-panel__row">
+                <span className="admin-map-panel__label">
+                  {t("admin.vehicle_history.filters.from")}
+                </span>
+                <span className="admin-map-panel__value">
+                  {fromDate || placeholderDash}
+                </span>
+              </div>
+              <div className="admin-map-panel__row">
+                <span className="admin-map-panel__label">
+                  {t("admin.vehicle_history.filters.to")}
+                </span>
+                <span className="admin-map-panel__value">
+                  {toDate || placeholderDash}
+                </span>
+              </div>
+            </div>
+            <div className="admin-map-panel__section">
+              <div className="admin-map-panel__section-title">
+                {t("dashboard.live_map.vehicle_information")}
+              </div>
+              <div className="admin-map-panel__row">
+                <span className="admin-map-panel__label">
+                  {t("dashboard.live_map.labels.status")}
+                </span>
+                <span className="admin-map-panel__value">
+                  {activePoint?.statusLabel || t("dashboard.live_map.status_unknown")}
+                </span>
+              </div>
+              <div className="admin-map-panel__row">
+                <span className="admin-map-panel__label">
+                  {t("dashboard.live_map.labels.speed")}
+                </span>
+                <span className="admin-map-panel__value">
+                  {activePoint ? activePoint.speedKmph.toFixed(1) : placeholderDash}{" "}
+                  {t("dashboard.live_map.units.kmh")}
+                </span>
+              </div>
+              <div className="admin-map-panel__row">
+                <span className="admin-map-panel__label">
+                  {t("common.total")} {t("admin.vehicle_tracking.labels.distance")}
+                </span>
+                <span className="admin-map-panel__value">
+                  {totalDistanceKm === null
+                    ? placeholderDash
+                    : `${totalDistanceKm.toFixed(2)} km`}
+                </span>
+              </div>
+              <div className="admin-map-panel__row">
+                <span className="admin-map-panel__label">
+                  {t("dashboard.live_map.labels.coordinates")}
+                </span>
+                <span className="admin-map-panel__value">
+                  {activePoint
+                    ? `${activePoint.lat.toFixed(5)}, ${activePoint.lng.toFixed(5)}`
+                    : placeholderDash}
+                </span>
+              </div>
+              <div className="admin-map-panel__row">
+                <span className="admin-map-panel__label">
+                  {t("dashboard.live_map.labels.location")}
+                </span>
+                <span className="admin-map-panel__value">
+                  {activePoint?.address || t("common.location_unavailable")}
+                </span>
+              </div>
+              <div className="admin-map-panel__row">
+                <span className="admin-map-panel__label">
+                  {t("dashboard.live_map.labels.last_updated")}
+                </span>
+                <span className="admin-map-panel__value">{activeTimestamp}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
 
       <div className="vh-playback floating">
         <button onClick={() => setIsPlaying((p) => !p)} disabled={!track.length}>
-          {isPlaying ? "Pause" : "Play"}
+          {isPlaying ? t("admin.vehicle_history.pause") : t("admin.vehicle_history.play")}
         </button>
 
         {/* SPEED BUTTONS — 2x / 4x / 8x */}
@@ -551,7 +800,7 @@ export default function VehicleHistory(): JSX.Element {
         />
       </div>
 
-      {historyError && <div className="vh-error">{historyError}</div>}
+      {historyError && <div className="vh-error">{t(historyError)}</div>}
     </div>
   );
 }

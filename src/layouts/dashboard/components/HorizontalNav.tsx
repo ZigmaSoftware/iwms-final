@@ -1,5 +1,6 @@
 import { LayoutDashboard, MapPin, Bell, FileText, Scale, Truck, Trash2, Users, MessageSquare, Archive } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { useTranslation } from "react-i18next";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
 const {
@@ -15,25 +16,27 @@ const {
 } = getEncryptedRoute();
 
 const menuItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Live Map", url: `/dashboard/${encDashboardLiveMap}`, icon: MapPin },
-  { title: "Vehicle", url: `/dashboard/${encDashboardVehicleManagement}`, icon: Truck },
-  { title: "Waste Collection", url: `/dashboard/${encDashboardWasteCollection}`, icon: Trash2 },
-  { title: "Resources", url: `/dashboard/${encDashboardResources}`, icon: Users },
-  { title: "Grievances", url: `/dashboard/${encDashboardGrievances}`, icon: MessageSquare },
-  { title: "Alerts", url: `/dashboard/${encDashboardAlerts}`, icon: Bell },
-  { title: "Reports", url: `/dashboard/${encDashboardReports}`, icon: FileText },
-  { title: "Weighbridge", url: `/dashboard/${encDashboardWeighBridge}`, icon: Scale },
-  { title: "Bins", url: `/dashboard/${encDashboardBins}`, icon: Archive },
+  { labelKey: "dashboard.nav.dashboard", url: "/dashboard", icon: LayoutDashboard },
+  { labelKey: "dashboard.nav.live_map", url: `/dashboard/${encDashboardLiveMap}`, icon: MapPin },
+  { labelKey: "dashboard.nav.vehicle", url: `/dashboard/${encDashboardVehicleManagement}`, icon: Truck },
+  { labelKey: "dashboard.nav.waste_collection", url: `/dashboard/${encDashboardWasteCollection}`, icon: Trash2 },
+  { labelKey: "dashboard.nav.resources", url: `/dashboard/${encDashboardResources}`, icon: Users },
+  { labelKey: "dashboard.nav.grievances", url: `/dashboard/${encDashboardGrievances}`, icon: MessageSquare },
+  { labelKey: "dashboard.nav.alerts", url: `/dashboard/${encDashboardAlerts}`, icon: Bell },
+  { labelKey: "dashboard.nav.reports", url: `/dashboard/${encDashboardReports}`, icon: FileText },
+  { labelKey: "dashboard.nav.weighbridge", url: `/dashboard/${encDashboardWeighBridge}`, icon: Scale },
+  { labelKey: "dashboard.nav.bins", url: `/dashboard/${encDashboardBins}`, icon: Archive },
 ];
 
 
 export function HorizontalNav() {
+  const { t } = useTranslation();
+
   return (
     <nav className="flex items-center gap-1">
       {menuItems.map((item) => (
         <NavLink
-          key={item.title}
+          key={item.url}
           to={item.url}
           end={item.url === "/dashboard"}
           className={({ isActive }) =>
@@ -51,7 +54,7 @@ export function HorizontalNav() {
                   isActive ? "scale-110" : "group-hover:scale-110"
                 }`} 
               />
-              <span className="text-sm">{item.title}</span>
+              <span className="text-sm">{t(item.labelKey)}</span>
               {isActive && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary-foreground/50 rounded-t-full" />
               )}

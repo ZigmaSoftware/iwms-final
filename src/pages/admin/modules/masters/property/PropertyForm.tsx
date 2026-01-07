@@ -6,6 +6,7 @@ import ComponentCard from "@/components/common/ComponentCard";
 import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 
 const { encMasters, encProperties } = getEncryptedRoute();
 
@@ -16,6 +17,7 @@ import { propertiesApi } from "@/helpers/admin";
 
 
 function PropertyForm() {
+  const { t } = useTranslation();
   const [propertyName, setPropertyName] = useState("");
   const [isActive, setIsActive] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -37,8 +39,8 @@ function PropertyForm() {
           console.error("Error fetching propertyData:", err);
           Swal.fire({
             icon: "error",
-            title: "Failed to load propertyName",
-            text: err.response?.data?.detail || "Something went wrong!",
+            title: t("common.error"),
+            text: err.response?.data?.detail || t("common.load_failed"),
           });
         });
     }
@@ -52,8 +54,8 @@ function PropertyForm() {
     if (!propertyName) {
       Swal.fire({
         icon: "warning",
-        title: "Missing Fields",
-        text: "Please fill all the required fields before submitting.",
+        title: t("common.warning"),
+        text: t("common.missing_fields"),
         confirmButtonColor: "#3085d6",
       });
       return; // Stop here if validation fails
@@ -69,7 +71,7 @@ function PropertyForm() {
         await propertiesApi.update(id as string, payload);
         Swal.fire({
           icon: "success",
-          title: "Updated successfully!",
+          title: t("common.updated_success"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -77,7 +79,7 @@ function PropertyForm() {
         await propertiesApi.create(payload);
         Swal.fire({
           icon: "success",
-          title: "Added successfully!",
+          title: t("common.added_success"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -88,7 +90,7 @@ function PropertyForm() {
       console.error("Failed to save:", error);
 
       const data = error.response?.data;
-      let message = "Something went wrong while saving.";
+      let message = t("common.save_failed_desc");
 
       if (typeof data === "object" && data !== null) {
         message = Object.entries(data)
@@ -100,7 +102,7 @@ function PropertyForm() {
 
       Swal.fire({
         icon: "error",
-        title: "Save failed",
+        title: t("common.save_failed"),
         text: message,
       });
     } finally {
@@ -109,20 +111,29 @@ function PropertyForm() {
   };
 
   return (
-    <ComponentCard title={isEdit ? "Edit Property" : "Add Property"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.property") })
+          : t("common.add_item", { item: t("admin.nav.property") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/*Property Name */}
           <div>
             <Label htmlFor="name">
-              Property Name <span className="text-red-500">*</span>
+              {t("common.item_name", { item: t("admin.nav.property") })}{" "}
+              <span className="text-red-500">*</span>
             </Label>
             <Input
               id="propertyName"
               type="text"
               value={propertyName}
               onChange={(e) => setPropertyName(e.target.value)}
-              placeholder="Enter Property Name"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.property"),
+              })}
               className="input-validate w-full"
               required
             />
@@ -131,15 +142,15 @@ function PropertyForm() {
           {/* Active Status */}
           <div>
             <Label htmlFor="isActive">
-              Active Status <span className="text-red-500">*</span>
+              {t("common.status")} <span className="text-red-500">*</span>
             </Label>
             <Select
               id="isActive"
               value={isActive ? "true" : "false"}
               onChange={(val) => setIsActive(val === "true")}
               options={[
-                { value: "true", label: "Active" },
-                { value: "false", label: "Inactive" },
+                { value: "true", label: t("common.active") },
+                { value: "false", label: t("common.inactive") },
               ]}
               className="input-validate w-full"
               required
@@ -156,18 +167,18 @@ function PropertyForm() {
           >
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-                ? "Update"
-                : "Save"}
+                ? t("common.update")
+                : t("common.save")}
           </button>
           <button
             type="button"
             onClick={() => navigate(ENC_LIST_PATH)}
             className="bg-red-400 text-white px-4 py-2 rounded hover:bg-red-500"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

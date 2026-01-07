@@ -16,6 +16,9 @@ export type EncryptedRoutes = {
   encFuel: string;
   encMainComplaintCategory: string;
   encMasters: string;
+  encStaffMasters: string;
+  encStaffTemplate: string;
+  encAlternativeStaffTemplate: string;
   encMonthlyDistance: string;
   encProperties: string;
   encReport: string;
@@ -76,6 +79,9 @@ const plainRoutes: EncryptedRoutes = {
   encFuel: "fuel",
   encMainComplaintCategory: "main-complaint-category",
   encMasters: "masters",
+  encStaffMasters: "staff-masters",
+  encStaffTemplate: "staff-template",
+  encAlternativeStaffTemplate: "alternative-staff-template",
   encMonthlyDistance: "monthly-distance",
   encProperties: "properties",
   encReport: "reports",

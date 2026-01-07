@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -61,6 +62,7 @@ const extractErrorMessage = (error: unknown) => {
 //   Component
 // ===========================
 export default function ZoneList() {
+  const { t } = useTranslation();
   const [zones, setZones] = useState<ZoneRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -89,7 +91,7 @@ export default function ZoneList() {
     } catch (error) {
       Swal.fire({
         icon: "error",
-        title: "Unable to load zones",
+        title: t("common.error"),
         text: extractErrorMessage(error),
       });
     } finally {
@@ -106,12 +108,12 @@ export default function ZoneList() {
   // ===========================
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This zone will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: t("common.confirm_delete_button"),
     });
 
     if (!confirm.isConfirmed) return;
@@ -120,7 +122,7 @@ export default function ZoneList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -149,7 +151,9 @@ export default function ZoneList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search Zones..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.nav.zone"),
+          })}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -206,12 +210,16 @@ export default function ZoneList() {
     <div className="p-3">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">Zones</h1>
-            <p className="text-gray-500 text-sm">Manage zone records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              {t("admin.nav.zone")}
+            </h1>
+            <p className="text-gray-500 text-sm">
+              {t("common.manage_item_records", { item: t("admin.nav.zone") })}
+            </p>
           </div>
 
           <Button
-            label="Add Zone"
+            label={t("common.add_item", { item: t("admin.nav.zone") })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -229,7 +237,9 @@ export default function ZoneList() {
           header={renderHeader()}
           stripedRows
           showGridlines
-          emptyMessage="No zones found."
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.nav.zone"),
+          })}
           globalFilterFields={[
             "name",
             "city_name",
@@ -238,26 +248,26 @@ export default function ZoneList() {
           ]}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
             field="city_name"
-            header="City"
+            header={t("admin.nav.city")}
             sortable
             body={(row) => cap(row.city_name)}
           />
 
           <Column
             field="name"
-            header="Zone"
+            header={t("admin.nav.zone")}
             sortable
             body={(row) => cap(row.name)}
           />
 
-          <Column header="Status" body={statusTemplate} style={{ width: "140px" }} />
+          <Column header={t("common.status")} body={statusTemplate} style={{ width: "140px" }} />
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px", textAlign: "center" }}
           />

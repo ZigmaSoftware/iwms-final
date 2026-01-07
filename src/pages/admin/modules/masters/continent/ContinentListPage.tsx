@@ -6,6 +6,7 @@ import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -38,6 +39,7 @@ const ENC_EDIT_PATH = (id: string) =>
 
 
 export default function ContinentList() {
+  const { t } = useTranslation();
   const [continents, setContinents] = useState<Continent[]>([]);
   const [loading, setLoading] = useState(false);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -55,7 +57,7 @@ export default function ContinentList() {
       const data = await continentApi.list();
       setContinents(data);
     } catch (error) {
-      Swal.fire("Error", "Failed to fetch continents", "error");
+      Swal.fire(t("common.error"), t("common.fetch_failed"), "error");
     } finally {
       setLoading(false);
     }
@@ -67,8 +69,8 @@ export default function ContinentList() {
 
   const handleDelete = async (id: string) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This continent will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -78,10 +80,10 @@ export default function ContinentList() {
 
     try {
       await continentApi.remove(id);
-      Swal.fire("Deleted!", "Record removed successfully", "success");
+      Swal.fire(t("common.deleted_success"), t("common.record_removed"), "success");
       fetchContinents();
     } catch (error) {
-      Swal.fire("Error", "Delete failed", "error");
+      Swal.fire(t("common.error"), t("common.delete_failed"), "error");
     }
   };
 
@@ -110,7 +112,7 @@ export default function ContinentList() {
         });
         fetchContinents();
       } catch (err) {
-        Swal.fire("Error", "Failed to update status", "error");
+        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
       }
     };
 
@@ -127,7 +129,7 @@ export default function ContinentList() {
       <button
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
         className="text-blue-600 hover:text-blue-800"
-        title="Edit"
+        title={t("common.edit")}
       >
         <PencilIcon className="size-5" />
       </button>
@@ -151,7 +153,9 @@ export default function ContinentList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search continents..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.nav.continent"),
+          })}
           className="p-inputtext-sm border-0 shadow-none"
         />
       </div>
@@ -163,14 +167,18 @@ export default function ContinentList() {
 
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Continents</h1>
+            <h1 className="text-3xl font-bold text-gray-800">
+              {t("admin.nav.continent")}
+            </h1>
             <p className="text-gray-500 text-sm">
-              Manage continent records
+              {t("common.manage_item_records", {
+                item: t("admin.nav.continent"),
+              })}
             </p>
           </div>
 
           <Button
-            label="Add Continent"
+            label={t("common.add_item", { item: t("admin.nav.continent") })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -192,27 +200,27 @@ export default function ContinentList() {
           className="p-datatable-sm"
         >
           <Column
-            header="S.No"
+            header={t("common.s_no")}
             body={indexTemplate}
             style={{ width: "80px" }}
           />
 
           <Column
             field="name"
-            header="Continent Name"
+            header={t("common.item_name", { item: t("admin.nav.continent") })}
             sortable
             style={{ minWidth: "200px" }}
           />
 
-          {/* 🔥 Toggle Switch Column */}
+          {/*  Toggle Switch Column */}
           <Column
-            header="Status"
+            header={t("common.status")}
             body={statusBodyTemplate}
             style={{ width: "150px", textAlign: "center" }}
           />
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionBodyTemplate}
             style={{ width: "150px", textAlign: "center" }}
           />

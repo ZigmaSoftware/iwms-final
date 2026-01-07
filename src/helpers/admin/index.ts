@@ -22,11 +22,14 @@ export const staffCreationApi = adminApi.staffCreation;
 export const staffUserTypeApi = adminApi.staffUserTypes;
 export const userTypeApi = adminApi.userTypes;
 export const userCreationApi = adminApi.usercreations;
+export const staffTemplateApi = adminApi.staffTemplate;
+export const alternativeStaffTemplateApi = adminApi.alternativeStaffTemplate;
 
 // Transport & Customer
 export const fuelApi = adminApi.fuels;
 export const vehicleTypeApi = adminApi.vehicleTypes;
-export const vehicleCreationApi = adminApi.vehicleCreation;
+export const vehicleAssigningApi = adminApi.vehicleAssigning;
+export const vehicleCreationApi = adminApi.vehicleCreations;
 export const customerCreationApi = adminApi.customerCreations;
 
 // Operations

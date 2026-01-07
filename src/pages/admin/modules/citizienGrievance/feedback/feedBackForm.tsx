@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 
 import { adminApi } from "@/helpers/admin/registry";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 
 const customerApi = adminApi.customerCreations;
 const feedbackApi = adminApi.feedbacks;
@@ -29,6 +30,7 @@ type Customer = {
 };
 
 function FeedBackForm() {
+  const { t } = useTranslation();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [customerId, setCustomerId] = useState<string>("");
   const [feedbackCategory, setFeedbackCategory] = useState("Excellent");
@@ -76,7 +78,11 @@ function FeedBackForm() {
     e.preventDefault();
 
     if (!customerId) {
-      Swal.fire("Warning", "Customer is required", "warning");
+      Swal.fire(
+        t("common.warning"),
+        t("admin.citizen_grievance.feedback_form.customer_required"),
+        "warning"
+      );
       return;
     }
 
@@ -92,10 +98,18 @@ function FeedBackForm() {
         ? await feedbackApi.update(id as string, payload)
         : await feedbackApi.create(payload);
 
-      Swal.fire("Success", "Saved successfully", "success");
+      Swal.fire(
+        t("common.success"),
+        t("admin.citizen_grievance.feedback_form.saved"),
+        "success"
+      );
       navigate(LIST_PATH);
     } catch {
-      Swal.fire("Error", "Save failed", "error");
+      Swal.fire(
+        t("common.error"),
+        t("admin.citizen_grievance.feedback_form.save_failed"),
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -103,14 +117,21 @@ function FeedBackForm() {
 
   /* ---------------- RENDER ---------------- */
   return (
-    <ComponentCard title="Add Feedback">
+    <ComponentCard
+      title={
+        isEdit
+          ? t("admin.citizen_grievance.feedback_form.title_edit")
+          : t("admin.citizen_grievance.feedback_form.title_add")
+      }
+    >
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           {/* Customer */}
           <div>
             <Label>
-              Customer <span className="text-red-500">*</span>
+              {t("admin.citizen_grievance.feedback_form.customer")}{" "}
+              <span className="text-red-500">*</span>
             </Label>
             <Select
               value={customerId}
@@ -124,7 +145,7 @@ function FeedBackForm() {
 
           {/* Address */}
           <div>
-            <Label>Customer Address</Label>
+            <Label>{t("admin.citizen_grievance.feedback_form.customer_address")}</Label>
             <Input
               disabled
               className="bg-gray-100"
@@ -144,64 +165,64 @@ function FeedBackForm() {
 
           {/* Zone */}
           <div>
-            <Label>Customer Zone</Label>
+            <Label>{t("admin.citizen_grievance.feedback_form.customer_zone")}</Label>
             <Input disabled className="bg-gray-100"
               value={selectedCustomer?.zone_name || ""} />
           </div>
 
           {/* Ward */}
           <div>
-            <Label>Customer Ward</Label>
+            <Label>{t("admin.citizen_grievance.feedback_form.customer_ward")}</Label>
             <Input disabled className="bg-gray-100"
               value={selectedCustomer?.ward_name || ""} />
           </div>
 
           {/* City */}
           <div>
-            <Label>Customer City</Label>
+            <Label>{t("admin.citizen_grievance.feedback_form.customer_city")}</Label>
             <Input disabled className="bg-gray-100"
               value={selectedCustomer?.city_name || ""} />
           </div>
 
           {/* District */}
           <div>
-            <Label>Customer District</Label>
+            <Label>{t("admin.citizen_grievance.feedback_form.customer_district")}</Label>
             <Input disabled className="bg-gray-100"
               value={selectedCustomer?.district_name || ""} />
           </div>
 
           {/* State */}
           <div>
-            <Label>Customer State</Label>
+            <Label>{t("admin.citizen_grievance.feedback_form.customer_state")}</Label>
             <Input disabled className="bg-gray-100"
               value={selectedCustomer?.state_name || ""} />
           </div>
 
           {/* Country */}
           <div>
-            <Label>Customer Country</Label>
+            <Label>{t("admin.citizen_grievance.feedback_form.customer_country")}</Label>
             <Input disabled className="bg-gray-100"
               value={selectedCustomer?.country_name || ""} />
           </div>
 
           {/* Feedback Category */}
           <div>
-            <Label>Feedback Category</Label>
+            <Label>{t("admin.citizen_grievance.feedback_form.feedback_category")}</Label>
             <Select
               value={feedbackCategory}
               onChange={(val) => setFeedbackCategory(val)}
               options={[
-                { value: "Excellent", label: "Excellent" },
-                { value: "Satisfied", label: "Satisfied" },
-                { value: "Not Satisfied", label: "Not Satisfied" },
-                { value: "Poor", label: "Poor" },
+                { value: "Excellent", label: t("admin.citizen_grievance.feedback_form.categories.excellent") },
+                { value: "Satisfied", label: t("admin.citizen_grievance.feedback_form.categories.satisfied") },
+                { value: "Not Satisfied", label: t("admin.citizen_grievance.feedback_form.categories.not_satisfied") },
+                { value: "Poor", label: t("admin.citizen_grievance.feedback_form.categories.poor") },
               ]}
             />
           </div>
 
           {/* Feedback Details */}
           <div>
-            <Label>Feedback Details</Label>
+            <Label>{t("admin.citizen_grievance.feedback_form.feedback_details")}</Label>
             <Input
               value={feedbackDetails}
               onChange={(e) => setFeedbackDetails(e.target.value)}
@@ -216,14 +237,14 @@ function FeedBackForm() {
             disabled={loading}
             className="bg-green-custom text-white px-4 py-2 rounded"
           >
-            {loading ? "Saving..." : "Save"}
+            {loading ? t("admin.citizen_grievance.feedback_form.saving") : t("common.save")}
           </button>
           <button
             type="button"
             onClick={() => navigate(LIST_PATH)}
             className="bg-red-400 text-white px-4 py-2 rounded"
           >
-            Cancel
+            {t("common.cancel")}
           </button>
         </div>
       </form>

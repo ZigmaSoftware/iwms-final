@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -25,6 +26,7 @@ import type { StaffUserType, GroupedMap } from "../types/admin.types";
    COMPONENT
 ----------------------------------------------------------- */
 export default function UserScreenPermissionList() {
+  const { t } = useTranslation();
   const [records, setRecords] = useState<StaffUserType[]>([]);
   const [loading, setLoading] = useState(true);
   const [globalFilterValue, setGlobalFilterValue] = useState("");
@@ -70,7 +72,7 @@ export default function UserScreenPermissionList() {
           acc[uid] = {
             unique_id: uid,
             name: item.userscreen_name,
-            staffusertype_name: item.staffusertype_name ?? "Unknown",
+            staffusertype_name: item.staffusertype_name ?? t("common.unknown"),
             mainscreen_id: item.mainscreen_id,
             is_active: item.is_active,
             screens: [],
@@ -107,8 +109,8 @@ export default function UserScreenPermissionList() {
 
   const handleDelete = async (staffTypeId: string) => {
   const confirmDelete = await Swal.fire({
-    title: "Are you sure?",
-    text: "All permissions for this staff user type will be deleted!",
+    title: t("common.confirm_title"),
+    text: t("admin.user_screen_permission.confirm_delete"),
     icon: "warning",
     showCancelButton: true,
     confirmButtonColor: "#d33",
@@ -122,13 +124,17 @@ export default function UserScreenPermissionList() {
       `delete-by-staffusertype/${staffTypeId}`
     );
 
-    Swal.fire("Deleted!", "All permissions removed for this staff type.", "success");
+    Swal.fire(
+      t("common.deleted_success"),
+      t("admin.user_screen_permission.delete_success"),
+      "success"
+    );
 
     fetchRecords();
 
   } catch (error) {
     console.error("DELETE ERROR:", error);
-    Swal.fire("Error", "Failed to delete permissions", "error");
+    Swal.fire(t("common.error"), t("admin.user_screen_permission.delete_failed"), "error");
   }
 };
 
@@ -159,7 +165,7 @@ export default function UserScreenPermissionList() {
   const actionTemplate = (row: StaffUserType) => (
     <div className="flex gap-2 justify-center">
       <button
-        title="Edit"
+        title={t("common.edit")}
         className="text-blue-600 hover:text-blue-800"
         onClick={() =>
           navigate(ENC_EDIT_PATH(row.unique_id))
@@ -169,7 +175,7 @@ export default function UserScreenPermissionList() {
       </button>
 
       <button
-        title="Delete"
+        title={t("common.delete")}
         className="text-red-600 hover:text-red-800"
         onClick={() => handleDelete(row.unique_id)}
       >
@@ -198,7 +204,7 @@ export default function UserScreenPermissionList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search..."
+          placeholder={t("common.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -214,15 +220,17 @@ export default function UserScreenPermissionList() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">
-              User Screen Permissions for Staff
+              {t("admin.user_screen_permission.title")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage screen-level permissions for staff types
+              {t("admin.user_screen_permission.subtitle")}
             </p>
           </div>
 
           <Button
-            label="Add Permission"
+            label={t("common.add_item", {
+              item: t("admin.user_screen_permission.permission_label"),
+            })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -240,17 +248,19 @@ export default function UserScreenPermissionList() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No records found."
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.user_screen_permission.permission_label"),
+          })}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: 80 }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: 80 }} />
           <Column
             field="staffusertype_name"
-            header="Staff User Type"
+            header={t("admin.nav.staff_user_type")}
             sortable
           />
           {/* <Column header="Status" body={statusTemplate} style={{ width: 120 }} /> */}
-          <Column header="Actions" body={actionTemplate} style={{ width: 150 }} />
+          <Column header={t("common.actions")} body={actionTemplate} style={{ width: 150 }} />
         </DataTable>
 
     </div>

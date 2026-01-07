@@ -9,6 +9,7 @@ import {
   type BinPriority,
 } from "./mapUtils";
 import { binApi } from "@/helpers/admin";
+import { useTranslation } from "react-i18next";
 
 /* ================= TYPES ================= */
 type ApiBin = {
@@ -116,9 +117,11 @@ const getPriorityFromColor = (
 
 /* ================= COMPONENT ================= */
 export function BinMapPanel() {
+  const { t } = useTranslation();
   const mapRef = useRef<L.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
+  const markerLookupRef = useRef<Record<string, L.Marker>>({});
 
   const [selectedBin, setSelectedBin] = useState<Bin | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
@@ -230,6 +233,7 @@ export function BinMapPanel() {
     if (!map || !layer) return;
 
     layer.clearLayers();
+    markerLookupRef.current = {};
     const bounds: LatLngTuple[] = [];
 
     filteredBins.forEach((bin) => {
@@ -237,15 +241,16 @@ export function BinMapPanel() {
       bounds.push(pos);
 
       const marker = L.marker(pos, {
-        icon: createBinIcon(bin.priority),
+        icon: createBinIcon(bin.priority, bin.id === selectedBin?.id),
         title: bin.name,
       });
 
+      const priorityLabel = t(BIN_PRIORITY_META[bin.priority].labelKey);
       marker.bindPopup(
         `<strong>${bin.name}</strong><br/>
-         Priority: ${BIN_PRIORITY_META[bin.priority].label}<br/>
-         Color: ${bin.colorCode ?? "—"}<br/>
-         Status: ${bin.status ?? "—"}`,
+         ${t("common.priority")}: ${priorityLabel}<br/>
+         ${t("common.color")}: ${bin.colorCode ?? "—"}<br/>
+         ${t("common.status")}: ${bin.status ?? "—"}`,
         { closeButton: false, autoClose: false, closeOnClick: false }
       );
 
@@ -259,10 +264,23 @@ export function BinMapPanel() {
       });
 
       marker.addTo(layer);
+      markerLookupRef.current[bin.id] = marker;
     });
 
     if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
-  }, [filteredBins]);
+  }, [filteredBins, selectedBin, t]);
+
+  useEffect(() => {
+    if (!selectedBin) return;
+    const map = mapRef.current;
+    const marker = markerLookupRef.current[selectedBin.id];
+    if (map && marker) {
+      map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15), {
+        animate: true,
+      });
+      marker.openPopup();
+    }
+  }, [selectedBin]);
 
   /* ================= UI ================= */
   return (
@@ -288,7 +306,7 @@ export function BinMapPanel() {
                   className="h-2 w-2 rounded-full"
                   style={{ background: meta.color }}
                 />
-                {meta.label}
+                {t(meta.labelKey)}
                 <span className="ml-1 text-[11px] font-bold">
                   {summary[key]}
                 </span>
@@ -329,6 +347,7 @@ function BinSideDetailsPanel({
   onToggle: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const meta = bin ? BIN_PRIORITY_META[bin.priority] : null;
   const WIDTH = 240;
 
@@ -368,35 +387,37 @@ function BinSideDetailsPanel({
               <div>
                 <h3 className="text-sm font-bold">{bin.name}</h3>
                 <p className="text-[11px] text-gray-500">
-                  {meta?.label}
+                  {meta ? t(meta.labelKey) : ""}
                 </p>
               </div>
             </div>
 
             {/* DETAILS */}
             <div className="space-y-4 p-3 text-xs">
-              <Section title="Bin Info">
-                <InfoRow label="Status" value={bin.status} />
-                <InfoRow label="Bin Type" value={bin.binType} />
-                <InfoRow label="Waste Type" value={bin.wasteType} />
-                <InfoRow label="Color Code" value={bin.colorCode} />
-                <InfoRow label="Capacity (L)" value={bin.capacityLiters} />
+              <Section title={t("dashboard.home.bin_info_title")}>
+                <InfoRow label={t("common.status")} value={bin.status} />
+                <InfoRow label={t("common.bin_type")} value={bin.binType} />
+                <InfoRow label={t("common.waste_type")} value={bin.wasteType} />
+                <InfoRow label={t("common.color_code")} value={bin.colorCode} />
+                <InfoRow label={t("common.capacity_liters")} value={bin.capacityLiters} />
               </Section>
 
-              <Section title="Location">
-                <InfoRow label="Ward" value={bin.wardName} />
-                <InfoRow label="Latitude" value={bin.lat} />
-                <InfoRow label="Longitude" value={bin.lng} />
+              <Section title={t("dashboard.home.location_title")}>
+                <InfoRow label={t("common.ward")} value={bin.wardName} />
+                <InfoRow label={t("common.latitude")} value={bin.lat} />
+                <InfoRow label={t("common.longitude")} value={bin.lng} />
               </Section>
 
-              <Section title="Lifecycle">
-                <InfoRow label="Installed On" value={bin.installedDate} />
-                <InfoRow label="Expected Life (Years)" value={bin.expectedLifeYears} />
+              <Section title={t("dashboard.home.lifecycle_title")}>
+                <InfoRow label={t("common.installed_on")} value={bin.installedDate} />
+                <InfoRow label={t("common.expected_life_years")} value={bin.expectedLifeYears} />
               </Section>
             </div>
           </>
         ) : (
-          <div className="p-3 text-xs text-gray-400">Select a bin</div>
+          <div className="p-3 text-xs text-gray-400">
+            {t("dashboard.home.select_bin")}
+          </div>
         )}
       </div>
     </div>

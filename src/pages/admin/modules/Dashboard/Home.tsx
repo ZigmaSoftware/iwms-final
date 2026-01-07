@@ -2,74 +2,88 @@ import { AlertTriangle, MapPin, Trash2, Users } from "lucide-react";
 import ComponentCard from "@/components/common/ComponentCard";
 import { MetricCard } from "@/components/MetricCard";
 import { DataCard } from "@/components/ui/DataCard";
-
-const activityItems = [
-  {
-    title: "Route Survey Completed",
-    description: "Zone 4 • Ward 18 • 42 households mapped",
-    time: "3 mins ago",
-    status: "Completed",
-  },
-  {
-    title: "Missed Pickup Alert",
-    description: "Zone 2 • Ward 07 • Vehicle TN38 AA 1234",
-    time: "12 mins ago",
-    status: "Exception",
-  },
-  {
-    title: "Bulk Waste Request",
-    description: "Coimbatore North • Industrial estate",
-    time: "30 mins ago",
-    status: "In-progress",
-  },
-];
-
-const capacitySummary = [
-  { label: "Total Vehicles", value: "214", hint: "34 routes running" },
-  { label: "Field Staff", value: "1,420", hint: "1,311 checked-in" },
-  { label: "Processing Units", value: "12", hint: "Avg load 78%" },
-];
+import { useTranslation } from "react-i18next";
 
 export default function Home() {
+  const { t } = useTranslation();
+  const activityItems = [
+    {
+      title: t("admin.dashboard_home.activity.route_survey_title"),
+      description: t("admin.dashboard_home.activity.route_survey_desc"),
+      time: t("admin.dashboard_home.activity.route_survey_time"),
+      status: t("admin.dashboard_home.activity.route_survey_status"),
+    },
+    {
+      title: t("admin.dashboard_home.activity.missed_pickup_title"),
+      description: t("admin.dashboard_home.activity.missed_pickup_desc"),
+      time: t("admin.dashboard_home.activity.missed_pickup_time"),
+      status: t("admin.dashboard_home.activity.missed_pickup_status"),
+    },
+    {
+      title: t("admin.dashboard_home.activity.bulk_waste_title"),
+      description: t("admin.dashboard_home.activity.bulk_waste_desc"),
+      time: t("admin.dashboard_home.activity.bulk_waste_time"),
+      status: t("admin.dashboard_home.activity.bulk_waste_status"),
+    },
+  ];
+
+  const capacitySummary = [
+    {
+      label: t("admin.dashboard_home.capacity.total_vehicles"),
+      value: "214",
+      hint: t("admin.dashboard_home.capacity.total_vehicles_hint"),
+    },
+    {
+      label: t("admin.dashboard_home.capacity.field_staff"),
+      value: "1,420",
+      hint: t("admin.dashboard_home.capacity.field_staff_hint"),
+    },
+    {
+      label: t("admin.dashboard_home.capacity.processing_units"),
+      value: "12",
+      hint: t("admin.dashboard_home.capacity.processing_units_hint"),
+    },
+  ];
+
   return (
     <div className="space-y-6">
       <ComponentCard
-        title="Operations Overview"
-        desc="Live snapshot of fleet, crew, and citizen services across the corporation."
+        title={t("admin.dashboard_home.title")}
+        desc={t("admin.dashboard_home.subtitle")}
       >
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <MetricCard
-            title="Daily Collections"
+            title={t("admin.dashboard_home.metrics.daily_collections")}
             value="5,842 tons"
             icon={Trash2}
-            trend="+6% vs last week"
+            trend={t("admin.dashboard_home.metrics.daily_collections_trend")}
             variant="success"
           />
           <MetricCard
-            title="Active Vehicles"
+            title={t("admin.dashboard_home.metrics.active_vehicles")}
             value="214"
             icon={MapPin}
-            trend="34 routes in transit"
+            trend={t("admin.dashboard_home.metrics.active_vehicles_trend")}
           />
           <MetricCard
-            title="On-ground Staff"
+            title={t("admin.dashboard_home.metrics.on_ground_staff")}
             value="1,311"
             icon={Users}
-            trend="92% attendance today"
+            trend={t("admin.dashboard_home.metrics.on_ground_staff_trend")}
             variant="warning"
           />
           <MetricCard
-            title="Critical Alerts"
+            title={t("admin.dashboard_home.metrics.critical_alerts")}
             value="12"
             icon={AlertTriangle}
-            trend="4 new in the last hour"
+            trend={t("admin.dashboard_home.metrics.critical_alerts_trend")}
             variant="destructive"
           />
         </div>
       </ComponentCard>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <DataCard title="Recent Activity">
+        <DataCard title={t("admin.dashboard_home.recent_activity_title")}>
           <div className="divide-y divide-border">
             {activityItems.map((item) => (
               <div key={item.title} className="py-4 flex items-start justify-between gap-4">
@@ -88,7 +102,7 @@ export default function Home() {
           </div>
         </DataCard>
 
-        <DataCard title="Capacity Snapshot">
+        <DataCard title={t("admin.dashboard_home.capacity_snapshot_title")}>
           <div className="grid gap-4">
             {capacitySummary.map((item) => (
               <div

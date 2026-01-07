@@ -16,10 +16,12 @@ import {
 import ComponentCard from "@/components/common/ComponentCard";
 
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 const { encCitizenGrivence, encSubComplaintCategory } = getEncryptedRoute();
 const ENC_LIST_PATH = `/${encCitizenGrivence}/${encSubComplaintCategory}`;
 
 export default function SubComplaintCategoryForm() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [mainCategory, setMainCategory] = useState<string>("");
   const [isActive, setIsActive] = useState(true);
@@ -69,7 +71,7 @@ export default function SubComplaintCategoryForm() {
         await mobileApi.patch(`sub-category/${id}/`, payload);
         Swal.fire({
           icon: "success",
-          title: "Updated successfully!",
+          title: t("admin.citizen_grievance.sub_category_form.updated"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -77,7 +79,7 @@ export default function SubComplaintCategoryForm() {
         await mobileApi.post("sub-category/", payload);
         Swal.fire({
           icon: "success",
-          title: "Added successfully!",
+          title: t("admin.citizen_grievance.sub_category_form.added"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -86,7 +88,11 @@ export default function SubComplaintCategoryForm() {
       navigate(ENC_LIST_PATH);
 
     } catch (err) {
-      Swal.fire("Error", "Unable to save record.", "error");
+      Swal.fire(
+        t("common.error"),
+        t("admin.citizen_grievance.sub_category_form.save_failed"),
+        "error"
+      );
     } finally {
       setLoading(false);
     }
@@ -94,7 +100,11 @@ export default function SubComplaintCategoryForm() {
 
   return (
     <ComponentCard
-      title={isEdit ? "Edit Sub Complaint Category" : "Add Sub Complaint Category"}
+      title={
+        isEdit
+          ? t("admin.citizen_grievance.sub_category_form.title_edit")
+          : t("admin.citizen_grievance.sub_category_form.title_add")
+      }
     >
       <form onSubmit={handleSubmit}>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -102,12 +112,15 @@ export default function SubComplaintCategoryForm() {
           {/* Main Category */}
           <div>
             <Label htmlFor="mainCategory">
-              Main Category <span className="text-red-500">*</span>
+              {t("admin.citizen_grievance.sub_category_form.main_category")}{" "}
+              <span className="text-red-500">*</span>
             </Label>
 
             <Select value={mainCategory} onValueChange={(val) => setMainCategory(val)}>
               <SelectTrigger className="input-validate w-full" id="mainCategory">
-                <SelectValue placeholder="Select Main Category" />
+                <SelectValue
+                  placeholder={t("admin.citizen_grievance.sub_category_form.main_category_placeholder")}
+                />
               </SelectTrigger>
               <SelectContent>
                 {mainList.map((m: any) => (
@@ -122,7 +135,8 @@ export default function SubComplaintCategoryForm() {
           {/* Sub Category Name */}
           <div>
             <Label htmlFor="name">
-              Sub-Category Name <span className="text-red-500">*</span>
+              {t("admin.citizen_grievance.sub_category_form.sub_category_name")}{" "}
+              <span className="text-red-500">*</span>
             </Label>
 
             <Input
@@ -131,7 +145,7 @@ export default function SubComplaintCategoryForm() {
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter sub-category name"
+              placeholder={t("admin.citizen_grievance.sub_category_form.sub_category_placeholder")}
               className="input-validate w-full"
             />
           </div>
@@ -139,7 +153,8 @@ export default function SubComplaintCategoryForm() {
           {/* Active Status */}
           <div>
             <Label htmlFor="isActive">
-              Active Status <span className="text-red-500">*</span>
+              {t("admin.citizen_grievance.sub_category_form.active_status")}{" "}
+              <span className="text-red-500">*</span>
             </Label>
 
             <Select
@@ -147,11 +162,11 @@ export default function SubComplaintCategoryForm() {
               onValueChange={(val) => setIsActive(val === "true")}
             >
               <SelectTrigger className="input-validate w-full" id="isActive">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("admin.citizen_grievance.sub_category_form.status_placeholder")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -162,15 +177,15 @@ export default function SubComplaintCategoryForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("admin.citizen_grievance.sub_category_form.updating")
+                : t("admin.citizen_grievance.sub_category_form.saving")
               : isEdit
-                ? "Update"
-                : "Save"}
+                ? t("common.update")
+                : t("common.save")}
           </Button>
 
           <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

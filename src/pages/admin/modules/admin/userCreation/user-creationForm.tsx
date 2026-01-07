@@ -7,6 +7,7 @@ import Label from "@/components/form/Label";
 import { Input } from "@/components/ui/input";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { Eye, EyeOff } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import {
   customerCreationApi,
   cityApi,
@@ -119,7 +120,7 @@ function ShadcnSelect({
   value,
   onChange,
   options,
-  placeholder = "Select option",
+  placeholder = "",
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -146,6 +147,7 @@ function ShadcnSelect({
    COMPONENT
    ======================= */
 export default function UserCreationForm() {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -190,7 +192,7 @@ export default function UserCreationForm() {
         setUserTypes(mapToOptions(normalizeList(res), (u) => u.name));
       })
       .catch((err) => {
-        Swal.fire("Error", "Unable to load user types", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
         console.error("User type load failed:", err);
       });
   }, []);
@@ -218,7 +220,7 @@ export default function UserCreationForm() {
           );
         })
         .catch((err) => {
-          Swal.fire("Error", "Unable to load customers", "error");
+          Swal.fire(t("common.error"), t("common.load_failed"), "error");
           console.error("Customer load failed:", err);
         });
     }
@@ -241,7 +243,7 @@ export default function UserCreationForm() {
           );
         })
         .catch((err) => {
-          Swal.fire("Error", "Unable to load staff data", "error");
+          Swal.fire(t("common.error"), t("common.load_failed"), "error");
           console.error("Staff data load failed:", err);
         });
     }
@@ -256,7 +258,7 @@ export default function UserCreationForm() {
         setCityList(mapToOptions(normalizeList(res), (c) => c.name))
       )
       .catch((err) => {
-        Swal.fire("Error", "Unable to load cities", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
         console.error("City load failed:", err);
       });
   }, [district]);
@@ -269,7 +271,7 @@ export default function UserCreationForm() {
         setZoneList(mapToOptions(normalizeList(res), (z) => z.name))
       )
       .catch((err) => {
-        Swal.fire("Error", "Unable to load zones", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
         console.error("Zone load failed:", err);
       });
   }, [city]);
@@ -282,7 +284,7 @@ export default function UserCreationForm() {
         setWardList(mapToOptions(normalizeList(res), (w) => w.name))
       )
       .catch((err) => {
-        Swal.fire("Error", "Unable to load wards", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
         console.error("Ward load failed:", err);
       });
   }, [zone]);
@@ -306,7 +308,7 @@ export default function UserCreationForm() {
         setWard(pickIdentifier(u.ward_id));
       })
       .catch((err) => {
-        Swal.fire("Error", "Unable to load user", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
         console.error("User load failed:", err);
       });
   }, [id, isEdit]);
@@ -338,17 +340,21 @@ export default function UserCreationForm() {
       setLoading(true);
       if (isEdit) {
         if (!id) {
-          throw new Error("Missing user id");
+          throw new Error(t("common.missing_id"));
         }
         await userCreationApi.update(id, payload);
       } else {
         await userCreationApi.create(payload);
       }
 
-      Swal.fire({ icon: "success", title: "Saved Successfully" });
+      Swal.fire({ icon: "success", title: t("common.updated_success") });
       navigate(ENC_LIST_PATH);
     } catch (err: any) {
-      Swal.fire({ icon: "error", title: "Save failed", text: JSON.stringify(err.response?.data) });
+      Swal.fire({
+        icon: "error",
+        title: t("common.save_failed"),
+        text: JSON.stringify(err.response?.data),
+      });
     } finally {
       setLoading(false);
     }
@@ -356,17 +362,30 @@ export default function UserCreationForm() {
 
   /* ---------- RENDER ---------- */
   return (
-    <ComponentCard title={isEdit ? "Edit User" : "Add User"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.user_creation.user_label") })
+          : t("common.add_item", { item: t("admin.user_creation.user_label") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           <div>
-            <Label>User Type *</Label>
-            <ShadcnSelect value={userType} onChange={setUserType} options={userTypes} />
+            <Label>{t("admin.nav.user_type")} *</Label>
+            <ShadcnSelect
+              value={userType}
+              onChange={setUserType}
+              options={userTypes}
+              placeholder={t("common.select_item_placeholder", {
+                item: t("admin.nav.user_type"),
+              })}
+            />
           </div>
 
           <div>
-  <Label>Password *</Label>
+  <Label>{t("admin.user_creation.password_label")} *</Label>
   <div className="relative">
     <Input
       type={showPassword ? "text" : "password"}
@@ -385,73 +404,127 @@ export default function UserCreationForm() {
 </div>
 
           <div>
-            <Label>Status *</Label>
+            <Label>{t("common.status")} *</Label>
             <ShadcnSelect
               value={isActive ? "1" : "0"}
               onChange={(v) => setIsActive(v === "1")}
               options={[
-                { value: "1", label: "Active" },
-                { value: "0", label: "Inactive" },
+                { value: "1", label: t("common.active") },
+                { value: "0", label: t("common.inactive") },
               ]}
+              placeholder={t("common.select_status")}
             />
           </div>
 
           {roleConfig?.fields?.includes("customer_id") && (
             <div>
-              <Label>Customer *</Label>
-              <ShadcnSelect value={customerId} onChange={setCustomerId} options={customerList} />
+              <Label>{t("admin.roles.customer")} *</Label>
+              <ShadcnSelect
+                value={customerId}
+                onChange={setCustomerId}
+                options={customerList}
+                placeholder={t("common.select_item_placeholder", {
+                  item: t("admin.roles.customer"),
+                })}
+              />
             </div>
           )}
 
           {roleConfig?.fields?.includes("staffusertype_id") && (
             <div>
-              <Label>Staff User Type *</Label>
-              <ShadcnSelect value={staffUserType} onChange={setStaffUserType} options={staffUserTypes} />
+              <Label>{t("admin.nav.staff_user_type")} *</Label>
+              <ShadcnSelect
+                value={staffUserType}
+                onChange={setStaffUserType}
+                options={staffUserTypes}
+                placeholder={t("common.select_item_placeholder", {
+                  item: t("admin.nav.staff_user_type"),
+                })}
+              />
             </div>
           )}
 
           {roleConfig?.fields?.includes("staff_id") && (
             <div>
-              <Label>Staff *</Label>
-              <ShadcnSelect value={staffId} onChange={setStaffId} options={staffList} />
+              <Label>{t("admin.roles.staff")} *</Label>
+              <ShadcnSelect
+                value={staffId}
+                onChange={setStaffId}
+                options={staffList}
+                placeholder={t("common.select_item_placeholder", {
+                  item: t("admin.roles.staff"),
+                })}
+              />
             </div>
           )}
 
           {roleConfig?.fields?.includes("district_id") && (
             <div>
-              <Label>District *</Label>
-              <ShadcnSelect value={district} onChange={setDistrict} options={districtList} />
+              <Label>{t("admin.nav.district")} *</Label>
+              <ShadcnSelect
+                value={district}
+                onChange={setDistrict}
+                options={districtList}
+                placeholder={t("common.select_item_placeholder", {
+                  item: t("admin.nav.district"),
+                })}
+              />
             </div>
           )}
 
           {roleConfig?.fields?.includes("city_id") && (
             <div>
-              <Label>City *</Label>
-              <ShadcnSelect value={city} onChange={setCity} options={cityList} />
+              <Label>{t("common.city")} *</Label>
+              <ShadcnSelect
+                value={city}
+                onChange={setCity}
+                options={cityList}
+                placeholder={t("common.select_item_placeholder", {
+                  item: t("common.city"),
+                })}
+              />
             </div>
           )}
 
           {roleConfig?.fields?.includes("zone_id") && (
             <div>
-              <Label>Zone *</Label>
-              <ShadcnSelect value={zone} onChange={setZone} options={zoneList} />
+              <Label>{t("common.zone")} *</Label>
+              <ShadcnSelect
+                value={zone}
+                onChange={setZone}
+                options={zoneList}
+                placeholder={t("common.select_item_placeholder", {
+                  item: t("common.zone"),
+                })}
+              />
             </div>
           )}
 
           {roleConfig?.fields?.includes("ward_id") && (
             <div>
-              <Label>Ward *</Label>
-              <ShadcnSelect value={ward} onChange={setWard} options={wardList} />
+              <Label>{t("common.ward")} *</Label>
+              <ShadcnSelect
+                value={ward}
+                onChange={setWard}
+                options={wardList}
+                placeholder={t("common.select_item_placeholder", {
+                  item: t("common.ward"),
+                })}
+              />
             </div>
           )}
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
           <button type="button" onClick={() => navigate(ENC_LIST_PATH)} className="bg-red-400 px-4 py-2 text-white rounded">
-            Cancel
+            {t("common.cancel")}
           </button>
           <button type="submit" disabled={loading} className="bg-green-custom px-4 py-2 text-white rounded">
-            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+            {loading
+              ? t("common.saving")
+              : isEdit
+              ? t("common.update")
+              : t("common.save")}
           </button>
         </div>
       </form>

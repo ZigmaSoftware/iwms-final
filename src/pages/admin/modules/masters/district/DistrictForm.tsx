@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
+import { useTranslation } from "react-i18next";
 
 
 import { continentApi, countryApi, stateApi, districtApi } from "@/helpers/admin";
@@ -54,6 +55,7 @@ const normalize = (v: any): string | null => {
 };
 
 export default function DistrictForm() {
+  const { t } = useTranslation();
   const [districtName, setDistrictName] = useState("");
   const [continentId, setContinentId] = useState<string>("");
   const [countryId, setCountryId] = useState<string>("");
@@ -249,8 +251,8 @@ export default function DistrictForm() {
     if (!continentId || !countryId || !stateId || !districtName.trim()) {
       Swal.fire({
         icon: "warning",
-        title: "Missing Fields",
-        text: "All fields are mandatory.",
+        title: t("common.warning"),
+        text: t("common.all_fields_required"),
       });
       return;
     }
@@ -268,18 +270,18 @@ export default function DistrictForm() {
 
       if (isEdit && id) {
         await districtApi.update(id, payload);
-        Swal.fire({ icon: "success", title: "Updated!" });
+        Swal.fire({ icon: "success", title: t("common.updated_success") });
       } else {
         await districtApi.create(payload);
-        Swal.fire({ icon: "success", title: "Added!" });
+        Swal.fire({ icon: "success", title: t("common.added_success") });
       }
 
       navigate(ENC_LIST_PATH);
     } catch (err: any) {
       Swal.fire({
         icon: "error",
-        title: "Save failed",
-        text: err?.response?.data || "Unexpected error!",
+        title: t("common.save_failed"),
+        text: err?.response?.data || t("common.unexpected_error"),
       });
     } finally {
       setLoading(false);
@@ -290,12 +292,18 @@ export default function DistrictForm() {
      JSX
   ------------------------------ */
   return (
-    <ComponentCard title={isEdit ? "Edit District" : "Add District"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.district") })
+          : t("common.add_item", { item: t("admin.nav.district") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Continent */}
           <div>
-            <Label>Continent *</Label>
+            <Label>{t("admin.nav.continent")} *</Label>
             <Select
               value={continentId}
               onValueChange={(val) => {
@@ -307,7 +315,11 @@ export default function DistrictForm() {
               }}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Continent" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.continent"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {continents.map((c) => (
@@ -321,7 +333,7 @@ export default function DistrictForm() {
 
           {/* Country */}
           <div>
-            <Label>Country *</Label>
+            <Label>{t("admin.nav.country")} *</Label>
             <Select
               value={countryId}
               onValueChange={(val) => {
@@ -332,14 +344,22 @@ export default function DistrictForm() {
               disabled={!continentId}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Country" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.country"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredCountries.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
                     {continentId
-                      ? "No countries available"
-                      : "Select a continent first"}
+                      ? t("common.no_items_found", {
+                          item: t("admin.nav.country"),
+                        })
+                      : t("common.select_item_first", {
+                          item: t("admin.nav.continent"),
+                        })}
                   </div>
                 ) : (
                   filteredCountries.map((c) => (
@@ -354,7 +374,7 @@ export default function DistrictForm() {
 
           {/* State */}
           <div>
-            <Label>State *</Label>
+            <Label>{t("admin.nav.state")} *</Label>
             <Select
               value={stateId}
               onValueChange={(val) => {
@@ -363,12 +383,22 @@ export default function DistrictForm() {
               disabled={!countryId}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select State" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.state"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {filteredStates.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
-                    {countryId ? "No states available" : "Select a country first"}
+                    {countryId
+                      ? t("common.no_items_found", {
+                          item: t("admin.nav.state"),
+                        })
+                      : t("common.select_item_first", {
+                          item: t("admin.nav.country"),
+                        })}
                   </div>
                 ) : (
                   filteredStates.map((s) => (
@@ -383,11 +413,15 @@ export default function DistrictForm() {
 
           {/* District */}
           <div>
-            <Label>District Name *</Label>
+            <Label>
+              {t("common.item_name", { item: t("admin.nav.district") })} *
+            </Label>
             <Input
               value={districtName}
               onChange={(e) => setDistrictName(e.target.value)}
-              placeholder="Enter district name"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.district"),
+              })}
               className="input-validate w-full"
               required
             />
@@ -395,17 +429,17 @@ export default function DistrictForm() {
 
           {/* Active */}
           <div>
-            <Label>Active Status *</Label>
+            <Label>{t("common.status")} *</Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(v) => setIsActive(v === "true")}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -415,11 +449,11 @@ export default function DistrictForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-              ? "Update"
-              : "Save"}
+              ? t("common.update")
+              : t("common.save")}
           </Button>
 
           <Button
@@ -427,7 +461,7 @@ export default function DistrictForm() {
             variant="destructive"
             onClick={() => navigate(ENC_LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

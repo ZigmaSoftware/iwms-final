@@ -1,67 +1,519 @@
+import { useEffect, useMemo, useState } from "react";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, MapPin, Clock, Filter, BellRing, ShieldAlert, Activity } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { useTheme } from "@/contexts/ThemeContext";
+import { complaintApi, customerCreationApi, wasteCollectionApi } from "@/helpers/admin";
 import { cn } from "@/lib/utils";
+import { filterActiveCustomers, normalizeCustomerArray } from "@/utils/customerUtils";
 
-const alerts = [
-  {
-    id: 1,
-    type: "deviation",
-    vehicle: "TRK-015",
-    message: "Route deviation detected - 2.4km off planned route",
-    zone: "Zone B",
-    time: "5 minutes ago",
-    severity: "high",
-  },
-  {
-    id: 2,
-    type: "weighbridge",
-    vehicle: "TRK-008",
-    message: "Weight mismatch: Expected 2.8T, Logged 3.2T (14% difference)",
-    zone: "Zone C",
-    time: "12 minutes ago",
-    severity: "critical",
-  },
-  {
-    id: 3,
-    type: "missed",
-    vehicle: "TRK-022",
-    message: "Missed pickup at location #47",
-    zone: "Zone D",
-    time: "18 minutes ago",
-    severity: "medium",
-  },
-  {
-    id: 4,
-    type: "late",
-    vehicle: "TRK-001",
-    message: "Staff late login - Scheduled: 06:00, Actual: 06:42",
-    zone: "Zone A",
-    time: "1 hour ago",
-    severity: "low",
-  },
-  {
-    id: 5,
-    type: "deviation",
-    vehicle: "TRK-019",
-    message: "Extended idle time at location (45 minutes)",
-    zone: "Zone E",
-    time: "1 hour ago",
-    severity: "medium",
-  },
-];
+type AlertSeverity = "critical" | "high" | "medium" | "low";
+type SeverityFilter = "all" | AlertSeverity | "medium_low";
+type AlertSource = "complaint" | "weighbridge" | "vehicle" | "collection";
+
+type AlertItem = {
+  id: string;
+  source: AlertSource;
+  title: string;
+  message: string;
+  zone?: string | null;
+  occurredAt?: number | null;
+  severity: AlertSeverity;
+};
+
+const REFRESH_MS = 10000;
+const WEIGHBRIDGE_API_BASE =
+  "https://zigma.in/d2d/folders/waste_collected_summary_report/test_waste_collected_data_api.php";
+const WEIGHBRIDGE_API_KEY = "ZIGMA-DELHI-WEIGHMENT-2025-SECURE";
+const WEIGHBRIDGE_EXPECTED_KG = 500;
+const TRACKING_API_URL =
+  "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM";
+const VEHICLE_IDLE_MINUTES = 30;
+const OVERSPEED_CRITICAL_DELTA = 15;
+const MAX_MISSED_ALERTS = 25;
+
+const formatDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const parseTimestamp = (value: unknown) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") {
+    return value > 1e12 ? value : value * 1000;
+  }
+
+  const numeric = Number(value);
+  if (!Number.isNaN(numeric) && String(value).trim() !== "") {
+    return numeric > 1e12 ? numeric : numeric * 1000;
+  }
+
+  const parsed = new Date(String(value));
+  const time = parsed.getTime();
+  return Number.isNaN(time) ? null : time;
+};
+
+const normalizeStatus = (value: unknown) => {
+  const status = String(value ?? "").toLowerCase();
+  if (status.includes("close") || status.includes("resolved")) return "resolved";
+  if (status.includes("progress") || status.includes("ongoing")) return "in-progress";
+  return "open";
+};
+
+const normalizePriority = (value: unknown): AlertSeverity => {
+  const priority = String(value ?? "").toLowerCase();
+  if (priority.includes("critical")) return "critical";
+  if (priority.includes("high")) return "high";
+  if (priority.includes("low")) return "low";
+  if (priority.includes("medium")) return "medium";
+  return "medium";
+};
+
+const extractArray = (response: any) => {
+  if (Array.isArray(response)) return response;
+  if (Array.isArray(response?.data)) return response.data;
+  if (Array.isArray(response?.data?.results)) return response.data.results;
+  if (Array.isArray(response?.results)) return response.results;
+  return [];
+};
+
+const parseNumber = (value: unknown) => {
+  if (value === null || value === undefined || value === "") return null;
+  const numeric = Number(value);
+  return Number.isNaN(numeric) ? null : numeric;
+};
+
+const pickText = (row: Record<string, any>, keys: string[], fallback = "") => {
+  for (const key of keys) {
+    const value = row?.[key];
+    if (value === undefined || value === null) continue;
+    const text = String(value).trim();
+    if (text) return text;
+  }
+  return fallback;
+};
+
+const pickVehicleLabel = (row: Record<string, any>) =>
+  pickText(
+    row,
+    [
+      "vehicle_no",
+      "vehicleNo",
+      "Vehicle_No",
+      "VehicleNo",
+      "vehicleNumber",
+      "vehicle_number",
+      "Reg_No",
+      "reg_no",
+    ],
+    "Vehicle"
+  );
+
+const pickVehicleZone = (row: Record<string, any>) =>
+  pickText(
+    row,
+    [
+      "zone",
+      "Zone",
+      "area",
+      "Area",
+      "location",
+      "address",
+      "geofenceName",
+      "geofence",
+    ],
+    ""
+  );
+
+const pickVehicleTimestamp = (row: Record<string, any>) =>
+  parseTimestamp(
+    pickText(
+      row,
+      [
+        "deviceTime",
+        "timestamp",
+        "gpsTime",
+        "time",
+        "serverTime",
+        "_ts",
+        "date",
+        "dateSec",
+        "lastComunicationTime",
+      ],
+      ""
+    )
+  );
+
+const fetchComplaintAlerts = async (): Promise<AlertItem[]> => {
+  try {
+    const response = await complaintApi.list();
+    const rows = extractArray(response);
+    const alerts: AlertItem[] = [];
+
+    rows.forEach((row: Record<string, any>, index: number) => {
+      const status = normalizeStatus(row.status);
+      if (status === "resolved") return;
+
+      const rawId = row.unique_id ?? row.id ?? row.complaint_id ?? index;
+      const id = String(rawId).trim();
+      if (!id) return;
+
+      const message = String(
+        row.title ??
+          row.details ??
+          row.description ??
+          row.main_category ??
+          row.sub_category ??
+          row.category ??
+          "Complaint reported"
+      ).trim();
+
+      const zoneValue =
+        row.zone_name ??
+        row.ward_name ??
+        row.zone?.name ??
+        row.zone ??
+        row.ward?.name ??
+        row.ward ??
+        null;
+      const zone = zoneValue ? String(zoneValue) : null;
+      const title = String(row.unique_id ?? row.complaint_id ?? row.id ?? "Complaint").trim();
+
+      alerts.push({
+        id,
+        source: "complaint",
+        title: title || "Complaint",
+        message: message || "Complaint reported",
+        zone,
+        occurredAt: parseTimestamp(row.created ?? row.updated ?? row.created_at),
+        severity: normalizePriority(row.priority ?? row.risk ?? row.severity),
+      });
+    });
+
+    return alerts;
+  } catch (error) {
+    console.error("Failed to load complaint alerts:", error);
+    return [];
+  }
+};
+
+const fetchWeighbridgeAlerts = async (dateKey: string): Promise<AlertItem[]> => {
+  try {
+    const url = `${WEIGHBRIDGE_API_BASE}?action=day_wise_data&from_date=${dateKey}&to_date=${dateKey}&key=${WEIGHBRIDGE_API_KEY}`;
+    const res = await fetch(url);
+    const json = await res.json();
+    const rows = Array.isArray(json?.data) ? json.data : [];
+    const alerts: AlertItem[] = [];
+
+    rows.forEach((row: Record<string, any>, index: number) => {
+      const actualKg = Number(String(row.Net_Wt ?? "0").replace(/,/g, ""));
+      if (!Number.isFinite(actualKg) || actualKg <= 0) return;
+
+      const diffPct = ((actualKg - WEIGHBRIDGE_EXPECTED_KG) / WEIGHBRIDGE_EXPECTED_KG) * 100;
+      const diffAbs = Math.abs(diffPct);
+
+      let severity: AlertSeverity | null = null;
+      if (diffAbs > 10) severity = "critical";
+      else if (diffAbs > 5) severity = "high";
+      if (!severity) return;
+
+      const vehicle = String(row.Vehicle_No ?? row.VehicleNo ?? row.vehicle_no ?? "Vehicle");
+      const diffLabel = `${diffPct > 0 ? "+" : ""}${diffPct.toFixed(0)}%`;
+      const expectedTons = (WEIGHBRIDGE_EXPECTED_KG / 1000).toFixed(1);
+      const actualTons = (actualKg / 1000).toFixed(1);
+      const message = `Weight mismatch ${diffLabel} (exp ${expectedTons}t, actual ${actualTons}t)`;
+      const rawId = row.Ticket_No ?? row.id ?? `${vehicle}-${row.Date ?? index}`;
+      const id = String(rawId).trim() || `${vehicle}-${index}`;
+
+      const zoneValue = row.Zone ?? row.zone ?? null;
+      const zone = zoneValue ? String(zoneValue) : null;
+
+      alerts.push({
+        id,
+        source: "weighbridge",
+        title: vehicle,
+        message,
+        zone,
+        occurredAt: parseTimestamp(row.Date ?? row.date ?? row.timestamp),
+        severity,
+      });
+    });
+
+    return alerts;
+  } catch (error) {
+    console.error("Failed to load weighbridge alerts:", error);
+    return [];
+  }
+};
+
+const fetchVehicleAlerts = async (): Promise<AlertItem[]> => {
+  try {
+    const res = await fetch(TRACKING_API_URL);
+    const data = await res.json();
+    const rows = Array.isArray(data) ? data : [];
+    const alerts: AlertItem[] = [];
+
+    rows.forEach((row: Record<string, any>) => {
+      const vehicle = pickVehicleLabel(row);
+      const speed = parseNumber(row.speed) ?? 0;
+      const speedLimit = parseNumber(row.overSpeedLimit) ?? 60;
+      const ignition = String(row.ignitionStatus ?? "").toUpperCase();
+      const idleTime = parseNumber(row.idleTime) ?? 0;
+      const zone = pickVehicleZone(row) || null;
+      const occurredAt = pickVehicleTimestamp(row);
+
+      if (speedLimit > 0 && speed > speedLimit) {
+        const delta = speed - speedLimit;
+        const severity: AlertSeverity =
+          delta >= OVERSPEED_CRITICAL_DELTA ? "critical" : "high";
+        const message = `Overspeeding ${Math.round(speed)} km/h (limit ${Math.round(speedLimit)} km/h)`;
+        alerts.push({
+          id: `${vehicle}-overspeed`,
+          source: "vehicle",
+          title: vehicle,
+          message,
+          zone,
+          occurredAt,
+          severity,
+        });
+        return;
+      }
+
+      if (speed === 0 && ignition === "ON" && idleTime >= VEHICLE_IDLE_MINUTES) {
+        const message = `Idle for ${Math.round(idleTime)} minutes`;
+        alerts.push({
+          id: `${vehicle}-idle`,
+          source: "vehicle",
+          title: vehicle,
+          message,
+          zone,
+          occurredAt,
+          severity: "medium",
+        });
+      }
+    });
+
+    return alerts;
+  } catch (error) {
+    console.error("Failed to load vehicle alerts:", error);
+    return [];
+  }
+};
+
+const extractCustomerId = (row: Record<string, any>, fallback: string) => {
+  const raw =
+    row.customer ??
+    row.customer_id ??
+    row.customer_unique_id ??
+    row.customerId ??
+    fallback;
+  return String(raw ?? "").trim();
+};
+
+const extractCustomerZone = (row: Record<string, any>) => {
+  const zoneValue =
+    row.zone_name ??
+    row.zone?.name ??
+    row.zone?.zone_name ??
+    row.zone ??
+    row.ward_name ??
+    row.ward?.ward_name ??
+    row.ward ??
+    null;
+  return zoneValue ? String(zoneValue) : null;
+};
+
+const fetchCollectionAlerts = async (dateKey: string): Promise<AlertItem[]> => {
+  try {
+    const [customerResponse, collectionResponse] = await Promise.all([
+      customerCreationApi.list(),
+      wasteCollectionApi.list({ params: { collection_date: dateKey } }),
+    ]);
+
+    const customers = filterActiveCustomers(normalizeCustomerArray(customerResponse));
+    const collectionRows = extractArray(collectionResponse);
+    const collectedIds = new Set(
+      collectionRows
+        .map((row: Record<string, any>) =>
+          extractCustomerId(row, String(row.id ?? row.unique_id ?? ""))
+        )
+        .filter((id) => id)
+    );
+
+    const missed = customers.filter((customer) => {
+      const id = String(customer.unique_id ?? customer.id ?? "").trim();
+      if (!id) return false;
+      return !collectedIds.has(id);
+    });
+
+    const alerts: AlertItem[] = [];
+    const limited = missed.slice(0, MAX_MISSED_ALERTS);
+
+    limited.forEach((customer, index) => {
+      const id = String(customer.unique_id ?? customer.id ?? index).trim() || `missed-${index}`;
+      const name =
+        String(customer.customer_name ?? customer.name ?? customer.unique_id ?? "Customer").trim() ||
+        "Customer";
+      const zone = extractCustomerZone(customer);
+
+      alerts.push({
+        id: `missed-${id}`,
+        source: "collection",
+        title: name,
+        message: "Missed pickup today",
+        zone,
+        occurredAt: parseTimestamp(dateKey),
+        severity: "high",
+      });
+    });
+
+    const remaining = missed.length - limited.length;
+    if (remaining > 0) {
+      alerts.push({
+        id: "missed-summary",
+        source: "collection",
+        title: "Missed pickups",
+        message: `+${remaining} more missed pickups`,
+        zone: null,
+        occurredAt: parseTimestamp(dateKey),
+        severity: "medium",
+      });
+    }
+
+    return alerts;
+  } catch (error) {
+    console.error("Failed to load collection alerts:", error);
+    return [];
+  }
+};
 
 export default function Alerts() {
-  const severityCounts = alerts.reduce(
-    (acc, alert) => {
-      acc[alert.severity] = (acc[alert.severity] || 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>
+  const { t, i18n } = useTranslation();
+  const [alerts, setAlerts] = useState<AlertItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedZone, setSelectedZone] = useState("all");
+  const [selectedSeverity, setSelectedSeverity] = useState<SeverityFilter>("all");
+
+  const rtf = useMemo(
+    () => new Intl.RelativeTimeFormat(i18n.language, { numeric: "auto" }),
+    [i18n.language]
   );
+
+  const formatTimeAgo = (timestamp?: number | null) => {
+    if (timestamp === null || timestamp === undefined) {
+      return t("common.not_available");
+    }
+    const diffMs = Date.now() - timestamp;
+    const diffSec = Math.max(Math.floor(diffMs / 1000), 0);
+
+    if (diffSec < 60) return t("common.now");
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return rtf.format(-diffMin, "minute");
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return rtf.format(-diffHr, "hour");
+    const diffDay = Math.floor(diffHr / 24);
+    return rtf.format(-diffDay, "day");
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadAlerts = async () => {
+      const dateKey = formatDateKey(new Date());
+      const [complaintsResult, weighbridgeResult, vehicleResult, collectionResult] =
+        await Promise.allSettled([
+        fetchComplaintAlerts(),
+        fetchWeighbridgeAlerts(dateKey),
+        fetchVehicleAlerts(),
+        fetchCollectionAlerts(dateKey),
+      ]);
+
+      if (!isMounted) return;
+
+      const combined = [
+        ...(complaintsResult.status === "fulfilled" ? complaintsResult.value : []),
+        ...(weighbridgeResult.status === "fulfilled" ? weighbridgeResult.value : []),
+        ...(vehicleResult.status === "fulfilled" ? vehicleResult.value : []),
+        ...(collectionResult.status === "fulfilled" ? collectionResult.value : []),
+      ];
+
+      const deduped = new Map<string, AlertItem>();
+      combined.forEach((alert, index) => {
+        const key = `${alert.source}-${alert.id || index}`;
+        const existing = deduped.get(key);
+        if (!existing || (alert.occurredAt ?? 0) > (existing.occurredAt ?? 0)) {
+          deduped.set(key, alert);
+        }
+      });
+
+      const severityRank: Record<AlertSeverity, number> = {
+        critical: 0,
+        high: 1,
+        medium: 2,
+        low: 3,
+      };
+
+      const nextAlerts = Array.from(deduped.values()).sort((a, b) => {
+        const timeDiff = (b.occurredAt ?? 0) - (a.occurredAt ?? 0);
+        if (timeDiff !== 0) return timeDiff;
+        return (severityRank[a.severity] ?? 4) - (severityRank[b.severity] ?? 4);
+      });
+
+      setAlerts(nextAlerts);
+      setLoading(false);
+    };
+
+    loadAlerts();
+    const interval = window.setInterval(loadAlerts, REFRESH_MS);
+
+    return () => {
+      isMounted = false;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  const severityCounts = useMemo(
+    () =>
+      alerts.reduce(
+        (acc, alert) => {
+          acc[alert.severity] += 1;
+          return acc;
+        },
+        { critical: 0, high: 0, medium: 0, low: 0 }
+      ),
+    [alerts]
+  );
+
+  const zoneOptions = useMemo(() => {
+    const zones = new Map<string, string>();
+    alerts.forEach((alert) => {
+      const zone = alert.zone?.trim();
+      if (zone) zones.set(zone.toLowerCase(), zone);
+    });
+    return Array.from(zones.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [alerts]);
+
+  const filteredAlerts = useMemo(() => {
+    return alerts.filter((alert) => {
+      const zoneMatch =
+        selectedZone === "all" ||
+        (alert.zone ?? "").toLowerCase() === selectedZone;
+      const severityMatch =
+        selectedSeverity === "all" ||
+        (selectedSeverity === "medium_low"
+          ? alert.severity === "medium" || alert.severity === "low"
+          : alert.severity === selectedSeverity);
+      return zoneMatch && severityMatch;
+    });
+  }, [alerts, selectedZone, selectedSeverity]);
 
   const { theme } = useTheme();
   const isDarkMode = theme === "dark";
@@ -89,49 +541,53 @@ export default function Alerts() {
 
   const summaryCards = [
     {
-      label: "Total Active Alerts",
+      label: t("dashboard.alerts.summary_total_active_alerts"),
       value: alerts.length,
-      subtext: "Records across fleet",
+      subtext: t("dashboard.alerts.summary_records_across_fleet"),
       gradient: "bg-gradient-to-br from-white via-sky-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900/40 dark:to-slate-900",
       border: "border-sky-200/80 dark:border-sky-500/40",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
       iconColor: "text-sky-600 dark:text-sky-200",
       Icon: BellRing,
+      filterValue: "all" as const,
     },
     {
-      label: "Critical Alerts",
+      label: t("dashboard.alerts.summary_critical_alerts"),
       value: severityCounts["critical"] ?? 0,
-      subtext: "Immediate action",
+      subtext: t("dashboard.alerts.summary_immediate_action"),
       gradient: "bg-gradient-to-br from-white via-rose-50 to-rose-100 dark:from-slate-950 dark:via-rose-950/20 dark:to-slate-900",
       border: "border-rose-200/80 dark:border-rose-500/40",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
       iconColor: "text-rose-600 dark:text-rose-200",
       Icon: ShieldAlert,
+      filterValue: "critical" as const,
     },
     {
-      label: "High Priority",
+      label: t("dashboard.alerts.summary_high_priority"),
       value: severityCounts["high"] ?? 0,
-      subtext: "Needs review",
+      subtext: t("dashboard.alerts.summary_needs_review"),
       gradient: "bg-gradient-to-br from-white via-amber-50 to-amber-100 dark:from-slate-950 dark:via-amber-950/20 dark:to-slate-900",
       border: "border-amber-200/80 dark:border-amber-500/40",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
       iconColor: "text-amber-600 dark:text-amber-200",
       Icon: Activity,
+      filterValue: "high" as const,
     },
     {
-      label: "Medium & Low",
+      label: t("dashboard.alerts.summary_medium_low"),
       value: (severityCounts["medium"] ?? 0) + (severityCounts["low"] ?? 0),
-      subtext: "Monitoring",
+      subtext: t("dashboard.alerts.summary_monitoring"),
       gradient: "bg-gradient-to-br from-white via-emerald-50 to-emerald-100 dark:from-slate-950 dark:via-emerald-950/20 dark:to-slate-900",
       border: "border-emerald-200/80 dark:border-emerald-500/40",
       iconBg: "bg-white/70 dark:bg-slate-900/60",
       iconColor: "text-emerald-600 dark:text-emerald-200",
       Icon: AlertTriangle,
+      filterValue: "medium_low" as const,
     },
   ];
 
   const severityTokens: Record<
-    typeof alerts[number]["severity"],
+    AlertSeverity,
     {
       badge: string;
       chip: string;
@@ -176,35 +632,41 @@ export default function Alerts() {
         <div className={heroPanelClass}>
           <div>
             <h2 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-sky-500 via-blue-500 to-indigo-500 bg-clip-text text-transparent">
-              Alert Management
+              {t("dashboard.alerts.title")}
             </h2>
-            <p className="text-muted-foreground">Monitor deviations, missed pickups, and system alerts</p>
+            <p className="text-muted-foreground">
+              {t("dashboard.alerts.subtitle")}
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Select defaultValue="all">
+            <Select value={selectedZone} onValueChange={setSelectedZone}>
               <SelectTrigger className="w-[190px]">
                 <Filter className="h-4 w-4 mr-2" />
-                <SelectValue placeholder="Filter by zone" />
+                <SelectValue placeholder={t("dashboard.alerts.filter_by_zone")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Zones</SelectItem>
-                <SelectItem value="a">Zone A</SelectItem>
-                <SelectItem value="b">Zone B</SelectItem>
-                <SelectItem value="c">Zone C</SelectItem>
-                <SelectItem value="d">Zone D</SelectItem>
-                <SelectItem value="e">Zone E</SelectItem>
+                <SelectItem value="all">{t("dashboard.alerts.all_zones")}</SelectItem>
+                {zoneOptions.map((zone) => (
+                  <SelectItem key={zone.value} value={zone.value}>
+                    {zone.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
-            <Select defaultValue="all">
+            <Select
+              value={selectedSeverity}
+              onValueChange={(value) => setSelectedSeverity(value as SeverityFilter)}
+            >
               <SelectTrigger className="w-[190px]">
-                <SelectValue placeholder="Filter by severity" />
+                <SelectValue placeholder={t("dashboard.alerts.filter_by_severity")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Severities</SelectItem>
-                <SelectItem value="critical">Critical</SelectItem>
-                <SelectItem value="high">High</SelectItem>
-                <SelectItem value="medium">Medium</SelectItem>
-                <SelectItem value="low">Low</SelectItem>
+                <SelectItem value="all">{t("dashboard.alerts.all_severities")}</SelectItem>
+                <SelectItem value="critical">{t("dashboard.alerts.severity_critical")}</SelectItem>
+                <SelectItem value="high">{t("dashboard.alerts.severity_high")}</SelectItem>
+                <SelectItem value="medium">{t("dashboard.alerts.severity_medium")}</SelectItem>
+                <SelectItem value="low">{t("dashboard.alerts.severity_low")}</SelectItem>
+                <SelectItem value="medium_low">{t("dashboard.alerts.summary_medium_low")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -216,11 +678,24 @@ export default function Alerts() {
             return (
               <Card
                 key={card.label}
+                role="button"
+                tabIndex={0}
+                onClick={() => {
+                  setSelectedSeverity(card.filterValue);
+                  setSelectedZone("all");
+                }}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    setSelectedSeverity(card.filterValue);
+                    setSelectedZone("all");
+                  }
+                }}
                 className={cn(
                   surfaceCardClass,
                   card.gradient,
                   card.border,
-                  "text-slate-900 dark:text-slate-100 hover:-translate-y-1"
+                  "text-slate-900 dark:text-slate-100 hover:-translate-y-1 cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-sky-500/60"
                 )}
               >
                 <div className="pointer-events-none absolute inset-0">
@@ -245,16 +720,27 @@ export default function Alerts() {
 
         <Card className={surfaceCardClass}>
           <CardHeader>
-            <CardTitle>Active Alerts</CardTitle>
-            <CardDescription>Real-time alerts requiring attention</CardDescription>
+            <CardTitle>{t("dashboard.alerts.active_alerts_title")}</CardTitle>
+            <CardDescription>{t("dashboard.alerts.active_alerts_description")}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {alerts.map((alert, index) => {
+              {loading && alerts.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  {t("common.loading")}
+                </div>
+              ) : null}
+              {!loading && filteredAlerts.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  {t("dashboard.home.alerts_none")}
+                </div>
+              ) : null}
+              {filteredAlerts.map((alert, index) => {
                 const severity = severityTokens[alert.severity];
+                const zoneLabel = alert.zone || t("common.not_available");
                 return (
                   <div
-                    key={alert.id}
+                    key={`${alert.source}-${alert.id}`}
                     className={cn(
                       "relative border rounded-2xl p-4 flex items-start gap-4 transition-all duration-500 hover:-translate-y-1",
                       "bg-white/90 dark:bg-slate-950/60 backdrop-blur",
@@ -262,31 +748,39 @@ export default function Alerts() {
                     )}
                     style={{ animationDelay: `${index * 0.05}s` }}
                   >
-                    <div className={cn("pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r opacity-40 blur-xl", severity.glow)} />
+                    <div
+                      className={cn(
+                        "pointer-events-none absolute inset-0 rounded-2xl bg-gradient-to-r opacity-40 blur-xl",
+                        severity.glow
+                      )}
+                    />
                     <div className={cn("relative p-3 rounded-xl shadow-inner", severity.chip)}>
                       <AlertTriangle className={cn("h-5 w-5", severity.icon)} />
                     </div>
                     <div className="relative flex-1 space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-base">{alert.vehicle}</span>
-                        <Badge variant="outline" className={cn("text-xs font-semibold", severity.badge)}>
-                          {alert.severity.toUpperCase()}
+                        <span className="font-semibold text-base">{alert.title}</span>
+                        <Badge
+                          variant="outline"
+                          className={cn("text-xs font-semibold", severity.badge)}
+                        >
+                          {t(`dashboard.alerts.severity_${alert.severity}`)}
                         </Badge>
                       </div>
                       <p className="text-sm text-foreground">{alert.message}</p>
                       <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
                           <MapPin className="h-3 w-3" />
-                          {alert.zone}
+                          {zoneLabel}
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {alert.time}
+                          {formatTimeAgo(alert.occurredAt)}
                         </span>
                       </div>
                     </div>
                     <Button variant="outline" size="sm" className="relative">
-                      Review
+                      {t("dashboard.alerts.review")}
                     </Button>
                   </div>
                 );
