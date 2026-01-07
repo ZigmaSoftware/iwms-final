@@ -19,21 +19,27 @@ type Option = {
 };
 
 type StaffTemplateFormData = {
-  primary_driver_id: string;
-  secondary_driver_id: string;
-  primary_operator_id: string;
-  secondary_operator_id: string;
-  is_active: boolean;
+  driver_id: string;
+  operator_id: string;
+  extra_operator_id: string; // comma-separated user IDs
+  status: "ACTIVE" | "INACTIVE";
+  approval_status: "PENDING" | "APPROVED" | "REJECTED";
+  created_by: string;
+  updated_by: string;
+  approved_by: string;
 };
 
 /* ================= INITIAL STATE ================= */
 
 const initialFormData: StaffTemplateFormData = {
-  primary_driver_id: "",
-  secondary_driver_id: "",
-  primary_operator_id: "",
-  secondary_operator_id: "",
-  is_active: true,
+  driver_id: "",
+  operator_id: "",
+  extra_operator_id: "",
+  status: "ACTIVE",
+  approval_status: "PENDING",
+  created_by: "",
+  updated_by: "",
+  approved_by: "",
 };
 
 /* ================= COMPONENT ================= */
@@ -55,8 +61,13 @@ export default function StaffTemplateForm() {
   const { encStaffMasters, encStaffTemplate } = getEncryptedRoute();
   const ENC_LIST_PATH = `/${encStaffMasters}/${encStaffTemplate}`;
   const statusOptions = [
-    { value: "true", label: t("common.active") },
-    { value: "false", label: t("common.inactive") },
+    { value: "ACTIVE", label: t("common.active") },
+    { value: "INACTIVE", label: t("common.inactive") },
+  ];
+  const approvalStatusOptions = [
+    { value: "PENDING", label: t("common.pending") },
+    { value: "APPROVED", label: t("common.approved") },
+    { value: "REJECTED", label: t("common.rejected") },
   ];
 
   /* ================= LOAD STAFF OPTIONS ================= */
@@ -72,25 +83,33 @@ export default function StaffTemplateForm() {
             u.user_type_name === "Staff" &&
             u.is_active === true &&
             u.is_deleted === false &&
-            u.staff_unique_id
+            u.unique_id
         );
 
         const drivers: Option[] = staffOnly
           .filter((s: any) => s.staffusertype_name === "driver")
           .map((s: any) => ({
-            value: s.staff_unique_id, // ✅ IMPORTANT
+            value: s.unique_id,
             label: s.staff_name,
           }));
 
         const operators: Option[] = staffOnly
           .filter((s: any) => s.staffusertype_name === "operator")
           .map((s: any) => ({
-            value: s.staff_unique_id, // ✅ IMPORTANT
+            value: s.unique_id,
             label: s.staff_name,
           }));
 
         setDriverOptions(drivers);
         setOperatorOptions(operators);
+
+        const currentUserId = localStorage.getItem("unique_id") || "";
+        setFormData((prev) => ({
+          ...prev,
+          created_by: currentUserId,
+          updated_by: currentUserId,
+          approved_by: prev.approved_by || currentUserId,
+        }));
       })
       .catch(() => {
         Swal.fire(t("common.error"), t("common.load_failed"), "error");
@@ -115,11 +134,16 @@ export default function StaffTemplateForm() {
       .get(id)
       .then((tpl: any) => {
         setFormData({
-          primary_driver_id: tpl.primary_driver_id ?? "",
-          secondary_driver_id: tpl.secondary_driver_id ?? "",
-          primary_operator_id: tpl.primary_operator_id ?? "",
-          secondary_operator_id: tpl.secondary_operator_id ?? "",
-          is_active: Boolean(tpl.is_active),
+          driver_id: tpl.driver_id ?? "",
+          operator_id: tpl.operator_id ?? "",
+          extra_operator_id: Array.isArray(tpl.extra_operator_id)
+            ? tpl.extra_operator_id.join(",")
+            : "",
+          status: tpl.status ?? "ACTIVE",
+          approval_status: tpl.approval_status ?? "PENDING",
+          created_by: tpl.created_by ?? "",
+          updated_by: tpl.updated_by ?? "",
+          approved_by: tpl.approved_by ?? "",
         });
       })
       .catch(() => {
@@ -135,8 +159,8 @@ export default function StaffTemplateForm() {
 
     // Business rule
     if (
-      formData.primary_driver_id &&
-      formData.primary_driver_id === formData.primary_operator_id
+      formData.driver_id &&
+      formData.driver_id === formData.operator_id
     ) {
       Swal.fire(
         t("common.error"),
@@ -149,18 +173,32 @@ export default function StaffTemplateForm() {
     setSubmitting(true);
 
     try {
+      const extraIds = formData.extra_operator_id
+        ? formData.extra_operator_id
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean)
+        : [];
+
       const payload = {
-        primary_driver_id: formData.primary_driver_id,
-        secondary_driver_id: formData.secondary_driver_id || null,
-        primary_operator_id: formData.primary_operator_id,
-        secondary_operator_id: formData.secondary_operator_id || null,
-        is_active: formData.is_active,
+        driver_id: formData.driver_id,
+        operator_id: formData.operator_id,
+        extra_operator_id: extraIds,
+        status: formData.status,
+        approval_status: formData.approval_status,
+        created_by: formData.created_by,
+        updated_by: formData.updated_by || formData.created_by,
+        approved_by: formData.approved_by || null,
       };
 
       const formBody = new FormData();
       Object.entries(payload).forEach(([k, v]) => {
         if (v === null || v === undefined) return;
-        formBody.append(k, String(v));
+        if (Array.isArray(v)) {
+          v.forEach((item) => formBody.append(k, String(item)));
+        } else {
+          formBody.append(k, String(v));
+        }
       });
 
       if (isEdit && id) {
@@ -171,9 +209,9 @@ export default function StaffTemplateForm() {
 
       Swal.fire(
         t("common.success"),
-        isEdit ? t("common.updated_success") : t("common.created_success"),
-        "success"
-      );
+          isEdit ? t("common.updated_success") : t("common.created_success"),
+          "success"
+        );
 
       navigate(ENC_LIST_PATH);
     } catch {
@@ -197,13 +235,13 @@ export default function StaffTemplateForm() {
       >
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-            {/* PRIMARY DRIVER */}
+            {/* DRIVER */}
             <div>
               <Label>{t("admin.staff_template.primary_driver")}</Label>
               <Select
-                value={formData.primary_driver_id}
+                value={formData.driver_id}
                 onChange={(v) =>
-                  setFormData((p) => ({ ...p, primary_driver_id: v }))
+                  setFormData((p) => ({ ...p, driver_id: v }))
                 }
                 options={driverOptions}
                 placeholder={t("common.select_option")}
@@ -212,27 +250,13 @@ export default function StaffTemplateForm() {
               />
             </div>
 
-            {/* SECONDARY DRIVER */}
-            <div>
-              <Label>{t("admin.staff_template.secondary_driver")}</Label>
-              <Select
-                value={formData.secondary_driver_id}
-                onChange={(v) =>
-                  setFormData((p) => ({ ...p, secondary_driver_id: v }))
-                }
-                options={driverOptions}
-                placeholder={t("common.optional")}
-                disabled={fetching}
-              />
-            </div>
-
-            {/* PRIMARY OPERATOR */}
+            {/* OPERATOR */}
             <div>
               <Label>{t("admin.staff_template.primary_operator")}</Label>
               <Select
-                value={formData.primary_operator_id}
+                value={formData.operator_id}
                 onChange={(v) =>
-                  setFormData((p) => ({ ...p, primary_operator_id: v }))
+                  setFormData((p) => ({ ...p, operator_id: v }))
                 }
                 options={operatorOptions}
                 placeholder={t("common.select_option")}
@@ -241,16 +265,19 @@ export default function StaffTemplateForm() {
               />
             </div>
 
-            {/* SECONDARY OPERATOR */}
+            {/* EXTRA OPERATORS (comma-separated IDs) */}
             <div>
-              <Label>{t("admin.staff_template.secondary_operator")}</Label>
-              <Select
-                value={formData.secondary_operator_id}
-                onChange={(v) =>
-                  setFormData((p) => ({ ...p, secondary_operator_id: v }))
+              <Label>{t("admin.staff_template.extra_staff")}</Label>
+              <textarea
+                className="w-full rounded border border-gray-300 p-2 text-sm"
+                placeholder={t("admin.staff_template.extra_staff_placeholder")}
+                value={formData.extra_operator_id}
+                onChange={(e) =>
+                  setFormData((p) => ({
+                    ...p,
+                    extra_operator_id: e.target.value,
+                  }))
                 }
-                options={operatorOptions}
-                placeholder={t("common.optional")}
                 disabled={fetching}
               />
             </div>
@@ -259,13 +286,66 @@ export default function StaffTemplateForm() {
             <div>
               <Label>{t("common.status")}</Label>
               <Select
-                value={formData.is_active ? "true" : "false"}
+                value={formData.status}
                 onChange={(v) =>
-                  setFormData((p) => ({ ...p, is_active: v === "true" }))
+                  setFormData((p) => ({ ...p, status: v as any }))
                 }
                 options={statusOptions}
                 placeholder={t("common.select_status")}
                 required
+                disabled={fetching}
+              />
+            </div>
+
+            {/* APPROVAL STATUS */}
+            <div>
+              <Label>{t("admin.staff_template.approval_status")}</Label>
+              <Select
+                value={formData.approval_status}
+                onChange={(v) =>
+                  setFormData((p) => ({ ...p, approval_status: v as any }))
+                }
+                options={approvalStatusOptions}
+                placeholder={t("common.select_status")}
+                required
+                disabled={fetching}
+              />
+            </div>
+
+            {/* APPROVER */}
+            <div>
+              <Label>{t("admin.staff_template.approved_by")}</Label>
+              <Select
+                value={formData.approved_by}
+                onChange={(v) =>
+                  setFormData((p) => ({ ...p, approved_by: v }))
+                }
+                options={operatorOptions.concat(driverOptions)}
+                placeholder={t("common.select_option")}
+                disabled={fetching}
+              />
+            </div>
+
+            {/* CREATED BY */}
+            <div>
+              <Label>{t("admin.staff_template.created_by")}</Label>
+              <input
+                className="w-full rounded border border-gray-200 bg-gray-100 p-2 text-sm"
+                value={formData.created_by}
+                readOnly
+              />
+            </div>
+
+            {/* UPDATED BY */}
+            <div>
+              <Label>{t("admin.staff_template.updated_by")}</Label>
+              <Select
+                value={formData.updated_by}
+                onChange={(v) =>
+                  setFormData((p) => ({ ...p, updated_by: v }))
+                }
+                options={operatorOptions.concat(driverOptions)}
+                placeholder={t("common.select_option")}
                 disabled={fetching}
               />
             </div>

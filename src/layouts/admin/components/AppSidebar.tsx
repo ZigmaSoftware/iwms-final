@@ -68,6 +68,7 @@ const {
   encUserScreenPermission,
   encStaffMasters,
   encStaffTemplate,
+  encAlternativeStaffTemplate
 } = getEncryptedRoute();
 
 type NavItem = {
@@ -129,7 +130,8 @@ const staffMasters: NavItem[] = [
     icon: <Users size={18} />,
     subItems: [
       { nameKey: "admin.nav.staff_creation", path: `/${encStaffMasters}/${encStaffCreation}` },
-      { nameKey: "admin.nav.staff_template", path: `/${encStaffMasters}/${encStaffTemplate}`}
+      { nameKey: "admin.nav.staff_template", path: `/${encStaffMasters}/${encStaffTemplate}`},
+      { nameKey: "admin.nav.alternative_staff_template", path: `/${encStaffMasters}/${encAlternativeStaffTemplate}`},
     ],
   },
 ];
