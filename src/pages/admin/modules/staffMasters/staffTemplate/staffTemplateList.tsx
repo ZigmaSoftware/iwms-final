@@ -9,7 +9,6 @@ import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 
-import { Switch } from "@/components/ui/switch";
 import { PencilIcon } from "@/icons";
 import { staffCreationApi, staffTemplateApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
@@ -17,24 +16,19 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 /* ================= TYPES ================= */
 
 type StaffTemplate = {
+  id: number;
   unique_id: string;
 
-  primary_driver_id: string;
-  primary_driver_name: string;
+  driver_id: string;
+  driver_name: string;
 
-  secondary_driver_id?: string | null;
-  secondary_driver_name?: string;
+  operator_id: string;
+  operator_name: string;
 
-  primary_operator_id: string;
-  primary_operator_name: string;
+  extra_operator_id?: string[];
 
-  secondary_operator_id?: string | null;
-  secondary_operator_name?: string;
-
-  extra_staff_ids?: string[];
-
-  is_active: boolean;
-  is_deleted: boolean;
+  status: string;
+  approval_status: string;
 
   created_at: string;
   updated_at: string;
@@ -94,23 +88,6 @@ export default function StaffTemplateList() {
   };
 
   /* ================= STATUS TOGGLE ================= */
-
-  const statusTemplate = (row: StaffTemplate) => {
-    const updateStatus = async (value: boolean) => {
-      try {
-        const formData = new FormData();
-        formData.append("is_active", String(value));
-
-        await staffTemplateApi.update(row.unique_id, formData);
-
-        fetchTemplates();
-      } catch {
-        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
-      }
-    };
-
-    return <Switch checked={row.is_active} onCheckedChange={updateStatus} />;
-  };
 
   /* ================= ACTIONS ================= */
 
@@ -176,10 +153,10 @@ export default function StaffTemplateList() {
         filters={datatableFilters}
         globalFilterFields={[
           "unique_id",
-          "primary_driver_name",
-          "primary_operator_name",
-          "secondary_driver_name",
-          "secondary_operator_name",
+          "driver_name",
+          "operator_name",
+          "status",
+          "approval_status",
         ]}
         header={header}
         stripedRows
@@ -197,38 +174,34 @@ export default function StaffTemplateList() {
 
         <Column
           header={t("admin.staff_template.columns.primary_driver")}
-          body={(r: StaffTemplate) => r.primary_driver_name}
+          body={(r: StaffTemplate) => r.driver_name}
           sortable
-        />
-
-        <Column
-          header={t("admin.staff_template.columns.secondary_driver")}
-          body={(r: StaffTemplate) => r.secondary_driver_name || "-"}
         />
 
         <Column
           header={t("admin.staff_template.columns.primary_operator")}
-          body={(r: StaffTemplate) => r.primary_operator_name}
+          body={(r: StaffTemplate) => r.operator_name}
           sortable
-        />
-
-        <Column
-          header={t("admin.staff_template.columns.secondary_operator")}
-          body={(r: StaffTemplate) => r.secondary_operator_name || "-"}
         />
 
         <Column
           header={t("admin.staff_template.columns.extra_staff")}
           body={(r: StaffTemplate) =>
-            r.extra_staff_ids?.length ?? 0
+            r.extra_operator_id?.length ?? 0
           }
           style={{ width: 130 }}
         />
 
         <Column
+          field="status"
           header={t("common.status")}
-          body={statusTemplate}
-          style={{ width: 120 }}
+          sortable
+        />
+
+        <Column
+          field="approval_status"
+          header={t("admin.staff_template.columns.approval_status")}
+          sortable
         />
 
         <Column

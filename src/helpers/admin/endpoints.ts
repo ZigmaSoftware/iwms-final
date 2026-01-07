@@ -42,6 +42,7 @@ export const adminEndpoints = {
   usercreations: "user-creation/users-creation",
   staffCreation: "user-creation/staffcreation",
   staffTemplate: "user-creation/stafftemplate-creation",
+  alternativeStaffTemplate: "user-creation/alternative-stafftemplate",
 
   /* =========================
      Login

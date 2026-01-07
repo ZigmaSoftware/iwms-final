@@ -18,6 +18,7 @@ export type EncryptedRoutes = {
   encMasters: string;
   encStaffMasters: string;
   encStaffTemplate: string;
+  encAlternativeStaffTemplate: string;
   encMonthlyDistance: string;
   encProperties: string;
   encReport: string;
@@ -80,6 +81,7 @@ const plainRoutes: EncryptedRoutes = {
   encMasters: "masters",
   encStaffMasters: "staff-masters",
   encStaffTemplate: "staff-template",
+  encAlternativeStaffTemplate: "alternative-staff-template",
   encMonthlyDistance: "monthly-distance",
   encProperties: "properties",
   encReport: "reports",

@@ -78,6 +78,8 @@ import UserScreenPermissionForm from "@/pages/admin/modules/admin/userScreenPerm
 import UserScreenPermissionList from "@/pages/admin/modules/admin/userScreenPermission/userScreenPermissionList";
 import StaffTemplateList from "@/pages/admin/modules/staffMasters/staffTemplate/staffTemplateList";
 import StaffTemplateForm from "@/pages/admin/modules/staffMasters/staffTemplate/staffTemplateForm";
+import AlternativeStaffTemplateList from "@/pages/admin/modules/staffMasters/alternativeStaffTemplate/alternativeStaffTemplateList";
+import AlternativeStaffTemplateForm from "@/pages/admin/modules/staffMasters/alternativeStaffTemplate/alternativeStaffTemplateForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -115,7 +117,8 @@ const ROUTES: RouteMap = {
   },
   "staff-masters": {
     "staff-creation": { list: StaffCreationList, form: StaffCreationForm },
-    "staff-template": {list: StaffTemplateList, form: StaffTemplateForm}
+    "staff-template": {list: StaffTemplateList, form: StaffTemplateForm},
+    "alternative-staff-template": {list: AlternativeStaffTemplateList, form: AlternativeStaffTemplateForm},
   },
   "transport-master": {
     fuel: { list: FuelList, form: FuelForm },
