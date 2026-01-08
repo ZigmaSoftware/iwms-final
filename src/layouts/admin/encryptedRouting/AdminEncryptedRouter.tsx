@@ -50,6 +50,8 @@ import VehicleTypeCreation from "@/pages/admin/modules/transportMasters/vehicleT
 import VehicleTypeCreationForm from "@/pages/admin/modules/transportMasters/vehicleTypecreation/vechicle-typeCreationForm";
 import VehicleCreationListPage from "@/pages/admin/modules/transportMasters/vehicleCreation/vehicleCreationListPage";
 import VehicleCreationForm from "@/pages/admin/modules/transportMasters/vehicleCreation/vehicleCreationForm";
+import RoutePlanListPage from "@/pages/admin/modules/staffMasters/routeplan/routeplanlist";
+import RoutePlanForm from "@/pages/admin/modules/staffMasters/routeplan/routeplanform";
 import VehicleTracking from "@/pages/admin/modules/vehicletracking/vehicletrack/vehicletracking";
 import VehicleHistory from "@/pages/admin/modules/vehicletracking/vehiclehistory/vehiclehistory";
 import WorkforceManagement from "@/pages/admin/modules/workforcemanagement/workforcemanagement";
@@ -119,6 +121,7 @@ const ROUTES: RouteMap = {
     "staff-creation": { list: StaffCreationList, form: StaffCreationForm },
     "staff-template": {list: StaffTemplateList, form: StaffTemplateForm},
     "alternative-staff-template": {list: AlternativeStaffTemplateList, form: AlternativeStaffTemplateForm},
+    "route-plans": { list: RoutePlanListPage, form: RoutePlanForm },
   },
   "transport-master": {
     fuel: { list: FuelList, form: FuelForm },

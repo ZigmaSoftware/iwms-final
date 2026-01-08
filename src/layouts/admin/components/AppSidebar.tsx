@@ -49,6 +49,7 @@ const {
   encComplaint,
   encFeedback,
   encTransportMaster,
+  encRoutePlans,
   encFuel,
   encVehicleCreation,
   encVehicleHistory,
@@ -68,7 +69,7 @@ const {
   encUserScreenPermission,
   encStaffMasters,
   encStaffTemplate,
-  encAlternativeStaffTemplate
+  encAlternativeStaffTemplate,
 } = getEncryptedRoute();
 
 type NavItem = {
@@ -132,6 +133,7 @@ const staffMasters: NavItem[] = [
       { nameKey: "admin.nav.staff_creation", path: `/${encStaffMasters}/${encStaffCreation}` },
       { nameKey: "admin.nav.staff_template", path: `/${encStaffMasters}/${encStaffTemplate}`},
       { nameKey: "admin.nav.alternative_staff_template", path: `/${encStaffMasters}/${encAlternativeStaffTemplate}`},
+      { nameKey: "admin.nav.route_plans", path: `/${encStaffMasters}/${encRoutePlans}` },
     ],
   },
 ];

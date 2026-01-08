@@ -11,7 +11,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useEffect, useMemo, useState } from "react";
-import { vehicleAssigningApi } from "@/helpers/admin";
 import { useTranslation } from "react-i18next";
 
 type VehicleStatus = "active" | "maintenance" | "inactive";
@@ -60,62 +59,62 @@ export default function Vehicle() {
   const [capacityFilter, setCapacityFilter] = useState("all");
   const [maintenanceFilter, setMaintenanceFilter] = useState("all");
 
-  useEffect(() => {
-    let isMounted = true;
-    const loadVehicles = async () => {
-      try {
-        const response = await vehicleAssigningApi.list();
-        const rows = normalizeList(response);
-        const deduped = new Map<string, VehicleCard>();
+  // useEffect(() => {
+  //   let isMounted = true;
+  //   const loadVehicles = async () => {
+  //     try {
+  //       const response = await vehicleAssigningApi.list();
+  //       const rows = normalizeList(response);
+  //       const deduped = new Map<string, VehicleCard>();
 
-        rows.forEach((row: Record<string, any>, index: number) => {
-          const vehicleNo = row.vehicle_no ?? row.registration ?? "";
-          const key = String(
-            vehicleNo || row.unique_id || row.id || index
-          ).trim();
-          if (!key) return;
+  //       rows.forEach((row: Record<string, any>, index: number) => {
+  //         const vehicleNo = row.vehicle_no ?? row.registration ?? "";
+  //         const key = String(
+  //           vehicleNo || row.unique_id || row.id || index
+  //         ).trim();
+  //         if (!key) return;
 
-          const lastMaintenance = formatDate(
-            row.last_maintenance ?? row.lastMaintenance
-          );
+  //         const lastMaintenance = formatDate(
+  //           row.last_maintenance ?? row.lastMaintenance
+  //         );
 
-          const card: VehicleCard = {
-            vehicleId: String(
-              row.unique_id ?? vehicleNo ?? row.id ?? key
-            ).trim(),
-            registration: String(vehicleNo || "-"),
-            type: String(row.vehicle_type_name ?? row.vehicle_type ?? "-"),
-            capacity: String(row.capacity ?? "-"),
-            fuelEfficiency: String(row.fuel_efficiency ?? "-"),
-            lastMaintenance,
-            status: resolveStatus(row.is_active, lastMaintenance),
-            driver: String(row.driver_name ?? row.driver ?? "Unassigned"),
-            zone: String(row.zone_name ?? row.zone ?? "-"),
-          };
+  //         const card: VehicleCard = {
+  //           vehicleId: String(
+  //             row.unique_id ?? vehicleNo ?? row.id ?? key
+  //           ).trim(),
+  //           registration: String(vehicleNo || "-"),
+  //           type: String(row.vehicle_type_name ?? row.vehicle_type ?? "-"),
+  //           capacity: String(row.capacity ?? "-"),
+  //           fuelEfficiency: String(row.fuel_efficiency ?? "-"),
+  //           lastMaintenance,
+  //           status: resolveStatus(row.is_active, lastMaintenance),
+  //           driver: String(row.driver_name ?? row.driver ?? "Unassigned"),
+  //           zone: String(row.zone_name ?? row.zone ?? "-"),
+  //         };
 
-          deduped.set(key, card);
-        });
+  //         deduped.set(key, card);
+  //       });
 
-        if (isMounted) {
-          setVehicles(Array.from(deduped.values()));
-        }
-      } catch (error) {
-        console.error("Failed to load vehicle data:", error);
-        if (isMounted) {
-          setVehicles([]);
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
+  //       if (isMounted) {
+  //         setVehicles(Array.from(deduped.values()));
+  //       }
+  //     } catch (error) {
+  //       console.error("Failed to load vehicle data:", error);
+  //       if (isMounted) {
+  //         setVehicles([]);
+  //       }
+  //     } finally {
+  //       if (isMounted) {
+  //         setLoading(false);
+  //       }
+  //     }
+  //   };
 
-    loadVehicles();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+  //   loadVehicles();
+  //   return () => {
+  //     isMounted = false;
+  //   };
+  // }, []);
 
   const statusGradients: Record<string, string> = {
     active: "from-white via-emerald-50 to-emerald-300 dark:from-slate-900 dark:via-emerald-900/30 dark:to-emerald-800",

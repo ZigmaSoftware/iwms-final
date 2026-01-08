@@ -28,7 +28,6 @@ export const alternativeStaffTemplateApi = adminApi.alternativeStaffTemplate;
 // Transport & Customer
 export const fuelApi = adminApi.fuels;
 export const vehicleTypeApi = adminApi.vehicleTypes;
-export const vehicleAssigningApi = adminApi.vehicleAssigning;
 export const vehicleCreationApi = adminApi.vehicleCreations;
 export const customerCreationApi = adminApi.customerCreations;
 
