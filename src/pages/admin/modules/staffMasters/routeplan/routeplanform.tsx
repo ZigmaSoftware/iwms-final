@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
+import type { FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
-
-import { Button } from "primereact/button";
-import { Dropdown } from "primereact/dropdown";
-
-import { adminApi } from "@/helpers/admin/registry";
 import { useTranslation } from "react-i18next";
+
+import ComponentCard from "@/components/common/ComponentCard";
+import Label from "@/components/form/Label";
+import Select, { type SelectOption } from "@/components/form/Select";
+
+import { getEncryptedRoute } from "@/utils/routeCache";
+import { adminApi } from "@/helpers/admin/registry";
 
 export default function RoutePlanForm() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { id } = useParams();
+  const { id } = useParams<{ id?: string }>();
+  const isEdit = Boolean(id);
 
   const routePlanApi = adminApi.routePlans;
   const districtApi = adminApi.districts;
@@ -19,73 +23,203 @@ export default function RoutePlanForm() {
   const vehicleApi = adminApi.vehicleCreations;
   const staffApi = adminApi.staffCreation;
 
-  const [districts, setDistricts] = useState<any[]>([]);
-  const [zones, setZones] = useState<any[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
-  const [supervisors, setSupervisors] = useState<any[]>([]);
+  const [districts, setDistricts] = useState<SelectOption[]>([]);
+  const [zones, setZones] = useState<SelectOption[]>([]);
+  const [vehicles, setVehicles] = useState<SelectOption[]>([]);
+  const [supervisors, setSupervisors] = useState<SelectOption[]>([]);
+  const [fetching, setFetching] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
-  const [form, setForm] = useState<any>({ district_id: null, zone_id: null, vehicle_id: null, supervisor_id: null, status: "ACTIVE" });
+  const [form, setForm] = useState({
+    district_id: "",
+    zone_id: "",
+    vehicle_id: "",
+    supervisor_id: "",
+    status: "ACTIVE" as "ACTIVE" | "INACTIVE",
+  });
+
+  const { encStaffMasters, encRoutePlans } = getEncryptedRoute();
+  const ENC_LIST_PATH = `/${encStaffMasters}/${encRoutePlans}`;
+  const statusOptions: SelectOption[] = [
+    { value: "ACTIVE", label: t("common.active") },
+    { value: "INACTIVE", label: t("common.inactive") },
+  ];
+
+  const normalizeList = (payload: any): any[] =>
+    Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : payload?.results ?? [];
+
+  const toOptions = (items: any[], valueKey: string, labelKey: string): SelectOption[] =>
+    items
+      .map((item) => ({
+        value: item?.[valueKey],
+        label: item?.[labelKey] ?? item?.[valueKey],
+      }))
+      .filter((option) => option.value !== undefined && option.value !== null);
 
   useEffect(() => {
-    districtApi.list().then((res: any) => setDistricts(res?.results ?? res ?? []));
-    zoneApi.list().then((res: any) => setZones(res?.results ?? res ?? []));
-    vehicleApi.list().then((res: any) => setVehicles(res?.results ?? res ?? []));
-    staffApi.list().then((res: any) => setSupervisors(res?.results ?? res ?? []));
+    setFetching(true);
+    Promise.all([
+      districtApi.list(),
+      zoneApi.list(),
+      vehicleApi.list(),
+      staffApi.list(),
+    ])
+      .then(([districtRes, zoneRes, vehicleRes, staffRes]) => {
+        setDistricts(toOptions(normalizeList(districtRes), "unique_id", "name"));
+        setZones(toOptions(normalizeList(zoneRes), "unique_id", "name"));
+        setVehicles(toOptions(normalizeList(vehicleRes), "id", "vehicle_no"));
+        setSupervisors(toOptions(normalizeList(staffRes), "id", "employee_name"));
+      })
+      .catch(() => {
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      })
+      .finally(() => setFetching(false));
 
-    if (id) {
-      routePlanApi.get(id as string).then((res: any) => setForm(res ?? {}));
+    if (!id) return;
+
+    routePlanApi
+      .get(id)
+      .then((res: any) =>
+        setForm({
+          district_id: res?.district_id ?? "",
+          zone_id: res?.zone_id ?? "",
+          vehicle_id: res?.vehicle_id ? String(res.vehicle_id) : "",
+          supervisor_id: res?.supervisor_id ? String(res.supervisor_id) : "",
+          status: res?.status ?? "ACTIVE",
+        })
+      )
+      .catch(() => {
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      });
+  }, [districtApi, id, routePlanApi, staffApi, t, vehicleApi, zoneApi]);
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!form.district_id || !form.zone_id || !form.vehicle_id || !form.supervisor_id) {
+      Swal.fire(t("common.error"), t("common.missing_fields"), "warning");
+      return;
     }
-  }, [id]);
 
-  const handleSave = async () => {
+    const payload = {
+      district_id: form.district_id,
+      zone_id: form.zone_id,
+      vehicle_id: Number(form.vehicle_id),
+      supervisor_id: Number(form.supervisor_id),
+      status: form.status,
+    };
+
+    setSubmitting(true);
     try {
-      if (id) {
-        await routePlanApi.update(id as string, form);
+      if (isEdit && id) {
+        await routePlanApi.update(id, payload);
       } else {
-        await routePlanApi.create(form);
+        await routePlanApi.create(payload);
       }
-      Swal.fire({ icon: "success", title: t("common.saved_success") });
-      navigate(-1);
-    } catch (error) {
-      console.error(error);
-      Swal.fire({ icon: "error", title: t("common.error"), text: t("common.request_failed") });
+      Swal.fire(
+        t("common.success"),
+        isEdit ? t("common.updated_success") : t("common.added_success"),
+        "success"
+      );
+      navigate(ENC_LIST_PATH);
+    } catch {
+      Swal.fire(t("common.error"), t("common.save_failed"), "error");
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
     <div className="p-3">
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-1">{t("admin.route_plan.title")}</h1>
-          <p className="text-gray-500 text-sm">{t("admin.route_plan.subtitle")}</p>
-        </div>
-      </div>
+      <ComponentCard title={t("admin.route_plan.title")} desc={t("admin.route_plan.subtitle")}>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div>
+              <Label>{t("admin.route_plan.district")}</Label>
+              <Select
+                value={form.district_id}
+                onChange={(value) => setForm((prev) => ({ ...prev, district_id: value }))}
+                options={districts}
+                placeholder={t("common.select_option")}
+                disabled={fetching}
+                required
+              />
+            </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm text-gray-600 mb-2">{t("admin.route_plan.district")}</label>
-          <Dropdown value={form.district_id} options={districts} onChange={(e) => setForm((f:any)=>({...f, district_id: e.value}))} optionLabel="name" optionValue="unique_id" placeholder="Select district" />
-        </div>
+            <div>
+              <Label>{t("admin.route_plan.zone")}</Label>
+              <Select
+                value={form.zone_id}
+                onChange={(value) => setForm((prev) => ({ ...prev, zone_id: value }))}
+                options={zones}
+                placeholder={t("common.select_option")}
+                disabled={fetching}
+                required
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm text-gray-600 mb-2">{t("admin.route_plan.zone")}</label>
-          <Dropdown value={form.zone_id} options={zones} onChange={(e) => setForm((f:any)=>({...f, zone_id: e.value}))} optionLabel="name" optionValue="unique_id" placeholder="Select zone" />
-        </div>
+            <div>
+              <Label>{t("admin.route_plan.vehicle")}</Label>
+              <Select
+                value={form.vehicle_id}
+                onChange={(value) => setForm((prev) => ({ ...prev, vehicle_id: value }))}
+                options={vehicles}
+                placeholder={t("common.select_option")}
+                disabled={fetching}
+                required
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm text-gray-600 mb-2">{t("admin.route_plan.vehicle")}</label>
-          <Dropdown value={form.vehicle_id} options={vehicles} onChange={(e) => setForm((f:any)=>({...f, vehicle_id: e.value}))} optionLabel="vehicle_no" optionValue="id" placeholder="Select vehicle" />
-        </div>
+            <div>
+              <Label>{t("admin.route_plan.supervisor")}</Label>
+              <Select
+                value={form.supervisor_id}
+                onChange={(value) => setForm((prev) => ({ ...prev, supervisor_id: value }))}
+                options={supervisors}
+                placeholder={t("common.select_option")}
+                disabled={fetching}
+                required
+              />
+            </div>
 
-        <div>
-          <label className="block text-sm text-gray-600 mb-2">{t("admin.route_plan.supervisor")}</label>
-          <Dropdown value={form.supervisor_id} options={supervisors} onChange={(e) => setForm((f:any)=>({...f, supervisor_id: e.value}))} optionLabel="employee_name" optionValue="id" placeholder="Select supervisor" />
-        </div>
-      </div>
+            <div>
+              <Label>{t("common.status")}</Label>
+              <Select
+                value={form.status}
+                onChange={(value) =>
+                  setForm((prev) => ({ ...prev, status: value as "ACTIVE" | "INACTIVE" }))
+                }
+                options={statusOptions}
+                placeholder={t("common.select_status")}
+                disabled={fetching}
+                required
+              />
+            </div>
+          </div>
 
-      <div className="mt-6">
-        <Button label={t("common.save")} className="p-button-primary" onClick={handleSave} />
-      </div>
+          <div className="flex justify-end gap-3">
+            <button
+              type="submit"
+              disabled={submitting || fetching}
+              className="rounded-lg bg-green-custom px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {submitting
+                ? t("common.saving")
+                : isEdit
+                ? t("common.update")
+                : t("common.save")}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate(ENC_LIST_PATH)}
+              className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-600"
+            >
+              {t("common.cancel")}
+            </button>
+          </div>
+        </form>
+      </ComponentCard>
     </div>
   );
 }

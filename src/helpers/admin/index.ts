@@ -24,12 +24,18 @@ export const userTypeApi = adminApi.userTypes;
 export const userCreationApi = adminApi.usercreations;
 export const staffTemplateApi = adminApi.staffTemplate;
 export const alternativeStaffTemplateApi = adminApi.alternativeStaffTemplate;
+export const supervisorZoneMapApi = adminApi.supervisorZoneMap;
+export const supervisorZoneAccessAuditApi = adminApi.supervisorZoneAccessAudit;
 
 // Transport & Customer
 export const fuelApi = adminApi.fuels;
 export const vehicleTypeApi = adminApi.vehicleTypes;
 export const vehicleCreationApi = adminApi.vehicleCreations;
+export const tripDefinitionApi = adminApi.tripDefinitions;
+export const binLoadLogApi = adminApi.binLoadLogs;
 export const customerCreationApi = adminApi.customerCreations;
+export const customerTagApi = adminApi.customerTags;
+export const householdPickupEventApi = adminApi.householdPickupEvents;
 
 // Operations
 export const wasteCollectionApi = adminApi.wasteCollections;

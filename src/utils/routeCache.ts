@@ -19,6 +19,7 @@ export type EncryptedRoutes = {
   encStaffMasters: string;
   encStaffTemplate: string;
   encAlternativeStaffTemplate: string;
+  encStaffTemplateAudit: string;
   encMonthlyDistance: string;
   encProperties: string;
   encReport: string;
@@ -46,11 +47,17 @@ export type EncryptedRoutes = {
   encWorkforceManagement: string;
   encZones: string;
   encRoutePlans: string;
+  encSupervisorZoneMap: string;
+  encSupervisorZoneAccessAudit: string;
   encTransportMaster: string;
   encMainScreenType: string;
   encUserScreenAction: string;
   encMainScreen: string;
   encUserScreen: string;
+  encTripDefinition: string;
+  encBinLoadLog: string;
+  encCustomerTag: string;
+  encHouseholdPickupEvent: string;
 
   // dashboard
   encDashboardLiveMap: string;
@@ -83,6 +90,7 @@ const plainRoutes: EncryptedRoutes = {
   encStaffMasters: "staff-masters",
   encStaffTemplate: "staff-template",
   encAlternativeStaffTemplate: "alternative-staff-template",
+  encStaffTemplateAudit: "staff-template-audit",
   encMonthlyDistance: "monthly-distance",
   encProperties: "properties",
   encReport: "reports",
@@ -109,12 +117,18 @@ const plainRoutes: EncryptedRoutes = {
   encWorkforceManagement: "workforce-management",
   encZones: "zones",
   encRoutePlans: "route-plans",
+  encSupervisorZoneMap: "supervisor-zone-map",
+  encSupervisorZoneAccessAudit: "supervisor-zone-access-audit",
   encTransportMaster: "transport-master",
   encMainScreenType: "mainscreen-type",
   encUserScreenAction: "userscreen-action",
   encMainScreen: "mainscreens",
   encUserScreen: "userscreens",
   encUserScreenPermission: "userscreenpermissions",
+  encTripDefinition: "trip-definition",
+  encBinLoadLog: "bin-load-log",
+  encCustomerTag: "customer-tag",
+  encHouseholdPickupEvent: "household-pickup-event",
 
   //dashboard
 

@@ -63,8 +63,6 @@ export default function StaffTemplateList() {
         Array.isArray(payload) ? payload :
         Array.isArray(payload?.data) ? payload.data :
         payload?.data?.results ?? [];
-        console.log(data);
-
       setTemplates(data);
     } catch {
       Swal.fire(t("common.error"), t("common.load_failed"), "error");

@@ -43,6 +43,8 @@ export const adminEndpoints = {
   staffCreation: "user-creation/staffcreation",
   staffTemplate: "user-creation/stafftemplate-creation",
   alternativeStaffTemplate: "user-creation/alternative-stafftemplate",
+  supervisorZoneMap: "user-creation/supervisor-zone-map",
+  supervisorZoneAccessAudit: "user-creation/supervisor-zone-access-audit",
 
   /* =========================
      Login
@@ -57,6 +59,8 @@ export const adminEndpoints = {
   wasteCollections: "customers/wastecollections",
   feedbacks: "customers/feedbacks",
   complaints: "customers/complaints",
+  customerTags: "customers/customer-tag",
+  householdPickupEvents: "customers/household-pickup-event",
   mainCategory: "customers/main-category",
   SubCategory: "customers/sub-category",
   
@@ -66,7 +70,9 @@ export const adminEndpoints = {
   ========================= */
   vehicleTypes: "vehicles/vehicle-type",
   vehicleCreations: "vehicles/vehicle-creation",
-   routePlans: "user-creation/route-plans",
+  tripDefinitions: "vehicles/trip-definition",
+  binLoadLogs: "vehicles/bin-load-log",
+  routePlans: "user-creation/route-plans",
 } as const;
 
 export type AdminEntity = keyof typeof adminEndpoints;
