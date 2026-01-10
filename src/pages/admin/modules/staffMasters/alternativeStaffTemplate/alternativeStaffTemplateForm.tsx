@@ -26,6 +26,7 @@ type FormState = {
   extra_operator: string[];
   change_reason: string;
   change_remarks: string;
+  approval_status?: string;
 };
 
 const initialFormState: FormState = {
@@ -58,6 +59,7 @@ export default function AlternativeStaffTemplateForm() {
 
   const { encStaffMasters, encAlternativeStaffTemplate } = getEncryptedRoute();
   const ENC_LIST_PATH = `/${encStaffMasters}/${encAlternativeStaffTemplate}`;
+  const stateRecord = (location.state as { record?: FormState & { approval_status?: string } } | null)?.record;
 
   /* =====================================================
      HARD RESET ON EVERY CREATE PAGE ENTRY
@@ -113,13 +115,32 @@ export default function AlternativeStaffTemplateForm() {
      EDIT MODE LOAD
   ===================================================== */
   useEffect(() => {
+    if (!isEdit || !stateRecord) return;
+    templateSelectedByUser.current = false;
+    setFormData({
+      staff_template: String(stateRecord.staff_template ?? ""),
+      effective_date: stateRecord.effective_date ?? "",
+      driver: String(stateRecord.driver ?? ""),
+      operator: String(stateRecord.operator ?? ""),
+      extra_operator: Array.isArray(stateRecord.extra_operator)
+        ? stateRecord.extra_operator.map(String)
+        : stateRecord.extra_operator
+        ? [String(stateRecord.extra_operator)]
+        : [],
+      change_reason: stateRecord.change_reason ?? "",
+      change_remarks: stateRecord.change_remarks ?? "",
+      approval_status: stateRecord.approval_status ?? "",
+    });
+  }, [isEdit, stateRecord]);
+
+  useEffect(() => {
     if (!isEdit || !id) return;
 
     setLoading(true);
     alternativeStaffTemplateApi
       .get(id)
       .then((rec: any) => {
-        templateSelectedByUser.current = true;
+        templateSelectedByUser.current = false;
         setFormData({
           staff_template: String(rec.staff_template),
           effective_date: rec.effective_date,
@@ -132,10 +153,14 @@ export default function AlternativeStaffTemplateForm() {
             : [],
           change_reason: rec.change_reason ?? "",
           change_remarks: rec.change_remarks ?? "",
+          approval_status: rec.approval_status ?? "",
         });
       })
+      .catch(() => {
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      })
       .finally(() => setLoading(false));
-  }, [id, isEdit]);
+  }, [id, isEdit, t]);
 
   /* =====================================================
      CLEAR DEPENDENT FIELDS WHEN TEMPLATE CLEARS
@@ -229,6 +254,26 @@ export default function AlternativeStaffTemplateForm() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
+    if (isEdit && formData.approval_status === "APPROVED") {
+      Swal.fire(
+        t("common.warning"),
+        t("admin.alternative_staff_template.approved_locked"),
+        "warning"
+      );
+      return;
+    }
+
+    if (
+      !formData.staff_template ||
+      !formData.effective_date ||
+      !formData.driver ||
+      !formData.operator ||
+      !formData.change_reason
+    ) {
+      Swal.fire(t("common.warning"), t("common.missing_fields"), "warning");
+      return;
+    }
+
     if (formData.driver && formData.driver === formData.operator) {
       Swal.fire(
         t("common.error"),
@@ -238,25 +283,22 @@ export default function AlternativeStaffTemplateForm() {
       return;
     }
 
-    const body = new FormData();
-    Object.entries(formData).forEach(([k, v]) => {
-      if (Array.isArray(v)) {
-        if (v.length === 0) {
-          body.append(k, "");
-        } else {
-          v.forEach((item) => body.append(k, String(item)));
-        }
-        return;
-      }
-      if (v !== "") body.append(k, String(v));
-    });
+      const payload = {
+        staff_template: formData.staff_template,
+        effective_date: formData.effective_date,
+        driver: formData.driver,
+        operator: formData.operator,
+        extra_operator: formData.extra_operator,
+        change_reason: formData.change_reason,
+        change_remarks: formData.change_remarks || null,
+      };
 
     setLoading(true);
     try {
       if (isEdit && id) {
-        await alternativeStaffTemplateApi.update(id, body);
+        await alternativeStaffTemplateApi.update(id, payload);
       } else {
-        await alternativeStaffTemplateApi.create(body);
+        await alternativeStaffTemplateApi.create(payload);
       }
       Swal.fire(
         t("common.success"),
@@ -264,6 +306,24 @@ export default function AlternativeStaffTemplateForm() {
         "success"
       );
       navigate(ENC_LIST_PATH);
+    } catch (error: any) {
+      const data = error?.response?.data;
+      let message =
+        data?.detail ||
+        data?.non_field_errors?.[0] ||
+        t("common.save_failed_desc");
+
+      if (data && typeof data === "object") {
+        const firstKey = Object.keys(data)[0];
+        const value = data[firstKey];
+        if (Array.isArray(value) && value.length > 0) {
+          message = value[0];
+        } else if (typeof value === "string") {
+          message = value;
+        }
+      }
+
+      Swal.fire(t("common.save_failed"), message, "error");
     } finally {
       setLoading(false);
     }

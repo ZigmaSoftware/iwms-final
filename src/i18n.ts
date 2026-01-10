@@ -3,6 +3,23 @@ import { initReactI18next } from "react-i18next";
 
 export const LANGUAGE_STORAGE_KEY = "iwms.language";
 
+type LanguageCode = "en" | "ta" | "hi";
+
+const normalizeLanguageCode = (value?: string | null): LanguageCode => {
+  if (!value) return "en";
+  const lower = value.toLowerCase();
+  if (lower.startsWith("ta") || lower.includes("tamil") || value.includes("தமிழ்")) {
+    return "ta";
+  }
+  if (lower.startsWith("hi") || lower.includes("hindi") || value.includes("हिन्दी")) {
+    return "hi";
+  }
+  if (lower.startsWith("en") || lower.includes("english")) {
+    return "en";
+  }
+  return "en";
+};
+
 const resources = {
   en: {
     translation: {
@@ -799,11 +816,17 @@ const resources = {
           "vehicle_creation": "Vehicle Creation",
           "trip_definition": "Trip Definition",
           "bin_load_log": "Bin Load Log",
+          "trip_instance": "Trip Instance",
+          "trip_attendance": "பயண வருகை",
+          "vehicle_trip_audit": "வாகன பயண ஆய்வு",
+          "trip_exception_log": "பயண விதிவிலக்கு பதிவு",
+          "zone_property_load_tracker": "Zone Load Tracker",
           "vehicle_tracking": "Vehicle Tracking",
           "vehicle_history": "Vehicle History",
           "route_plans": "Route Plans",
           "supervisor_zone_map": "Supervisor Zone Map",
           "supervisor_zone_access_audit": "Supervisor Zone Access Audit",
+          "unassigned_staff_pool": "Unassigned Staff Pool",
           "bin_master": "Bin Master",
           "bin_creation": "Bin Creation",
           "waste_management": "Waste Management",
@@ -869,6 +892,7 @@ const resources = {
           "search_placeholder": "Search alternative templates",
           "empty_message": "No alternative staff templates found",
           "error_same_driver_operator": "Driver and Operator cannot be the same user.",
+          "approved_locked": "Approved records cannot be modified.",
           "staff_template": "Staff Template",
           "effective_date": "Effective Date",
           "driver": "Driver",
@@ -930,6 +954,95 @@ const resources = {
           "approval_status": "Approval Status",
           "status": "Status"
         },
+        "trip_instance": {
+          "title_edit": "பயண நிகழ்வை திருத்தவும்",
+          "subtitle": "பயண செயல்பாட்டு நிலை மற்றும் சுமைகளை நிர்வகிக்கவும்.",
+          "list_title": "பயண நிகழ்வுகள்",
+          "list_subtitle": "நடைபெறும் மற்றும் முடிந்த பயணங்கள்",
+          "search_placeholder": "பயண நிகழ்வுகளை தேடவும்",
+          "empty_message": "பயண நிகழ்வுகள் இல்லை",
+          "trip_no": "பயண எண்",
+          "trip_definition": "பயண வரையறை",
+          "staff_template": "பணியாளர் டெம்ப்ளேட்",
+          "alt_staff_template": "மாற்று பணியாளர் டெம்ப்ளேட்",
+          "zone": "மண்டலம்",
+          "vehicle": "வாகனம்",
+          "property": "சொத்து",
+          "sub_property": "உப சொத்து",
+          "trigger_weight": "தூண்டுதல் எடை (கிலோ)",
+          "max_capacity": "அதிகபட்ச கொள்ளளவு (கிலோ)",
+          "current_load": "தற்போதைய சுமை (கிலோ)",
+          "start_load": "தொடக்க சுமை (கிலோ)",
+          "end_load": "இறுதி சுமை (கிலோ)",
+          "trip_start_time": "பயண தொடக்க நேரம்",
+          "trip_end_time": "பயண முடிவு நேரம்",
+          "status": "நிலை",
+          "create_not_allowed": "பயண நிகழ்வுகள் முறையால் மட்டுமே உருவாக்கப்படும்."
+        },
+        "trip_attendance": {
+          "title_add": "பயண வருகை சேர்க்கவும்",
+          "title_edit": "பயண வருகை திருத்தவும்",
+          "subtitle": "நடைபெறும் பயணங்களில் வருகையை பதிவு செய்யவும்.",
+          "list_title": "பயண வருகை",
+          "list_subtitle": "காலாந்தர வருகை பதிவுகள்",
+          "create_button": "வருகை உருவாக்கு",
+          "search_placeholder": "பயண வருகையை தேடவும்",
+          "empty_message": "பயண வருகை பதிவுகள் இல்லை",
+          "trip_instance": "பயணம்",
+          "staff": "பணியாளர்",
+          "vehicle": "வாகனம்",
+          "attendance_time": "வருகை நேரம்",
+          "latitude": "அட்சரேகை",
+          "longitude": "தீர்க்கரேகை",
+          "photo": "புகைப்படம்",
+          "source": "மூலம்",
+          "source_mobile": "மொபைல்",
+          "source_vehicle_cam": "வாகன கேமரா"
+        },
+        "vehicle_trip_audit": {
+          "title_add": "வாகன பயண ஆய்வு சேர்க்கவும்",
+          "title_edit": "வாகன பயண ஆய்வு திருத்தவும்",
+          "subtitle": "GPS மாதிரிகள் மற்றும் இடைவேளை நேரத்தை பதிவு செய்யவும்.",
+          "list_title": "வாகன பயண ஆய்வுகள்",
+          "list_subtitle": "பயணத்திற்கு GPS ஆய்வு பதிவுகள்",
+          "create_button": "வாகன பயண ஆய்வு உருவாக்கு",
+          "search_placeholder": "வாகன பயண ஆய்வுகளை தேடவும்",
+          "empty_message": "வாகன பயண ஆய்வுகள் இல்லை",
+          "trip_instance": "பயணம்",
+          "vehicle": "வாகனம்",
+          "gps_lat": "GPS அட்சரேகைகள்",
+          "gps_lon": "GPS தீர்க்கரேகைகள்",
+          "avg_speed": "சராசரி வேகம் (கிமீ/ம)",
+          "idle_seconds": "இடைவேளை (விநாடி)",
+          "captured_at": "பதிவான நேரம்",
+          "gps_placeholder": "JSON வரிசை அல்லது கமா பிரிக்கப்பட்ட மதிப்புகள்"
+        },
+        "trip_exception_log": {
+          "title_add": "பயண விதிவிலக்கு பதிவு சேர்க்கவும்",
+          "title_edit": "பயண விதிவிலக்கு பதிவு",
+          "subtitle": "பயணங்களில் விதிவிலக்குகளை பதிவு செய்யவும்.",
+          "list_title": "பயண விதிவிலக்கு பதிவுகள்",
+          "list_subtitle": "பயண அளவிலான விதிவிலக்கு வரலாறு",
+          "create_button": "விதிவிலக்கு உருவாக்கு",
+          "search_placeholder": "விதிவிலக்கு பதிவுகளை தேடவும்",
+          "empty_message": "விதிவிலக்கு பதிவுகள் இல்லை",
+          "trip_instance": "பயணம்",
+          "exception_type": "விதிவிலக்கு வகை",
+          "remarks": "குறிப்புகள்",
+          "detected_by": "கண்டறிந்தவர்",
+          "exception_types": {
+            "gps_mismatch": "GPS Mismatch",
+            "missed_attendance": "Missed Attendance",
+            "over_capacity": "Over Capacity",
+            "route_deviation": "Route Deviation",
+            "vehicle_unavailable": "Vehicle Unavailable"
+          },
+          "detected_by_options": {
+            "system": "System",
+            "supervisor": "Supervisor"
+          },
+          "edit_not_allowed": "பயண விதிவிலக்கு பதிவுகள் மாற்ற முடியாது."
+        },
         "bin_load_log": {
           "title_add": "Add Bin Load Log",
           "title_edit": "Edit Bin Load Log",
@@ -947,6 +1060,22 @@ const resources = {
           "source_type": "Source Type",
           "event_time": "Event Time",
           "processed": "Processed"
+        },
+        "zone_property_load_tracker": {
+          "title_add": "மண்டல சொத்து சுமை கண்காணிப்பு சேர்க்கவும்",
+          "title_edit": "மண்டல சொத்து சுமை கண்காணிப்பை திருத்தவும்",
+          "subtitle": "மண்டலம் மற்றும் சொத்து வாரியாக நிலுவை சுமையை கண்காணிக்கவும்.",
+          "list_title": "மண்டல சொத்து சுமை கண்காணிப்புகள்",
+          "list_subtitle": "மண்டலம், சொத்து, வாகனம் வாரியாக நேரடி சுமை கண்காணிப்பு",
+          "create_button": "சுமை கண்காணிப்பு உருவாக்கு",
+          "search_placeholder": "சுமை கண்காணிப்புகளை தேடவும்",
+          "empty_message": "சுமை கண்காணிப்பு பதிவுகள் இல்லை",
+          "zone": "மண்டலம்",
+          "vehicle": "வாகனம்",
+          "property": "சொத்து",
+          "sub_property": "உப சொத்து",
+          "current_weight": "தற்போதைய எடை (கிலோ)",
+          "last_updated": "கடைசி புதுப்பிப்பு"
         },
         "customer_tag": {
           "title_add": "Issue Customer Tag",
@@ -995,6 +1124,27 @@ const resources = {
           "old_zones": "Old Zones",
           "new_zones": "New Zones",
           "remarks": "Remarks",
+          "created_at": "Created At"
+        },
+        "unassigned_staff_pool": {
+          "title_add": "Add Unassigned Staff Pool",
+          "title_edit": "Edit Unassigned Staff Pool",
+          "subtitle": "Manage available operators and drivers by zone.",
+          "list_title": "Unassigned Staff Pool",
+          "list_subtitle": "Available staff by zone and ward",
+          "create_button": "Create Pool Entry",
+          "search_placeholder": "Search pool records",
+          "empty_message": "No unassigned staff records found",
+          "role": "Role",
+          "role_placeholder": "Select role",
+          "operator": "Operator",
+          "driver": "Driver",
+          "zone": "Zone",
+          "ward": "Ward",
+          "status": "Status",
+          "status_available": "Available",
+          "status_assigned": "Assigned",
+          "trip_instance": "Trip Instance",
           "created_at": "Created At"
         },
         "user_screen_action": {
@@ -2488,11 +2638,17 @@ const resources = {
           "vehicle_creation": "வாகன உருவாக்கம்",
           "trip_definition": "பயணம் வரையறை",
           "bin_load_log": "பின் ஏற்ற பதிவு",
+          "trip_instance": "பயண நிகழ்வு",
+          "trip_attendance": "பயண வருகை",
+          "vehicle_trip_audit": "வாகன பயண ஆய்வு",
+          "trip_exception_log": "பயண விதிவிலக்கு பதிவு",
+          "zone_property_load_tracker": "மண்டல சொத்து சுமை கண்காணிப்பு",
           "vehicle_tracking": "வாகன கண்காணிப்பு",
           "vehicle_history": "வாகன வரலாறு",
           "route_plans": "வழித் திட்டங்கள்",
           "supervisor_zone_map": "மேற்பார்வையாளர் மண்டல வரைபடம்",
           "supervisor_zone_access_audit": "மேற்பார்வையாளர் மண்டல அணுகல் ஆய்வு",
+          "unassigned_staff_pool": "Unassigned Staff Pool",
           "bin_master": "குப்பைத்தொட்டி மாஸ்டர்",
           "bin_creation": "குப்பைத்தொட்டி உருவாக்கம்",
           "waste_management": "கழிவு மேலாண்மை",
@@ -2558,6 +2714,7 @@ const resources = {
           "search_placeholder": "மாற்று டெம்ப்ளேட்டுகளை தேடவும்",
           "empty_message": "மாற்று பணியாளர் டெம்ப்ளேட்டுகள் இல்லை",
           "error_same_driver_operator": "டிரைவர் மற்றும் ஆபரேட்டர் ஒரே நபராக இருக்க முடியாது.",
+          "approved_locked": "Approved records cannot be modified.",
           "staff_template": "பணியாளர் டெம்ப்ளேட்",
           "effective_date": "செயல்படும் தேதி",
           "driver": "டிரைவர்",
@@ -2630,6 +2787,95 @@ const resources = {
           "approval_status": "ஒப்புதல் நிலை",
           "status": "நிலை"
         },
+        "trip_instance": {
+          "title_edit": "ट्रिप इंस्टेंस संपादित करें",
+          "subtitle": "ट्रिप निष्पादन स्थिति और लोड प्रबंधित करें।",
+          "list_title": "ट्रिप इंस्टेंस",
+          "list_subtitle": "लाइव और पूर्ण ट्रिप रन",
+          "search_placeholder": "ट्रिप इंस्टेंस खोजें",
+          "empty_message": "कोई ट्रिप इंस्टेंस नहीं मिला",
+          "trip_no": "ट्रिप नंबर",
+          "trip_definition": "ट्रिप परिभाषा",
+          "staff_template": "स्टाफ टेम्पलेट",
+          "alt_staff_template": "वैकल्पिक स्टाफ टेम्पलेट",
+          "zone": "ज़ोन",
+          "vehicle": "वाहन",
+          "property": "प्रॉपर्टी",
+          "sub_property": "सब-प्रॉपर्टी",
+          "trigger_weight": "ट्रिगर वजन (किग्रा)",
+          "max_capacity": "अधिकतम क्षमता (किग्रा)",
+          "current_load": "वर्तमान लोड (किग्रा)",
+          "start_load": "प्रारंभिक लोड (किग्रा)",
+          "end_load": "अंतिम लोड (किग्रा)",
+          "trip_start_time": "ट्रिप प्रारंभ समय",
+          "trip_end_time": "ट्रिप समाप्ति समय",
+          "status": "स्थिति",
+          "create_not_allowed": "ट्रिप इंस्टेंस केवल सिस्टम द्वारा बनाए जाते हैं।"
+        },
+        "trip_attendance": {
+          "title_add": "ट्रिप उपस्थिति जोड़ें",
+          "title_edit": "ट्रिप उपस्थिति संपादित करें",
+          "subtitle": "चल रही यात्राओं में उपस्थिति रिकॉर्ड करें।",
+          "list_title": "ट्रिप उपस्थिति",
+          "list_subtitle": "आवधिक उपस्थिति कैप्चर",
+          "create_button": "उपस्थिति बनाएं",
+          "search_placeholder": "ट्रिप उपस्थिति खोजें",
+          "empty_message": "कोई ट्रिप उपस्थिति रिकॉर्ड नहीं मिला",
+          "trip_instance": "ट्रिप",
+          "staff": "स्टाफ",
+          "vehicle": "वाहन",
+          "attendance_time": "उपस्थिति समय",
+          "latitude": "अक्षांश",
+          "longitude": "देशांतर",
+          "photo": "फोटो",
+          "source": "स्रोत",
+          "source_mobile": "मोबाइल",
+          "source_vehicle_cam": "वाहन कैमरा"
+        },
+        "vehicle_trip_audit": {
+          "title_add": "वाहन ट्रिप ऑडिट जोड़ें",
+          "title_edit": "वाहन ट्रिप ऑडिट संपादित करें",
+          "subtitle": "GPS सैंपल और आइडल समय कैप्चर करें।",
+          "list_title": "वाहन ट्रिप ऑडिट",
+          "list_subtitle": "ट्रिप के लिए GPS ऑडिट सैंपल",
+          "create_button": "वाहन ट्रिप ऑडिट बनाएं",
+          "search_placeholder": "वाहन ट्रिप ऑडिट खोजें",
+          "empty_message": "कोई वाहन ट्रिप ऑडिट नहीं मिला",
+          "trip_instance": "ट्रिप",
+          "vehicle": "वाहन",
+          "gps_lat": "GPS अक्षांश",
+          "gps_lon": "GPS देशांतर",
+          "avg_speed": "औसत गति (किमी/घं.)",
+          "idle_seconds": "आइडल (सेकंड)",
+          "captured_at": "कैप्चर समय",
+          "gps_placeholder": "JSON ऐरे या कॉमा से अलग मान"
+        },
+        "trip_exception_log": {
+          "title_add": "ट्रिप अपवाद लॉग जोड़ें",
+          "title_edit": "ट्रिप अपवाद लॉग",
+          "subtitle": "ट्रिप के दौरान अपवाद ट्रैक करें।",
+          "list_title": "ट्रिप अपवाद लॉग",
+          "list_subtitle": "ट्रिप स्तर अपवाद इतिहास",
+          "create_button": "अपवाद बनाएं",
+          "search_placeholder": "ट्रिप अपवाद लॉग खोजें",
+          "empty_message": "कोई ट्रिप अपवाद लॉग नहीं मिला",
+          "trip_instance": "ट्रिप",
+          "exception_type": "अपवाद प्रकार",
+          "remarks": "टिप्पणियाँ",
+          "detected_by": "पता लगाने वाला",
+          "exception_types": {
+            "gps_mismatch": "GPS பொருந்தவில்லை",
+            "missed_attendance": "வருகை தவறியது",
+            "over_capacity": "அதிக கொள்ளளவு",
+            "route_deviation": "பாதை விலகல்",
+            "vehicle_unavailable": "வாகனம் கிடைக்கவில்லை"
+          },
+          "detected_by_options": {
+            "system": "அமைப்பு",
+            "supervisor": "மேற்பார்வையாளர்"
+          },
+          "edit_not_allowed": "ट्रिप अपवाद लॉग बदले नहीं जा सकते।"
+        },
         "bin_load_log": {
           "title_add": "பின் ஏற்ற பதிவு சேர்க்கவும்",
           "title_edit": "பின் ஏற்ற பதிவு திருத்தவும்",
@@ -2647,6 +2893,22 @@ const resources = {
           "source_type": "மூல வகை",
           "event_time": "நிகழ்வு நேரம்",
           "processed": "செயலாக்கப்பட்டது"
+        },
+        "zone_property_load_tracker": {
+          "title_add": "மண்டல சொத்து சுமை கண்காணிப்பு சேர்க்கவும்",
+          "title_edit": "மண்டல சொத்து சுமை கண்காணிப்பை திருத்தவும்",
+          "subtitle": "மண்டலம் மற்றும் சொத்து வாரியாக நிலுவை சுமையை கண்காணிக்கவும்.",
+          "list_title": "மண்டல சொத்து சுமை கண்காணிப்புகள்",
+          "list_subtitle": "மண்டலம், சொத்து, வாகனம் வாரியாக நேரடி சுமை கண்காணிப்பு",
+          "create_button": "சுமை கண்காணிப்பு உருவாக்கு",
+          "search_placeholder": "சுமை கண்காணிப்புகளை தேடவும்",
+          "empty_message": "சுமை கண்காணிப்பு பதிவுகள் இல்லை",
+          "zone": "மண்டலம்",
+          "vehicle": "வாகனம்",
+          "property": "சொத்து",
+          "sub_property": "உப சொத்து",
+          "current_weight": "தற்போதைய எடை (கிலோ)",
+          "last_updated": "கடைசி புதுப்பிப்பு"
         },
         "customer_tag": {
           "title_add": "வாடிக்கையாளர் டேக் வழங்கவும்",
@@ -2696,6 +2958,27 @@ const resources = {
           "new_zones": "புதிய மண்டலங்கள்",
           "remarks": "குறிப்புகள்",
           "created_at": "உருவாக்கப்பட்டது"
+        },
+        "unassigned_staff_pool": {
+          "title_add": "Add Unassigned Staff Pool",
+          "title_edit": "Edit Unassigned Staff Pool",
+          "subtitle": "Manage available operators and drivers by zone.",
+          "list_title": "Unassigned Staff Pool",
+          "list_subtitle": "Available staff by zone and ward",
+          "create_button": "Create Pool Entry",
+          "search_placeholder": "Search pool records",
+          "empty_message": "No unassigned staff records found",
+          "role": "Role",
+          "role_placeholder": "Select role",
+          "operator": "Operator",
+          "driver": "Driver",
+          "zone": "Zone",
+          "ward": "Ward",
+          "status": "Status",
+          "status_available": "Available",
+          "status_assigned": "Assigned",
+          "trip_instance": "Trip Instance",
+          "created_at": "Created At"
         },
         "user_screen_action": {
           "action_label": "செயல்",
@@ -4177,11 +4460,17 @@ const resources = {
           "vehicle_creation": "वाहन निर्माण",
           "trip_definition": "ट्रिप परिभाषा",
           "bin_load_log": "बिन लोड लॉग",
+          "trip_instance": "ट्रिप इंस्टेंस",
+          "trip_attendance": "ट्रिप उपस्थिति",
+          "vehicle_trip_audit": "वाहन ट्रिप ऑडिट",
+          "trip_exception_log": "ट्रिप अपवाद लॉग",
+          "zone_property_load_tracker": "ज़ोन प्रॉपर्टी लोड ट्रैकर",
           "vehicle_tracking": "वाहन ट्रैकिंग",
           "vehicle_history": "वाहन इतिहास",
           "route_plans": "रूट प्लान्स",
           "supervisor_zone_map": "सुपरवाइज़र ज़ोन मैप",
           "supervisor_zone_access_audit": "सुपरवाइज़र ज़ोन एक्सेस ऑडिट",
+          "unassigned_staff_pool": "Unassigned Staff Pool",
           "bin_master": "बिन मास्टर",
           "bin_creation": "बिन निर्माण",
           "waste_management": "कचरा प्रबंधन",
@@ -4247,6 +4536,7 @@ const resources = {
           "search_placeholder": "वैकल्पिक टेम्पलेट खोजें",
           "empty_message": "कोई वैकल्पिक स्टाफ टेम्पलेट नहीं मिला",
           "error_same_driver_operator": "ड्राइवर और ऑपरेटर समान नहीं हो सकते।",
+          "approved_locked": "Approved records cannot be modified.",
           "staff_template": "स्टाफ टेम्पलेट",
           "effective_date": "प्रभावी तिथि",
           "driver": "ड्राइवर",
@@ -4319,6 +4609,95 @@ const resources = {
           "approval_status": "अनुमोदन स्थिति",
           "status": "स्थिति"
         },
+        "trip_instance": {
+          "title_edit": "ट्रिप इंस्टेंस संपादित करें",
+          "subtitle": "ट्रिप निष्पादन स्थिति और लोड प्रबंधित करें।",
+          "list_title": "ट्रिप इंस्टेंस",
+          "list_subtitle": "लाइव और पूर्ण ट्रिप रन",
+          "search_placeholder": "ट्रिप इंस्टेंस खोजें",
+          "empty_message": "कोई ट्रिप इंस्टेंस नहीं मिला",
+          "trip_no": "ट्रिप नंबर",
+          "trip_definition": "ट्रिप परिभाषा",
+          "staff_template": "स्टाफ टेम्पलेट",
+          "alt_staff_template": "वैकल्पिक स्टाफ टेम्पलेट",
+          "zone": "ज़ोन",
+          "vehicle": "वाहन",
+          "property": "प्रॉपर्टी",
+          "sub_property": "सब-प्रॉपर्टी",
+          "trigger_weight": "ट्रिगर वजन (किग्रा)",
+          "max_capacity": "अधिकतम क्षमता (किग्रा)",
+          "current_load": "वर्तमान लोड (किग्रा)",
+          "start_load": "प्रारंभिक लोड (किग्रा)",
+          "end_load": "अंतिम लोड (किग्रा)",
+          "trip_start_time": "ट्रिप प्रारंभ समय",
+          "trip_end_time": "ट्रिप समाप्ति समय",
+          "status": "स्थिति",
+          "create_not_allowed": "ट्रिप इंस्टेंस केवल सिस्टम द्वारा बनाए जाते हैं।"
+        },
+        "trip_attendance": {
+          "title_add": "ट्रिप उपस्थिति जोड़ें",
+          "title_edit": "ट्रिप उपस्थिति संपादित करें",
+          "subtitle": "चल रही यात्राओं में उपस्थिति रिकॉर्ड करें।",
+          "list_title": "ट्रिप उपस्थिति",
+          "list_subtitle": "आवधिक उपस्थिति कैप्चर",
+          "create_button": "उपस्थिति बनाएं",
+          "search_placeholder": "ट्रिप उपस्थिति खोजें",
+          "empty_message": "कोई ट्रिप उपस्थिति रिकॉर्ड नहीं मिला",
+          "trip_instance": "ट्रिप",
+          "staff": "स्टाफ",
+          "vehicle": "वाहन",
+          "attendance_time": "उपस्थिति समय",
+          "latitude": "अक्षांश",
+          "longitude": "देशांतर",
+          "photo": "फोटो",
+          "source": "स्रोत",
+          "source_mobile": "मोबाइल",
+          "source_vehicle_cam": "वाहन कैमरा"
+        },
+        "vehicle_trip_audit": {
+          "title_add": "वाहन ट्रिप ऑडिट जोड़ें",
+          "title_edit": "वाहन ट्रिप ऑडिट संपादित करें",
+          "subtitle": "GPS सैंपल और आइडल समय कैप्चर करें।",
+          "list_title": "वाहन ट्रिप ऑडिट",
+          "list_subtitle": "ट्रिप के लिए GPS ऑडिट सैंपल",
+          "create_button": "वाहन ट्रिप ऑडिट बनाएं",
+          "search_placeholder": "वाहन ट्रिप ऑडिट खोजें",
+          "empty_message": "कोई वाहन ट्रिप ऑडिट नहीं मिला",
+          "trip_instance": "ट्रिप",
+          "vehicle": "वाहन",
+          "gps_lat": "GPS अक्षांश",
+          "gps_lon": "GPS देशांतर",
+          "avg_speed": "औसत गति (किमी/घं.)",
+          "idle_seconds": "आइडल (सेकंड)",
+          "captured_at": "कैप्चर समय",
+          "gps_placeholder": "JSON ऐरे या कॉमा से अलग मान"
+        },
+        "trip_exception_log": {
+          "title_add": "ट्रिप अपवाद लॉग जोड़ें",
+          "title_edit": "ट्रिप अपवाद लॉग",
+          "subtitle": "ट्रिप के दौरान अपवाद ट्रैक करें।",
+          "list_title": "ट्रिप अपवाद लॉग",
+          "list_subtitle": "ट्रिप स्तर अपवाद इतिहास",
+          "create_button": "अपवाद बनाएं",
+          "search_placeholder": "ट्रिप अपवाद लॉग खोजें",
+          "empty_message": "कोई ट्रिप अपवाद लॉग नहीं मिला",
+          "trip_instance": "ट्रिप",
+          "exception_type": "अपवाद प्रकार",
+          "remarks": "टिप्पणियाँ",
+          "detected_by": "पता लगाने वाला",
+          "exception_types": {
+            "gps_mismatch": "GPS मिसमैच",
+            "missed_attendance": "उपस्थिति छूटी",
+            "over_capacity": "क्षमता से अधिक",
+            "route_deviation": "रूट विचलन",
+            "vehicle_unavailable": "वाहन उपलब्ध नहीं"
+          },
+          "detected_by_options": {
+            "system": "सिस्टम",
+            "supervisor": "सुपरवाइज़र"
+          },
+          "edit_not_allowed": "ट्रिप अपवाद लॉग बदले नहीं जा सकते।"
+        },
         "bin_load_log": {
           "title_add": "बिन लोड लॉग जोड़ें",
           "title_edit": "बिन लोड लॉग संपादित करें",
@@ -4336,6 +4715,22 @@ const resources = {
           "source_type": "स्रोत प्रकार",
           "event_time": "इवेंट समय",
           "processed": "प्रोसेस्ड"
+        },
+        "zone_property_load_tracker": {
+          "title_add": "ज़ोन प्रॉपर्टी लोड ट्रैकर जोड़ें",
+          "title_edit": "ज़ोन प्रॉपर्टी लोड ट्रैकर संपादित करें",
+          "subtitle": "ज़ोन और प्रॉपर्टी के अनुसार लंबित लोड ट्रैक करें।",
+          "list_title": "ज़ोन प्रॉपर्टी लोड ट्रैकर",
+          "list_subtitle": "ज़ोन, प्रॉपर्टी और वाहन के अनुसार लाइव लोड ट्रैकिंग",
+          "create_button": "लोड ट्रैकर बनाएं",
+          "search_placeholder": "लोड ट्रैकर खोजें",
+          "empty_message": "कोई लोड ट्रैकर रिकॉर्ड नहीं मिला",
+          "zone": "ज़ोन",
+          "vehicle": "वाहन",
+          "property": "प्रॉपर्टी",
+          "sub_property": "सब-प्रॉपर्टी",
+          "current_weight": "वर्तमान वजन (किग्रा)",
+          "last_updated": "अंतिम अपडेट"
         },
         "customer_tag": {
           "title_add": "कस्टमर टैग जारी करें",
@@ -4385,6 +4780,27 @@ const resources = {
           "new_zones": "नए ज़ोन्स",
           "remarks": "टिप्पणियाँ",
           "created_at": "बनाया गया"
+        },
+        "unassigned_staff_pool": {
+          "title_add": "Add Unassigned Staff Pool",
+          "title_edit": "Edit Unassigned Staff Pool",
+          "subtitle": "Manage available operators and drivers by zone.",
+          "list_title": "Unassigned Staff Pool",
+          "list_subtitle": "Available staff by zone and ward",
+          "create_button": "Create Pool Entry",
+          "search_placeholder": "Search pool records",
+          "empty_message": "No unassigned staff records found",
+          "role": "Role",
+          "role_placeholder": "Select role",
+          "operator": "Operator",
+          "driver": "Driver",
+          "zone": "Zone",
+          "ward": "Ward",
+          "status": "Status",
+          "status_available": "Available",
+          "status_assigned": "Assigned",
+          "trip_instance": "Trip Instance",
+          "created_at": "Created At"
         },
         "user_screen_action": {
           "action_label": "एक्शन",
@@ -5075,7 +5491,7 @@ const resources = {
 
 const initialLanguage = (() => {
   if (typeof window === "undefined") return "en";
-  return localStorage.getItem(LANGUAGE_STORAGE_KEY) || "en";
+  return normalizeLanguageCode(localStorage.getItem(LANGUAGE_STORAGE_KEY));
 })();
 
 i18n.use(initReactI18next).init({
@@ -5090,14 +5506,15 @@ i18n.use(initReactI18next).init({
 
 if (typeof window !== "undefined") {
   const applyLanguageAttributes = (lng: string) => {
-    const normalized = lng.split("-")[0] || "en";
+    const normalized = normalizeLanguageCode(lng);
     document.documentElement.lang = normalized;
   };
 
   applyLanguageAttributes(initialLanguage);
   i18n.on("languageChanged", (lng) => {
-    localStorage.setItem(LANGUAGE_STORAGE_KEY, lng);
-    applyLanguageAttributes(lng);
+    const normalized = normalizeLanguageCode(lng);
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, normalized);
+    applyLanguageAttributes(normalized);
   });
 }
 

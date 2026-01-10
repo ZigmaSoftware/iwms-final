@@ -5,7 +5,6 @@ import { useTranslation } from "react-i18next";
 
 import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
-import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
 
@@ -13,17 +12,21 @@ import { PencilIcon } from "@/icons";
 import { adminApi } from "@/helpers/admin/registry";
 import { getEncryptedRoute } from "@/utils/routeCache";
 
-type TripDefinitionRecord = {
+type TripInstanceRecord = {
+  id: number;
   unique_id: string;
-  routeplan_id: string;
+  trip_no: string;
+  trip_definition_id: string;
   staff_template_id: string;
+  alternative_staff_template_id?: string | null;
+  zone_id: string;
+  vehicle_id: string;
   property_id: string;
   sub_property_id: string;
-  trip_trigger_weight_kg: number;
-  max_vehicle_capacity_kg: number;
-  approval_status: string;
+  current_load_kg: number;
   status: string;
-  created_at: string;
+  trip_start_time?: string | null;
+  trip_end_time?: string | null;
 };
 
 const normalizeList = (payload: any): any[] =>
@@ -38,35 +41,27 @@ const buildLookup = (items: any[], key: string, label: string, fallbackKey?: str
     return acc;
   }, {});
 
-const extractErrorMessage = (error: any): string | null => {
-  const data = error?.response?.data;
-  if (!data) return null;
-  if (typeof data === "string") return data;
-  if (typeof data?.detail === "string") return data.detail;
-  if (typeof data?.error === "string") return data.error;
-  if (typeof data === "object") {
-    const firstValue = Object.values(data)[0];
-    if (Array.isArray(firstValue)) return String(firstValue[0]);
-    if (typeof firstValue === "string") return firstValue;
-  }
-  return null;
-};
-
-export default function TripDefinitionList() {
+export default function TripInstanceList() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
+  const tripInstanceApi = adminApi.tripInstances;
   const tripDefinitionApi = adminApi.tripDefinitions;
-  const routePlanApi = adminApi.routePlans;
   const staffTemplateApi = adminApi.staffTemplate;
+  const altStaffTemplateApi = adminApi.alternativeStaffTemplate;
+  const zoneApi = adminApi.zones;
+  const vehicleApi = adminApi.vehicleCreations;
   const propertyApi = adminApi.properties;
   const subPropertyApi = adminApi.subProperties;
 
-  const [records, setRecords] = useState<TripDefinitionRecord[]>([]);
+  const [records, setRecords] = useState<TripInstanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [routePlanLookup, setRoutePlanLookup] = useState<Record<string, string>>({});
+  const [tripDefinitionLookup, setTripDefinitionLookup] = useState<Record<string, string>>({});
   const [staffTemplateLookup, setStaffTemplateLookup] = useState<Record<string, string>>({});
+  const [altStaffTemplateLookup, setAltStaffTemplateLookup] = useState<Record<string, string>>({});
+  const [zoneLookup, setZoneLookup] = useState<Record<string, string>>({});
+  const [vehicleLookup, setVehicleLookup] = useState<Record<string, string>>({});
   const [propertyLookup, setPropertyLookup] = useState<Record<string, string>>({});
   const [subPropertyLookup, setSubPropertyLookup] = useState<Record<string, string>>({});
 
@@ -75,32 +70,42 @@ export default function TripDefinitionList() {
     global: { value: null, matchMode: FilterMatchMode.CONTAINS },
   });
 
-  const { encTransportMaster, encTripDefinition } = getEncryptedRoute();
-  const ENC_NEW_PATH = `/${encTransportMaster}/${encTripDefinition}/new`;
-  const ENC_EDIT_PATH = (id: string) =>
-    `/${encTransportMaster}/${encTripDefinition}/${id}/edit`;
+  const { encTransportMaster, encTripInstance } = getEncryptedRoute();
+  const ENC_EDIT_PATH = (id: number) => `/${encTransportMaster}/${encTripInstance}/${id}/edit`;
 
   const fetchRecords = async () => {
     setLoading(true);
     try {
-      const [tripRes, routeRes, staffRes, propertyRes, subPropertyRes] = await Promise.all([
+      const [
+        tripRes,
+        tripDefRes,
+        staffRes,
+        altStaffRes,
+        zoneRes,
+        vehicleRes,
+        propertyRes,
+        subPropertyRes,
+      ] = await Promise.all([
+        tripInstanceApi.list(),
         tripDefinitionApi.list(),
-        routePlanApi.list(),
         staffTemplateApi.list(),
+        altStaffTemplateApi.list(),
+        zoneApi.list(),
+        vehicleApi.list(),
         propertyApi.list(),
         subPropertyApi.list(),
       ]);
 
       setRecords(normalizeList(tripRes));
-      setRoutePlanLookup(buildLookup(normalizeList(routeRes), "unique_id", "unique_id"));
-      setStaffTemplateLookup(
-        buildLookup(normalizeList(staffRes), "unique_id", "unique_id", "driver_name")
-      );
+      setTripDefinitionLookup(buildLookup(normalizeList(tripDefRes), "unique_id", "unique_id"));
+      setStaffTemplateLookup(buildLookup(normalizeList(staffRes), "unique_id", "unique_id", "driver_name"));
+      setAltStaffTemplateLookup(buildLookup(normalizeList(altStaffRes), "unique_id", "unique_id"));
+      setZoneLookup(buildLookup(normalizeList(zoneRes), "unique_id", "name"));
+      setVehicleLookup(buildLookup(normalizeList(vehicleRes), "unique_id", "vehicle_no"));
       setPropertyLookup(buildLookup(normalizeList(propertyRes), "unique_id", "property_name"));
       setSubPropertyLookup(buildLookup(normalizeList(subPropertyRes), "unique_id", "sub_property_name"));
-    } catch (error: any) {
-      const message = extractErrorMessage(error) ?? t("common.fetch_failed");
-      Swal.fire(t("common.error"), message, "error");
+    } catch {
+      Swal.fire(t("common.error"), t("common.fetch_failed"), "error");
     } finally {
       setLoading(false);
     }
@@ -116,24 +121,20 @@ export default function TripDefinitionList() {
     setFilters({ global: { value, matchMode: FilterMatchMode.CONTAINS } });
   };
 
+  const resolveDateTime = (value?: string | null) =>
+    value ? new Date(value).toLocaleString() : "-";
+
   const header = (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-semibold text-gray-800">
-            {t("admin.trip_definition.list_title")}
+            {t("admin.trip_instance.list_title")}
           </h1>
           <p className="text-sm text-gray-500">
-            {t("admin.trip_definition.list_subtitle")}
+            {t("admin.trip_instance.list_subtitle")}
           </p>
         </div>
-
-        <Button
-          label={t("admin.trip_definition.create_button")}
-          icon="pi pi-plus"
-          className="p-button-success p-button-sm"
-          onClick={() => navigate(ENC_NEW_PATH)}
-        />
       </div>
 
       <div className="flex justify-end">
@@ -142,7 +143,7 @@ export default function TripDefinitionList() {
           <InputText
             value={globalFilterValue}
             onChange={onGlobalFilterChange}
-            placeholder={t("admin.trip_definition.search_placeholder")}
+            placeholder={t("admin.trip_instance.search_placeholder")}
             className="border-none text-sm"
           />
         </div>
@@ -150,11 +151,11 @@ export default function TripDefinitionList() {
     </div>
   );
 
-  const actionTemplate = (row: TripDefinitionRecord) => (
+  const actionTemplate = (row: TripInstanceRecord) => (
     <div className="flex justify-center">
       <button
         title={t("common.edit")}
-        onClick={() => navigate(ENC_EDIT_PATH(row.unique_id), { state: { record: row } })}
+        onClick={() => navigate(ENC_EDIT_PATH(row.id), { state: { record: row } })}
         className="text-blue-600 hover:text-blue-800"
       >
         <PencilIcon className="size-5" />
@@ -166,52 +167,75 @@ export default function TripDefinitionList() {
     <div className="p-3">
       <DataTable
         value={records}
-        dataKey="unique_id"
+        dataKey="id"
         paginator
         rows={10}
         loading={loading}
         filters={filters}
         globalFilterFields={[
-          "unique_id",
-          "routeplan_id",
+          "trip_no",
+          "trip_definition_id",
           "staff_template_id",
-          "property_id",
-          "sub_property_id",
-          "approval_status",
+          "zone_id",
+          "vehicle_id",
           "status",
         ]}
         header={header}
         stripedRows
         showGridlines
         className="p-datatable-sm"
-        emptyMessage={t("admin.trip_definition.empty_message")}
+        emptyMessage={t("admin.trip_instance.empty_message")}
       >
         <Column header={t("common.s_no")} body={(_, { rowIndex }) => rowIndex + 1} style={{ width: 70 }} />
-        <Column field="unique_id" header="ID" />
+        <Column field="trip_no" header={t("admin.trip_instance.trip_no")} />
         <Column
-          header={t("admin.trip_definition.route_plan")}
-          body={(row: TripDefinitionRecord) => routePlanLookup[row.routeplan_id] ?? row.routeplan_id}
+          header={t("admin.trip_instance.trip_definition")}
+          body={(row: TripInstanceRecord) =>
+            tripDefinitionLookup[row.trip_definition_id] ?? row.trip_definition_id
+          }
         />
         <Column
-          header={t("admin.trip_definition.staff_template")}
-          body={(row: TripDefinitionRecord) =>
+          header={t("admin.trip_instance.staff_template")}
+          body={(row: TripInstanceRecord) =>
             staffTemplateLookup[row.staff_template_id] ?? row.staff_template_id
           }
         />
         <Column
-          header={t("admin.trip_definition.property")}
-          body={(row: TripDefinitionRecord) => propertyLookup[row.property_id] ?? row.property_id}
+          header={t("admin.trip_instance.alt_staff_template")}
+          body={(row: TripInstanceRecord) =>
+            row.alternative_staff_template_id
+              ? altStaffTemplateLookup[row.alternative_staff_template_id] ?? row.alternative_staff_template_id
+              : "-"
+          }
         />
         <Column
-          header={t("admin.trip_definition.sub_property")}
-          body={(row: TripDefinitionRecord) =>
+          header={t("admin.trip_instance.zone")}
+          body={(row: TripInstanceRecord) => zoneLookup[row.zone_id] ?? row.zone_id}
+        />
+        <Column
+          header={t("admin.trip_instance.vehicle")}
+          body={(row: TripInstanceRecord) => vehicleLookup[row.vehicle_id] ?? row.vehicle_id}
+        />
+        <Column
+          header={t("admin.trip_instance.property")}
+          body={(row: TripInstanceRecord) => propertyLookup[row.property_id] ?? row.property_id}
+        />
+        <Column
+          header={t("admin.trip_instance.sub_property")}
+          body={(row: TripInstanceRecord) =>
             subPropertyLookup[row.sub_property_id] ?? row.sub_property_id
           }
         />
-        <Column field="trip_trigger_weight_kg" header={t("admin.trip_definition.trigger_weight")} />
-        <Column field="max_vehicle_capacity_kg" header={t("admin.trip_definition.max_capacity")} />
-        <Column field="approval_status" header={t("admin.trip_definition.approval_status")} />
-        <Column field="status" header={t("admin.trip_definition.status")} />
+        <Column field="current_load_kg" header={t("admin.trip_instance.current_load")} />
+        <Column field="status" header={t("admin.trip_instance.status")} />
+        <Column
+          header={t("admin.trip_instance.trip_start_time")}
+          body={(row: TripInstanceRecord) => resolveDateTime(row.trip_start_time)}
+        />
+        <Column
+          header={t("admin.trip_instance.trip_end_time")}
+          body={(row: TripInstanceRecord) => resolveDateTime(row.trip_end_time)}
+        />
         <Column header={t("common.actions")} body={actionTemplate} style={{ width: 120 }} />
       </DataTable>
     </div>

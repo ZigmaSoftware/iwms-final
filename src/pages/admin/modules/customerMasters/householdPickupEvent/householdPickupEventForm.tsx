@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useTranslation } from "react-i18next";
 
@@ -21,6 +21,19 @@ type HouseholdPickupFormState = {
   sub_property_id: string;
   pickup_time: string;
   weight_kg: string;
+  collector_staff_id: string;
+  vehicle_id: string;
+  source: string;
+};
+
+type HouseholdPickupEventRecord = {
+  id: number;
+  customer_id: string;
+  zone_id: string;
+  property_id: string;
+  sub_property_id: string;
+  pickup_time?: string | null;
+  weight_kg?: number | null;
   collector_staff_id: string;
   vehicle_id: string;
   source: string;
@@ -50,6 +63,7 @@ export default function HouseholdPickupEventForm() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
+  const location = useLocation();
   const isEdit = Boolean(id);
 
   const householdPickupEventApi = adminApi.householdPickupEvents;
@@ -84,6 +98,22 @@ export default function HouseholdPickupEventForm() {
 
   const { encCustomerMaster, encHouseholdPickupEvent } = getEncryptedRoute();
   const ENC_LIST_PATH = `/${encCustomerMaster}/${encHouseholdPickupEvent}`;
+  const stateRecord = (location.state as { record?: HouseholdPickupEventRecord } | null)?.record;
+
+  const toFormState = (record?: Partial<HouseholdPickupEventRecord>): HouseholdPickupFormState | null => {
+    if (!record) return null;
+    return {
+      customer_id: record.customer_id ?? "",
+      zone_id: record.zone_id ?? "",
+      property_id: record.property_id ?? "",
+      sub_property_id: record.sub_property_id ?? "",
+      pickup_time: toDateTimeLocal(record.pickup_time),
+      weight_kg: record.weight_kg !== undefined && record.weight_kg !== null ? String(record.weight_kg) : "",
+      collector_staff_id: record.collector_staff_id ?? "",
+      vehicle_id: record.vehicle_id ?? "",
+      source: record.source ?? "",
+    };
+  };
 
   useEffect(() => {
     setFetching(true);
@@ -119,58 +149,80 @@ export default function HouseholdPickupEventForm() {
     householdPickupEventApi
       .get(id)
       .then((res: any) => {
-        setFormData({
-          customer_id: res?.customer_id ?? "",
-          zone_id: res?.zone_id ?? "",
-          property_id: res?.property_id ?? "",
-          sub_property_id: res?.sub_property_id ?? "",
-          pickup_time: toDateTimeLocal(res?.pickup_time),
-          weight_kg: res?.weight_kg ? String(res.weight_kg) : "",
-          collector_staff_id: res?.collector_staff_id ?? "",
-          vehicle_id: res?.vehicle_id ?? "",
-          source: res?.source ?? "",
-        });
+        const nextState = toFormState(res);
+        if (nextState) {
+          setFormData(nextState);
+        }
       })
       .catch(() => {
         Swal.fire(t("common.error"), t("common.load_failed"), "error");
       });
   }, [householdPickupEventApi, id, isEdit, t]);
 
+  useEffect(() => {
+    if (!isEdit || !stateRecord) return;
+    const nextState = toFormState(stateRecord);
+    if (nextState) {
+      setFormData(nextState);
+    }
+  }, [isEdit, stateRecord]);
+
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
-    if (
-      !formData.customer_id ||
-      !formData.zone_id ||
-      !formData.property_id ||
-      !formData.sub_property_id ||
-      !formData.pickup_time ||
-      !formData.collector_staff_id ||
-      !formData.vehicle_id ||
-      !formData.source
-    ) {
-      Swal.fire(t("common.warning"), t("common.missing_fields"), "warning");
-      return;
-    }
-
     setLoading(true);
     try {
-      const payload = {
-        customer_id: formData.customer_id,
-        zone_id: formData.zone_id,
-        property_id: formData.property_id,
-        sub_property_id: formData.sub_property_id,
-        pickup_time: formData.pickup_time,
-        weight_kg: formData.weight_kg ? Number(formData.weight_kg) : null,
-        collector_staff_id: formData.collector_staff_id,
-        vehicle_id: formData.vehicle_id,
-        source: formData.source,
-      };
+      if (!isEdit) {
+        if (
+          !formData.customer_id ||
+          !formData.zone_id ||
+          !formData.property_id ||
+          !formData.sub_property_id ||
+          !formData.pickup_time ||
+          !formData.collector_staff_id ||
+          !formData.vehicle_id ||
+          !formData.source
+        ) {
+          Swal.fire(t("common.warning"), t("common.missing_fields"), "warning");
+          return;
+        }
 
-      if (isEdit && id) {
-        await householdPickupEventApi.update(id, payload);
-      } else {
+        const payload = {
+          customer_id: formData.customer_id,
+          zone_id: formData.zone_id,
+          property_id: formData.property_id,
+          sub_property_id: formData.sub_property_id,
+          pickup_time: formData.pickup_time,
+          weight_kg: formData.weight_kg === "" ? null : Number(formData.weight_kg),
+          collector_staff_id: formData.collector_staff_id,
+          vehicle_id: formData.vehicle_id,
+          source: formData.source,
+        };
+
         await householdPickupEventApi.create(payload);
+      } else if (id) {
+        const payload = {
+          customer_id: formData.customer_id || undefined,
+          zone_id: formData.zone_id || undefined,
+          property_id: formData.property_id || undefined,
+          sub_property_id: formData.sub_property_id || undefined,
+          pickup_time: formData.pickup_time || undefined,
+          weight_kg: formData.weight_kg === "" ? undefined : Number(formData.weight_kg),
+          collector_staff_id: formData.collector_staff_id || undefined,
+          vehicle_id: formData.vehicle_id || undefined,
+          source: formData.source || undefined,
+        };
+
+        const updatePayload = Object.fromEntries(
+          Object.entries(payload).filter(([, value]) => value !== undefined)
+        );
+
+        if (Object.keys(updatePayload).length === 0) {
+          Swal.fire(t("common.warning"), t("common.missing_fields"), "warning");
+          return;
+        }
+
+        await householdPickupEventApi.update(id, updatePayload);
       }
 
       Swal.fire(

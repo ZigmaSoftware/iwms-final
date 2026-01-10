@@ -113,7 +113,7 @@ export default function AlternativeStaffTemplateList() {
     <div className="flex justify-center">
       <button
         title={t("common.edit")}
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.id), { state: { record: row } })}
         className="text-blue-600 hover:text-blue-800"
       >
         <i className="pi pi-pencil" />

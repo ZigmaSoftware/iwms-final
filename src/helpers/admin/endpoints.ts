@@ -20,6 +20,7 @@ export const adminEndpoints = {
   fuels: "assets/fuels",
   properties: "assets/properties",
   subProperties: "assets/subproperties",
+  zonePropertyLoadTrackers: "assets/zone-property-load-tracker",
 
   /* =========================
      SCREEN MANAGEMENT
@@ -71,8 +72,13 @@ export const adminEndpoints = {
   vehicleTypes: "vehicles/vehicle-type",
   vehicleCreations: "vehicles/vehicle-creation",
   tripDefinitions: "vehicles/trip-definition",
+  tripInstances: "vehicles/trip-instance",
   binLoadLogs: "vehicles/bin-load-log",
+  tripAttendances: "vehicles/trip-attendance",
+  vehicleTripAudits: "vehicles/vehicle-trip-audit",
+  tripExceptionLogs: "vehicles/trip-exception-log",
   routePlans: "user-creation/route-plans",
+  unassignedStaffPool: "user-creation/unassigned-staff-pool",
 } as const;
 
 export type AdminEntity = keyof typeof adminEndpoints;

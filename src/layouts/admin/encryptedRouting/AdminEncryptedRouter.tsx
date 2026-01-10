@@ -58,6 +58,16 @@ import TripDefinitionList from "@/pages/admin/modules/transportMasters/tripDefin
 import TripDefinitionForm from "@/pages/admin/modules/transportMasters/tripDefinition/tripDefinitionForm";
 import BinLoadLogList from "@/pages/admin/modules/transportMasters/binLoadLog/binLoadLogList";
 import BinLoadLogForm from "@/pages/admin/modules/transportMasters/binLoadLog/binLoadLogForm";
+import TripInstanceList from "@/pages/admin/modules/transportMasters/tripInstance/tripInstanceList";
+import TripInstanceForm from "@/pages/admin/modules/transportMasters/tripInstance/tripInstanceForm";
+import ZonePropertyLoadTrackerList from "@/pages/admin/modules/transportMasters/zonePropertyLoadTracker/zonePropertyLoadTrackerList";
+import ZonePropertyLoadTrackerForm from "@/pages/admin/modules/transportMasters/zonePropertyLoadTracker/zonePropertyLoadTrackerForm";
+import TripAttendanceList from "@/pages/admin/modules/transportMasters/tripAttendance/tripAttendanceList";
+import TripAttendanceForm from "@/pages/admin/modules/transportMasters/tripAttendance/tripAttendanceForm";
+import VehicleTripAuditList from "@/pages/admin/modules/transportMasters/vehicleTripAudit/vehicleTripAuditList";
+import VehicleTripAuditForm from "@/pages/admin/modules/transportMasters/vehicleTripAudit/vehicleTripAuditForm";
+import TripExceptionLogList from "@/pages/admin/modules/transportMasters/tripExceptionLog/tripExceptionLogList";
+import TripExceptionLogForm from "@/pages/admin/modules/transportMasters/tripExceptionLog/tripExceptionLogForm";
 import RoutePlanListPage from "@/pages/admin/modules/staffMasters/routeplan/routeplanlist";
 import RoutePlanForm from "@/pages/admin/modules/staffMasters/routeplan/routeplanform";
 import VehicleTracking from "@/pages/admin/modules/vehicletracking/vehicletrack/vehicletracking";
@@ -96,6 +106,8 @@ import SupervisorZoneMapList from "@/pages/admin/modules/staffMasters/supervisor
 import SupervisorZoneMapForm from "@/pages/admin/modules/staffMasters/supervisorZoneMap/supervisorZoneMapForm";
 import SupervisorZoneAccessAuditList from "@/pages/admin/modules/staffMasters/supervisorZoneAccessAudit/supervisorZoneAccessAuditList";
 import SupervisorZoneAccessAuditForm from "@/pages/admin/modules/staffMasters/supervisorZoneAccessAudit/supervisorZoneAccessAuditForm";
+import UnassignedStaffPoolList from "@/pages/admin/modules/staffMasters/unassignedStaffPool/unassignedStaffPoolList";
+import UnassignedStaffPoolForm from "@/pages/admin/modules/staffMasters/unassignedStaffPool/unassignedStaffPoolForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -139,6 +151,7 @@ const ROUTES: RouteMap = {
     "route-plans": { list: RoutePlanListPage, form: RoutePlanForm },
     "supervisor-zone-map": { list: SupervisorZoneMapList, form: SupervisorZoneMapForm },
     "supervisor-zone-access-audit": { list: SupervisorZoneAccessAuditList, form: SupervisorZoneAccessAuditForm },
+    "unassigned-staff-pool": { list: UnassignedStaffPoolList, form: UnassignedStaffPoolForm },
   },
   "transport-master": {
     fuel: { list: FuelList, form: FuelForm },
@@ -146,6 +159,11 @@ const ROUTES: RouteMap = {
     "vehicle-creation": { list: VehicleCreationListPage, form: VehicleCreationForm },
     "trip-definition": { list: TripDefinitionList, form: TripDefinitionForm },
     "bin-load-log": { list: BinLoadLogList, form: BinLoadLogForm },
+    "trip-instance": { list: TripInstanceList, form: TripInstanceForm },
+    "zone-property-load-tracker": { list: ZonePropertyLoadTrackerList, form: ZonePropertyLoadTrackerForm },
+    "trip-attendance": { list: TripAttendanceList, form: TripAttendanceForm },
+    "vehicle-trip-audit": { list: VehicleTripAuditList, form: VehicleTripAuditForm },
+    "trip-exception-log": { list: TripExceptionLogList, form: TripExceptionLogForm },
   },
   "customer-master": {
     "customer-creation": { list: CustomerCreationList, form: CustomerCreationForm },

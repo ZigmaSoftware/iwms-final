@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import Swal from "sweetalert2";
 import { useTranslation } from "react-i18next";
 
@@ -41,10 +41,25 @@ const toOptions = (items: any[], valueKey: string, labelKey: string, fallbackKey
     }))
     .filter((option) => option.value);
 
+const extractErrorMessage = (error: any): string | null => {
+  const data = error?.response?.data;
+  if (!data) return null;
+  if (typeof data === "string") return data;
+  if (typeof data?.detail === "string") return data.detail;
+  if (typeof data?.error === "string") return data.error;
+  if (typeof data === "object") {
+    const firstValue = Object.values(data)[0];
+    if (Array.isArray(firstValue)) return String(firstValue[0]);
+    if (typeof firstValue === "string") return firstValue;
+  }
+  return null;
+};
+
 export default function TripDefinitionForm() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
+  const location = useLocation();
   const isEdit = Boolean(id);
 
   const tripDefinitionApi = adminApi.tripDefinitions;
@@ -74,6 +89,7 @@ export default function TripDefinitionForm() {
 
   const { encTransportMaster, encTripDefinition } = getEncryptedRoute();
   const ENC_LIST_PATH = `/${encTransportMaster}/${encTripDefinition}`;
+  const stateRecord = (location.state as { record?: Partial<TripDefinitionFormState> } | null)?.record;
 
   useEffect(() => {
     setFetching(true);
@@ -91,11 +107,33 @@ export default function TripDefinitionForm() {
         setProperties(toOptions(normalizeList(propertyRes), "unique_id", "property_name"));
         setSubProperties(toOptions(normalizeList(subPropertyRes), "unique_id", "sub_property_name"));
       })
-      .catch(() => {
-        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      .catch((error: any) => {
+        const message = extractErrorMessage(error) ?? t("common.load_failed");
+        Swal.fire(t("common.error"), message, "error");
       })
       .finally(() => setFetching(false));
   }, [propertyApi, routePlanApi, staffTemplateApi, subPropertyApi, t]);
+
+  useEffect(() => {
+    if (!isEdit || !stateRecord) return;
+
+    setFormData({
+      routeplan_id: stateRecord?.routeplan_id ?? "",
+      staff_template_id: stateRecord?.staff_template_id ?? "",
+      property_id: stateRecord?.property_id ?? "",
+      sub_property_id: stateRecord?.sub_property_id ?? "",
+      trip_trigger_weight_kg:
+        stateRecord?.trip_trigger_weight_kg !== undefined && stateRecord?.trip_trigger_weight_kg !== null
+          ? String(stateRecord.trip_trigger_weight_kg)
+          : "",
+      max_vehicle_capacity_kg:
+        stateRecord?.max_vehicle_capacity_kg !== undefined && stateRecord?.max_vehicle_capacity_kg !== null
+          ? String(stateRecord.max_vehicle_capacity_kg)
+          : "",
+      approval_status: stateRecord?.approval_status ?? "",
+      status: stateRecord?.status ?? "ACTIVE",
+    });
+  }, [isEdit, stateRecord]);
 
   useEffect(() => {
     if (!isEdit || !id) return;
@@ -114,8 +152,9 @@ export default function TripDefinitionForm() {
           status: res?.status ?? "ACTIVE",
         });
       })
-      .catch(() => {
-        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      .catch((error: any) => {
+        const message = extractErrorMessage(error) ?? t("common.load_failed");
+        Swal.fire(t("common.error"), message, "error");
       });
   }, [id, isEdit, t, tripDefinitionApi]);
 
@@ -158,8 +197,9 @@ export default function TripDefinitionForm() {
         "success"
       );
       navigate(ENC_LIST_PATH);
-    } catch {
-      Swal.fire(t("common.save_failed"), t("common.save_failed_desc"), "error");
+    } catch (error: any) {
+      const message = extractErrorMessage(error) ?? t("common.save_failed_desc");
+      Swal.fire(t("common.save_failed"), message, "error");
     } finally {
       setLoading(false);
     }

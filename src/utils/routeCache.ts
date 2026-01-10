@@ -58,6 +58,12 @@ export type EncryptedRoutes = {
   encBinLoadLog: string;
   encCustomerTag: string;
   encHouseholdPickupEvent: string;
+  encZonePropertyLoadTracker: string;
+  encTripInstance: string;
+  encUnassignedStaffPool: string;
+  encTripAttendance: string;
+  encVehicleTripAudit: string;
+  encTripExceptionLog: string;
 
   // dashboard
   encDashboardLiveMap: string;
@@ -129,6 +135,12 @@ const plainRoutes: EncryptedRoutes = {
   encBinLoadLog: "bin-load-log",
   encCustomerTag: "customer-tag",
   encHouseholdPickupEvent: "household-pickup-event",
+  encZonePropertyLoadTracker: "zone-property-load-tracker",
+  encTripInstance: "trip-instance",
+  encUnassignedStaffPool: "unassigned-staff-pool",
+  encTripAttendance: "trip-attendance",
+  encVehicleTripAudit: "vehicle-trip-audit",
+  encTripExceptionLog: "trip-exception-log",
 
   //dashboard
 
