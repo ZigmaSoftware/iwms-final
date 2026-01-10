@@ -20,6 +20,7 @@ export const adminEndpoints = {
   fuels: "assets/fuels",
   properties: "assets/properties",
   subProperties: "assets/subproperties",
+  zonePropertyLoadTrackers: "assets/zone-property-load-tracker",
 
   /* =========================
      SCREEN MANAGEMENT
@@ -43,6 +44,8 @@ export const adminEndpoints = {
   staffCreation: "user-creation/staffcreation",
   staffTemplate: "user-creation/stafftemplate-creation",
   alternativeStaffTemplate: "user-creation/alternative-stafftemplate",
+  supervisorZoneMap: "user-creation/supervisor-zone-map",
+  supervisorZoneAccessAudit: "user-creation/supervisor-zone-access-audit",
 
   /* =========================
      Login
@@ -57,6 +60,8 @@ export const adminEndpoints = {
   wasteCollections: "customers/wastecollections",
   feedbacks: "customers/feedbacks",
   complaints: "customers/complaints",
+  customerTags: "customers/customer-tag",
+  householdPickupEvents: "customers/household-pickup-event",
   mainCategory: "customers/main-category",
   SubCategory: "customers/sub-category",
   
@@ -65,8 +70,15 @@ export const adminEndpoints = {
      VEHICLES
   ========================= */
   vehicleTypes: "vehicles/vehicle-type",
-  vehicleAssigning: "vehicles/vehicle-Assigning",
   vehicleCreations: "vehicles/vehicle-creation",
+  tripDefinitions: "vehicles/trip-definition",
+  tripInstances: "vehicles/trip-instance",
+  binLoadLogs: "vehicles/bin-load-log",
+  tripAttendances: "vehicles/trip-attendance",
+  vehicleTripAudits: "vehicles/vehicle-trip-audit",
+  tripExceptionLogs: "vehicles/trip-exception-log",
+  routePlans: "user-creation/route-plans",
+  unassignedStaffPool: "user-creation/unassigned-staff-pool",
 } as const;
 
 export type AdminEntity = keyof typeof adminEndpoints;

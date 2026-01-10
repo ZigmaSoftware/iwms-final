@@ -34,6 +34,10 @@ import UserCreationForm from "@/pages/admin/modules/admin/userCreation/user-crea
 // Customer Master
 import CustomerCreationList from "@/pages/admin/modules/customerMasters/customerCreations/customerCreationListPage";
 import CustomerCreationForm from "@/pages/admin/modules/customerMasters/customerCreations/customerCreationForm";
+import CustomerTagList from "@/pages/admin/modules/customerMasters/customerTag/customerTagList";
+import CustomerTagForm from "@/pages/admin/modules/customerMasters/customerTag/customerTagForm";
+import HouseholdPickupEventList from "@/pages/admin/modules/customerMasters/householdPickupEvent/householdPickupEventList";
+import HouseholdPickupEventForm from "@/pages/admin/modules/customerMasters/householdPickupEvent/householdPickupEventForm";
 
 // Reports (Single components)
 import TripSummary from "@/pages/admin/modules/reports/tripsummary/tripsummary";
@@ -50,6 +54,22 @@ import VehicleTypeCreation from "@/pages/admin/modules/transportMasters/vehicleT
 import VehicleTypeCreationForm from "@/pages/admin/modules/transportMasters/vehicleTypecreation/vechicle-typeCreationForm";
 import VehicleCreationListPage from "@/pages/admin/modules/transportMasters/vehicleCreation/vehicleCreationListPage";
 import VehicleCreationForm from "@/pages/admin/modules/transportMasters/vehicleCreation/vehicleCreationForm";
+import TripDefinitionList from "@/pages/admin/modules/transportMasters/tripDefinition/tripDefinitionList";
+import TripDefinitionForm from "@/pages/admin/modules/transportMasters/tripDefinition/tripDefinitionForm";
+import BinLoadLogList from "@/pages/admin/modules/transportMasters/binLoadLog/binLoadLogList";
+import BinLoadLogForm from "@/pages/admin/modules/transportMasters/binLoadLog/binLoadLogForm";
+import TripInstanceList from "@/pages/admin/modules/transportMasters/tripInstance/tripInstanceList";
+import TripInstanceForm from "@/pages/admin/modules/transportMasters/tripInstance/tripInstanceForm";
+import ZonePropertyLoadTrackerList from "@/pages/admin/modules/transportMasters/zonePropertyLoadTracker/zonePropertyLoadTrackerList";
+import ZonePropertyLoadTrackerForm from "@/pages/admin/modules/transportMasters/zonePropertyLoadTracker/zonePropertyLoadTrackerForm";
+import TripAttendanceList from "@/pages/admin/modules/transportMasters/tripAttendance/tripAttendanceList";
+import TripAttendanceForm from "@/pages/admin/modules/transportMasters/tripAttendance/tripAttendanceForm";
+import VehicleTripAuditList from "@/pages/admin/modules/transportMasters/vehicleTripAudit/vehicleTripAuditList";
+import VehicleTripAuditForm from "@/pages/admin/modules/transportMasters/vehicleTripAudit/vehicleTripAuditForm";
+import TripExceptionLogList from "@/pages/admin/modules/transportMasters/tripExceptionLog/tripExceptionLogList";
+import TripExceptionLogForm from "@/pages/admin/modules/transportMasters/tripExceptionLog/tripExceptionLogForm";
+import RoutePlanListPage from "@/pages/admin/modules/staffMasters/routeplan/routeplanlist";
+import RoutePlanForm from "@/pages/admin/modules/staffMasters/routeplan/routeplanform";
 import VehicleTracking from "@/pages/admin/modules/vehicletracking/vehicletrack/vehicletracking";
 import VehicleHistory from "@/pages/admin/modules/vehicletracking/vehiclehistory/vehiclehistory";
 import WorkforceManagement from "@/pages/admin/modules/workforcemanagement/workforcemanagement";
@@ -80,6 +100,14 @@ import StaffTemplateList from "@/pages/admin/modules/staffMasters/staffTemplate/
 import StaffTemplateForm from "@/pages/admin/modules/staffMasters/staffTemplate/staffTemplateForm";
 import AlternativeStaffTemplateList from "@/pages/admin/modules/staffMasters/alternativeStaffTemplate/alternativeStaffTemplateList";
 import AlternativeStaffTemplateForm from "@/pages/admin/modules/staffMasters/alternativeStaffTemplate/alternativeStaffTemplateForm";
+import StaffTemplateAuditList from "@/pages/admin/modules/staffMasters/staffTemplateAudit/staffTemplateAuditList";
+import StaffTemplateAuditForm from "@/pages/admin/modules/staffMasters/staffTemplateAudit/staffTemplateAuditForm";
+import SupervisorZoneMapList from "@/pages/admin/modules/staffMasters/supervisorZoneMap/supervisorZoneMapList";
+import SupervisorZoneMapForm from "@/pages/admin/modules/staffMasters/supervisorZoneMap/supervisorZoneMapForm";
+import SupervisorZoneAccessAuditList from "@/pages/admin/modules/staffMasters/supervisorZoneAccessAudit/supervisorZoneAccessAuditList";
+import SupervisorZoneAccessAuditForm from "@/pages/admin/modules/staffMasters/supervisorZoneAccessAudit/supervisorZoneAccessAuditForm";
+import UnassignedStaffPoolList from "@/pages/admin/modules/staffMasters/unassignedStaffPool/unassignedStaffPoolList";
+import UnassignedStaffPoolForm from "@/pages/admin/modules/staffMasters/unassignedStaffPool/unassignedStaffPoolForm";
 
 type ModuleComponent = ComponentType | undefined;
 
@@ -119,14 +147,28 @@ const ROUTES: RouteMap = {
     "staff-creation": { list: StaffCreationList, form: StaffCreationForm },
     "staff-template": {list: StaffTemplateList, form: StaffTemplateForm},
     "alternative-staff-template": {list: AlternativeStaffTemplateList, form: AlternativeStaffTemplateForm},
+    "staff-template-audit": { list: StaffTemplateAuditList, form: StaffTemplateAuditForm },
+    "route-plans": { list: RoutePlanListPage, form: RoutePlanForm },
+    "supervisor-zone-map": { list: SupervisorZoneMapList, form: SupervisorZoneMapForm },
+    "supervisor-zone-access-audit": { list: SupervisorZoneAccessAuditList, form: SupervisorZoneAccessAuditForm },
+    "unassigned-staff-pool": { list: UnassignedStaffPoolList, form: UnassignedStaffPoolForm },
   },
   "transport-master": {
     fuel: { list: FuelList, form: FuelForm },
     "vehicle-type": { list: VehicleTypeCreation, form: VehicleTypeCreationForm },
     "vehicle-creation": { list: VehicleCreationListPage, form: VehicleCreationForm },
+    "trip-definition": { list: TripDefinitionList, form: TripDefinitionForm },
+    "bin-load-log": { list: BinLoadLogList, form: BinLoadLogForm },
+    "trip-instance": { list: TripInstanceList, form: TripInstanceForm },
+    "zone-property-load-tracker": { list: ZonePropertyLoadTrackerList, form: ZonePropertyLoadTrackerForm },
+    "trip-attendance": { list: TripAttendanceList, form: TripAttendanceForm },
+    "vehicle-trip-audit": { list: VehicleTripAuditList, form: VehicleTripAuditForm },
+    "trip-exception-log": { list: TripExceptionLogList, form: TripExceptionLogForm },
   },
   "customer-master": {
     "customer-creation": { list: CustomerCreationList, form: CustomerCreationForm },
+    "customer-tag": { list: CustomerTagList, form: CustomerTagForm },
+    "household-pickup-event": { list: HouseholdPickupEventList, form: HouseholdPickupEventForm },
   },
   "vehicle-tracking": {
     "vehicle-track": { component: VehicleTracking },

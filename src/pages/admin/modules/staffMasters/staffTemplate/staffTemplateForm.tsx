@@ -21,7 +21,7 @@ type Option = {
 type StaffTemplateFormData = {
   driver_id: string;
   operator_id: string;
-  extra_operator_id: string; // comma-separated user IDs
+  extra_operator_id: string[];
   status: "ACTIVE" | "INACTIVE";
   approval_status: "PENDING" | "APPROVED" | "REJECTED";
   created_by: string;
@@ -34,7 +34,7 @@ type StaffTemplateFormData = {
 const initialFormData: StaffTemplateFormData = {
   driver_id: "",
   operator_id: "",
-  extra_operator_id: "",
+  extra_operator_id: [],
   status: "ACTIVE",
   approval_status: "PENDING",
   created_by: "",
@@ -55,8 +55,12 @@ export default function StaffTemplateForm() {
 
   const [driverOptions, setDriverOptions] = useState<Option[]>([]);
   const [operatorOptions, setOperatorOptions] = useState<Option[]>([]);
+  const [adminOptions, setAdminOptions] = useState<Option[]>([]);
+  const [supervisorOptions, setSupervisorOptions] = useState<Option[]>([]);
+  const [extraOperatorPick, setExtraOperatorPick] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [fetching, setFetching] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const { encStaffMasters, encStaffTemplate } = getEncryptedRoute();
   const ENC_LIST_PATH = `/${encStaffMasters}/${encStaffTemplate}`;
@@ -69,6 +73,29 @@ export default function StaffTemplateForm() {
     { value: "APPROVED", label: t("common.approved") },
     { value: "REJECTED", label: t("common.rejected") },
   ];
+
+  const extractError = (error: any): string => {
+    const data = error?.response?.data;
+    if (!data) return error?.message ?? t("common.unexpected_error");
+    if (typeof data === "string") return data;
+    if (data?.detail) return String(data.detail);
+    if (typeof data === "object") {
+      const messages = Object.entries(data).flatMap(([key, value]) => {
+        if (Array.isArray(value)) {
+          return value.map((item) => `${key}: ${item}`);
+        }
+        if (value === null || value === undefined) {
+          return [];
+        }
+        if (typeof value === "string") {
+          return [`${key}: ${value}`];
+        }
+        return [`${key}: ${JSON.stringify(value)}`];
+      });
+      if (messages.length) return messages.join("\n");
+    }
+    return t("common.unexpected_error");
+  };
 
   /* ================= LOAD STAFF OPTIONS ================= */
 
@@ -86,15 +113,32 @@ export default function StaffTemplateForm() {
             u.unique_id
         );
 
+        const normalizeRole = (value: unknown) =>
+          String(value ?? "").trim().toLowerCase();
+
         const drivers: Option[] = staffOnly
-          .filter((s: any) => s.staffusertype_name === "driver")
+          .filter((s: any) => normalizeRole(s.staffusertype_name) === "driver")
           .map((s: any) => ({
             value: s.unique_id,
             label: s.staff_name,
           }));
 
         const operators: Option[] = staffOnly
-          .filter((s: any) => s.staffusertype_name === "operator")
+          .filter((s: any) => normalizeRole(s.staffusertype_name) === "operator")
+          .map((s: any) => ({
+            value: s.unique_id,
+            label: s.staff_name,
+          }));
+
+        const admins: Option[] = staffOnly
+          .filter((s: any) => normalizeRole(s.staffusertype_name) === "admin")
+          .map((s: any) => ({
+            value: s.unique_id,
+            label: s.staff_name,
+          }));
+
+        const supervisors: Option[] = staffOnly
+          .filter((s: any) => normalizeRole(s.staffusertype_name) === "supervisor")
           .map((s: any) => ({
             value: s.unique_id,
             label: s.staff_name,
@@ -102,13 +146,19 @@ export default function StaffTemplateForm() {
 
         setDriverOptions(drivers);
         setOperatorOptions(operators);
+        setAdminOptions(admins);
+        setSupervisorOptions(supervisors);
 
         const currentUserId = localStorage.getItem("unique_id") || "";
+        const isAdmin = admins.some((option) => String(option.value) === currentUserId);
+        const isSupervisor = supervisors.some(
+          (option) => String(option.value) === currentUserId
+        );
         setFormData((prev) => ({
           ...prev,
           created_by: currentUserId,
-          updated_by: currentUserId,
-          approved_by: prev.approved_by || currentUserId,
+          updated_by: isSupervisor ? currentUserId : prev.updated_by,
+          approved_by: isAdmin ? currentUserId : prev.approved_by,
         }));
       })
       .catch(() => {
@@ -133,12 +183,20 @@ export default function StaffTemplateForm() {
     staffTemplateApi
       .get(id)
       .then((tpl: any) => {
+        setFormError(null);
+        const extraIds = Array.isArray(tpl.extra_operator_id)
+          ? tpl.extra_operator_id.map(String)
+          : typeof tpl.extra_operator_id === "string"
+          ? tpl.extra_operator_id
+              .split(",")
+              .map((item: string) => item.trim())
+              .filter(Boolean)
+          : [];
+
         setFormData({
           driver_id: tpl.driver_id ?? "",
           operator_id: tpl.operator_id ?? "",
-          extra_operator_id: Array.isArray(tpl.extra_operator_id)
-            ? tpl.extra_operator_id.join(",")
-            : "",
+          extra_operator_id: extraIds,
           status: tpl.status ?? "ACTIVE",
           approval_status: tpl.approval_status ?? "PENDING",
           created_by: tpl.created_by ?? "",
@@ -146,16 +204,72 @@ export default function StaffTemplateForm() {
           approved_by: tpl.approved_by ?? "",
         });
       })
-      .catch(() => {
-        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      .catch((error) => {
+        const message = extractError(error);
+        setFormError(message);
+        Swal.fire(t("common.error"), message, "error");
       })
       .finally(() => setFetching(false));
   }, [id, isEdit, driverOptions.length, operatorOptions.length, t]);
+
+  useEffect(() => {
+    setFormData((prev) => {
+      const filtered = prev.extra_operator_id.filter(
+        (item) => item !== prev.driver_id && item !== prev.operator_id
+      );
+      if (filtered.length === prev.extra_operator_id.length) {
+        return prev;
+      }
+      return { ...prev, extra_operator_id: filtered };
+    });
+  }, [formData.driver_id, formData.operator_id]);
+
+  const availableExtraOperatorOptions = operatorOptions.filter((option) => {
+    const value = String(option.value);
+    if (!value) return false;
+    if (value === formData.driver_id || value === formData.operator_id) {
+      return false;
+    }
+    return !formData.extra_operator_id.includes(value);
+  });
+
+  const resolveOperatorLabel = (value: string) => {
+    const match = operatorOptions.find(
+      (option) => String(option.value) === value
+    );
+    return match?.label ?? value;
+  };
+
+  const handleAddExtraOperator = (value: string) => {
+    if (!value) return;
+    if (
+      value === formData.driver_id ||
+      value === formData.operator_id ||
+      formData.extra_operator_id.includes(value)
+    ) {
+      setExtraOperatorPick("");
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      extra_operator_id: [...prev.extra_operator_id, value],
+    }));
+    setExtraOperatorPick("");
+  };
+
+  const handleRemoveExtraOperator = (value: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      extra_operator_id: prev.extra_operator_id.filter((item) => item !== value),
+    }));
+  };
 
   /* ================= SUBMIT ================= */
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setFormError(null);
 
     // Business rule
     if (
@@ -173,17 +287,10 @@ export default function StaffTemplateForm() {
     setSubmitting(true);
 
     try {
-      const extraIds = formData.extra_operator_id
-        ? formData.extra_operator_id
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean)
-        : [];
-
       const payload = {
         driver_id: formData.driver_id,
         operator_id: formData.operator_id,
-        extra_operator_id: extraIds,
+        extra_operator_id: formData.extra_operator_id,
         status: formData.status,
         approval_status: formData.approval_status,
         created_by: formData.created_by,
@@ -191,31 +298,23 @@ export default function StaffTemplateForm() {
         approved_by: formData.approved_by || null,
       };
 
-      const formBody = new FormData();
-      Object.entries(payload).forEach(([k, v]) => {
-        if (v === null || v === undefined) return;
-        if (Array.isArray(v)) {
-          v.forEach((item) => formBody.append(k, String(item)));
-        } else {
-          formBody.append(k, String(v));
-        }
-      });
-
       if (isEdit && id) {
-        await staffTemplateApi.update(id, formBody);
+        await staffTemplateApi.update(id, payload);
       } else {
-        await staffTemplateApi.create(formBody);
+        await staffTemplateApi.create(payload);
       }
 
       Swal.fire(
         t("common.success"),
-          isEdit ? t("common.updated_success") : t("common.created_success"),
-          "success"
-        );
+        isEdit ? t("common.updated_success") : t("common.added_success"),
+        "success"
+      );
 
       navigate(ENC_LIST_PATH);
-    } catch {
-      Swal.fire(t("common.error"), t("common.save_failed"), "error");
+    } catch (error) {
+      const message = extractError(error);
+      setFormError(message);
+      Swal.fire(t("common.save_failed"), message, "error");
     } finally {
       setSubmitting(false);
     }
@@ -234,6 +333,16 @@ export default function StaffTemplateForm() {
         desc={t("admin.staff_template.subtitle")}
       >
         <form onSubmit={handleSubmit} className="space-y-6">
+          {formError ? (
+            <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+              <p className="font-semibold">{t("common.error")}</p>
+              <ul className="mt-2 list-disc space-y-1 pl-5">
+                {formError.split("\n").map((line) => (
+                  <li key={line}>{line}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
             {/* DRIVER */}
             <div>
@@ -265,21 +374,44 @@ export default function StaffTemplateForm() {
               />
             </div>
 
-            {/* EXTRA OPERATORS (comma-separated IDs) */}
+            {/* EXTRA OPERATORS */}
             <div>
               <Label>{t("admin.staff_template.extra_staff")}</Label>
-              <textarea
-                className="w-full rounded border border-gray-300 p-2 text-sm"
-                placeholder={t("admin.staff_template.extra_staff_placeholder")}
-                value={formData.extra_operator_id}
-                onChange={(e) =>
-                  setFormData((p) => ({
-                    ...p,
-                    extra_operator_id: e.target.value,
-                  }))
-                }
+              <Select
+                value={extraOperatorPick}
+                onChange={handleAddExtraOperator}
+                options={availableExtraOperatorOptions}
+                placeholder={t("common.select_option")}
                 disabled={fetching}
               />
+              <div className="mt-3 flex flex-wrap gap-2">
+                {formData.extra_operator_id.length === 0 ? (
+                  <span className="text-xs text-gray-500">
+                    {t("common.no_items_found", {
+                      item: t("admin.staff_template.extra_staff"),
+                    })}
+                  </span>
+                ) : (
+                  formData.extra_operator_id.map((value) => (
+                    <span
+                      key={value}
+                      className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-xs text-gray-700"
+                    >
+                      <span className="max-w-[160px] truncate">
+                        {resolveOperatorLabel(value)}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExtraOperator(value)}
+                        className="rounded-full bg-white px-2 py-0.5 text-xs text-gray-500 hover:text-gray-800"
+                        aria-label={t("common.remove")}
+                      >
+                        x
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
             </div>
 
             {/* STATUS */}
@@ -320,7 +452,7 @@ export default function StaffTemplateForm() {
                 onChange={(v) =>
                   setFormData((p) => ({ ...p, approved_by: v }))
                 }
-                options={operatorOptions.concat(driverOptions)}
+                options={adminOptions}
                 placeholder={t("common.select_option")}
                 disabled={fetching}
               />
@@ -344,7 +476,7 @@ export default function StaffTemplateForm() {
                 onChange={(v) =>
                   setFormData((p) => ({ ...p, updated_by: v }))
                 }
-                options={operatorOptions.concat(driverOptions)}
+                options={supervisorOptions}
                 placeholder={t("common.select_option")}
                 disabled={fetching}
               />

@@ -18,6 +18,21 @@ const LANGUAGES: Array<{ value: LanguageCode; labelKey: string }> = [
   { value: "hi", labelKey: "common.language_hi" },
 ];
 
+const normalizeLanguageCode = (value?: string | null): LanguageCode => {
+  if (!value) return "en";
+  const lower = value.toLowerCase();
+  if (lower.startsWith("ta") || lower.includes("tamil") || value.includes("தமிழ்")) {
+    return "ta";
+  }
+  if (lower.startsWith("hi") || lower.includes("hindi") || value.includes("हिन्दी")) {
+    return "hi";
+  }
+  if (lower.startsWith("en") || lower.includes("english")) {
+    return "en";
+  }
+  return "en";
+};
+
 type LanguageSwitcherProps = {
   variant?: "buttons" | "select";
   className?: string;
@@ -33,10 +48,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
 }) => {
   const { i18n, t } = useTranslation();
   const rawLanguage = i18n.resolvedLanguage || i18n.language || "en";
-  const normalized = rawLanguage.split("-")[0] as LanguageCode;
-  const current = LANGUAGES.some((lang) => lang.value === normalized)
-    ? normalized
-    : "en";
+  const current = normalizeLanguageCode(rawLanguage);
   const defaultIconClass = "text-white";
   const iconClass = cn("text-[16px] leading-none", iconClassName ?? defaultIconClass);
   const iconBadgeClass = cn(
@@ -52,7 +64,7 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
       <div className={cn("flex items-center", className)}>
         <Select
           value={current}
-          onValueChange={(value) => setLang(value as LanguageCode)}
+          onValueChange={(value) => setLang(normalizeLanguageCode(value))}
         >
           <SelectTrigger
             className={cn(

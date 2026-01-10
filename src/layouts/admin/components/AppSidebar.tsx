@@ -49,6 +49,7 @@ const {
   encComplaint,
   encFeedback,
   encTransportMaster,
+  encRoutePlans,
   encFuel,
   encVehicleCreation,
   encVehicleHistory,
@@ -68,7 +69,20 @@ const {
   encUserScreenPermission,
   encStaffMasters,
   encStaffTemplate,
-  encAlternativeStaffTemplate
+  encAlternativeStaffTemplate,
+  encStaffTemplateAudit,
+  encSupervisorZoneMap,
+  encSupervisorZoneAccessAudit,
+  encTripDefinition,
+  encBinLoadLog,
+  encCustomerTag,
+  encHouseholdPickupEvent,
+  encZonePropertyLoadTracker,
+  encTripInstance,
+  encUnassignedStaffPool,
+  encTripAttendance,
+  encVehicleTripAudit,
+  encTripExceptionLog,
 } = getEncryptedRoute();
 
 type NavItem = {
@@ -132,6 +146,11 @@ const staffMasters: NavItem[] = [
       { nameKey: "admin.nav.staff_creation", path: `/${encStaffMasters}/${encStaffCreation}` },
       { nameKey: "admin.nav.staff_template", path: `/${encStaffMasters}/${encStaffTemplate}`},
       { nameKey: "admin.nav.alternative_staff_template", path: `/${encStaffMasters}/${encAlternativeStaffTemplate}`},
+      { nameKey: "admin.nav.staff_template_audit", path: `/${encStaffMasters}/${encStaffTemplateAudit}` },
+      { nameKey: "admin.nav.route_plans", path: `/${encStaffMasters}/${encRoutePlans}` },
+      { nameKey: "admin.nav.supervisor_zone_map", path: `/${encStaffMasters}/${encSupervisorZoneMap}` },
+      { nameKey: "admin.nav.supervisor_zone_access_audit", path: `/${encStaffMasters}/${encSupervisorZoneAccessAudit}` },
+      { nameKey: "admin.nav.unassigned_staff_pool", path: `/${encStaffMasters}/${encUnassignedStaffPool}` },
     ],
   },
 ];
@@ -144,6 +163,14 @@ const customerMasters: NavItem[] = [
       {
         nameKey: "admin.nav.customer_creation",
         path: `/${encCustomerMaster}/${encCustomerCreation}`,
+      },
+      {
+        nameKey: "admin.nav.customer_tag",
+        path: `/${encCustomerMaster}/${encCustomerTag}`,
+      },
+      {
+        nameKey: "admin.nav.household_pickup_event",
+        path: `/${encCustomerMaster}/${encHouseholdPickupEvent}`,
       },
     ],
   },
@@ -162,6 +189,34 @@ const transportMasters: NavItem[] = [
       {
         nameKey: "admin.nav.vehicle_creation",
         path: `/${encTransportMaster}/${encVehicleCreation}`,
+      },
+      {
+        nameKey: "admin.nav.trip_definition",
+        path: `/${encTransportMaster}/${encTripDefinition}`,
+      },
+      {
+        nameKey: "admin.nav.bin_load_log",
+        path: `/${encTransportMaster}/${encBinLoadLog}`,
+      },
+      {
+        nameKey: "admin.nav.trip_instance",
+        path: `/${encTransportMaster}/${encTripInstance}`,
+      },
+      {
+        nameKey: "admin.nav.zone_property_load_tracker",
+        path: `/${encTransportMaster}/${encZonePropertyLoadTracker}`,
+      },
+      {
+        nameKey: "admin.nav.trip_attendance",
+        path: `/${encTransportMaster}/${encTripAttendance}`,
+      },
+      {
+        nameKey: "admin.nav.vehicle_trip_audit",
+        path: `/${encTransportMaster}/${encVehicleTripAudit}`,
+      },
+      {
+        nameKey: "admin.nav.trip_exception_log",
+        path: `/${encTransportMaster}/${encTripExceptionLog}`,
       },
     ],
   },

@@ -19,7 +19,7 @@ type AlternativeStaffTemplate = {
   effective_date: string;
   driver: string;
   operator: string;
-  extra_operator?: string | null;
+  extra_operator?: string[] | null;
   change_reason: string;
   change_remarks?: string;
   approval_status: string;
@@ -113,7 +113,7 @@ export default function AlternativeStaffTemplateList() {
     <div className="flex justify-center">
       <button
         title={t("common.edit")}
-        onClick={() => navigate(ENC_EDIT_PATH(row.id))}
+        onClick={() => navigate(ENC_EDIT_PATH(row.id), { state: { record: row } })}
         className="text-blue-600 hover:text-blue-800"
       >
         <i className="pi pi-pencil" />
@@ -149,7 +149,16 @@ export default function AlternativeStaffTemplateList() {
         <Column field="effective_date" header={t("admin.alternative_staff_template.columns.effective_date")} />
         <Column field="driver" header={t("admin.alternative_staff_template.columns.driver")} />
         <Column field="operator" header={t("admin.alternative_staff_template.columns.operator")} />
-        <Column field="extra_operator" header={t("admin.alternative_staff_template.columns.extra_operator")} />
+        <Column
+          header={t("admin.alternative_staff_template.columns.extra_operator")}
+          body={(row: AlternativeStaffTemplate) =>
+            Array.isArray(row.extra_operator)
+              ? row.extra_operator.length
+              : row.extra_operator
+              ? 1
+              : 0
+          }
+        />
         <Column field="change_reason" header={t("admin.alternative_staff_template.columns.change_reason")} />
         <Column field="approval_status" header={t("admin.alternative_staff_template.columns.approval_status")} />
         <Column
