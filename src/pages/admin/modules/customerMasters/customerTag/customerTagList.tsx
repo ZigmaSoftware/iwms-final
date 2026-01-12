@@ -12,6 +12,7 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon } from "@/icons";
 import { adminApi } from "@/helpers/admin/registry";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { Switch } from "@/components/ui/switch";
 
 type CustomerTagRecord = {
   id: number;
@@ -85,6 +86,28 @@ export default function CustomerTagList() {
   const formatDate = (value?: string | null) =>
     value ? new Date(value).toLocaleString() : "-";
 
+  const statusBodyTemplate = (row: CustomerTagRecord) => {
+    const isActive = row.status === "ACTIVE";
+
+    const updateStatus = async (checked: boolean) => {
+      if (checked) return;
+      try {
+        await customerTagApi.update(row.id, {});
+        fetchRecords();
+      } catch {
+        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
+      }
+    };
+
+    return (
+      <Switch
+        checked={isActive}
+        disabled={!isActive}
+        onCheckedChange={updateStatus}
+      />
+    );
+  };
+
   const header = (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -153,7 +176,7 @@ export default function CustomerTagList() {
           header={t("admin.customer_tag.customer")}
           body={(row: CustomerTagRecord) => customerLookup[row.customer_id] ?? row.customer_id}
         />
-        <Column field="status" header={t("admin.customer_tag.status")} />
+        <Column header={t("admin.customer_tag.status")} body={statusBodyTemplate} style={{ width: 120 }} />
         <Column
           header={t("admin.customer_tag.issued_at")}
           body={(row: CustomerTagRecord) => formatDate(row.issued_at)}

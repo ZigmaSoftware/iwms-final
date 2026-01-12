@@ -12,6 +12,7 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon } from "@/icons";
 import { adminApi } from "@/helpers/admin/registry";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { Switch } from "@/components/ui/switch";
 
 type UnassignedStaffPoolRecord = {
   id: number;
@@ -96,10 +97,24 @@ export default function UnassignedStaffPoolList() {
     setFilters({ global: { value, matchMode: FilterMatchMode.CONTAINS } });
   };
 
-  const resolveStatus = (status?: string) => {
-    if (status === "AVAILABLE") return t("admin.unassigned_staff_pool.status_available");
-    if (status === "ASSIGNED") return t("admin.unassigned_staff_pool.status_assigned");
-    return status ?? "-";
+  const statusBodyTemplate = (row: UnassignedStaffPoolRecord) => {
+    const updateStatus = async (checked: boolean) => {
+      try {
+        await unassignedStaffPoolApi.update(row.id, {
+          status: checked ? "AVAILABLE" : "ASSIGNED",
+        });
+        fetchRecords();
+      } catch {
+        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
+      }
+    };
+
+    return (
+      <Switch
+        checked={row.status === "AVAILABLE"}
+        onCheckedChange={updateStatus}
+      />
+    );
   };
 
   const resolveDateTime = (value?: string | null) =>
@@ -190,7 +205,8 @@ export default function UnassignedStaffPoolList() {
         />
         <Column
           header={t("admin.unassigned_staff_pool.status")}
-          body={(row: UnassignedStaffPoolRecord) => resolveStatus(row.status)}
+          body={statusBodyTemplate}
+          style={{ width: 120 }}
         />
         <Column
           header={t("admin.unassigned_staff_pool.trip_instance")}

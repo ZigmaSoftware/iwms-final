@@ -173,6 +173,19 @@ export default function TripDefinitionForm() {
       return;
     }
 
+    const triggerWeight = Number(formData.trip_trigger_weight_kg);
+    const maxCapacity = Number(formData.max_vehicle_capacity_kg);
+
+    if (!Number.isFinite(triggerWeight) || !Number.isFinite(maxCapacity)) {
+      Swal.fire(t("common.warning"), t("common.invalid_data"), "warning");
+      return;
+    }
+
+    if (triggerWeight >= maxCapacity) {
+      Swal.fire(t("common.warning"), t("admin.trip_definition.validation_trigger"), "warning");
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = {
@@ -180,8 +193,8 @@ export default function TripDefinitionForm() {
         staff_template_id: formData.staff_template_id,
         property_id: formData.property_id,
         sub_property_id: formData.sub_property_id,
-        trip_trigger_weight_kg: Number(formData.trip_trigger_weight_kg),
-        max_vehicle_capacity_kg: Number(formData.max_vehicle_capacity_kg),
+        trip_trigger_weight_kg: triggerWeight,
+        max_vehicle_capacity_kg: maxCapacity,
         status: formData.status,
       };
 

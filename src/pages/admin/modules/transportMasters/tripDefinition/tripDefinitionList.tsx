@@ -12,6 +12,7 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon } from "@/icons";
 import { adminApi } from "@/helpers/admin/registry";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { Switch } from "@/components/ui/switch";
 
 type TripDefinitionRecord = {
   unique_id: string;
@@ -116,6 +117,27 @@ export default function TripDefinitionList() {
     setFilters({ global: { value, matchMode: FilterMatchMode.CONTAINS } });
   };
 
+  const statusBodyTemplate = (row: TripDefinitionRecord) => {
+    const updateStatus = async (checked: boolean) => {
+      try {
+        await tripDefinitionApi.update(row.unique_id, {
+          status: checked ? "ACTIVE" : "INACTIVE",
+        });
+        fetchRecords();
+      } catch (error: any) {
+        const message = extractErrorMessage(error) ?? t("common.update_status_failed");
+        Swal.fire(t("common.error"), message, "error");
+      }
+    };
+
+    return (
+      <Switch
+        checked={row.status === "ACTIVE"}
+        onCheckedChange={updateStatus}
+      />
+    );
+  };
+
   const header = (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -211,7 +233,7 @@ export default function TripDefinitionList() {
         <Column field="trip_trigger_weight_kg" header={t("admin.trip_definition.trigger_weight")} />
         <Column field="max_vehicle_capacity_kg" header={t("admin.trip_definition.max_capacity")} />
         <Column field="approval_status" header={t("admin.trip_definition.approval_status")} />
-        <Column field="status" header={t("admin.trip_definition.status")} />
+        <Column header={t("admin.trip_definition.status")} body={statusBodyTemplate} style={{ width: 120 }} />
         <Column header={t("common.actions")} body={actionTemplate} style={{ width: 120 }} />
       </DataTable>
     </div>

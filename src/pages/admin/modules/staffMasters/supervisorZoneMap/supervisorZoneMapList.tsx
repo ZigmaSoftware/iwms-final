@@ -11,6 +11,7 @@ import { FilterMatchMode } from "primereact/api";
 
 import { adminApi } from "@/helpers/admin/registry";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { Switch } from "@/components/ui/switch";
 
 type SupervisorZoneMapRecord = {
   id: number;
@@ -118,6 +119,26 @@ export default function SupervisorZoneMapList() {
       .join(", ");
   };
 
+  const statusBodyTemplate = (row: SupervisorZoneMapRecord) => {
+    const updateStatus = async (checked: boolean) => {
+      try {
+        await supervisorZoneMapApi.update(row.id, {
+          status: checked ? "ACTIVE" : "INACTIVE",
+        });
+        fetchRecords();
+      } catch {
+        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
+      }
+    };
+
+    return (
+      <Switch
+        checked={row.status === "ACTIVE"}
+        onCheckedChange={updateStatus}
+      />
+    );
+  };
+
   const actionTemplate = (row: SupervisorZoneMapRecord) => (
     <div className="flex justify-center">
       <button
@@ -189,7 +210,7 @@ export default function SupervisorZoneMapList() {
         <Column header={t("admin.supervisor_zone_map.district")} body={resolveDistrict} />
         <Column header={t("admin.supervisor_zone_map.city")} body={resolveCity} />
         <Column header={t("admin.supervisor_zone_map.zones")} body={resolveZones} />
-        <Column field="status" header={t("common.status")} />
+        <Column header={t("common.status")} body={statusBodyTemplate} style={{ width: 120 }} />
         <Column
           header={t("common.created_at")}
           body={(r: SupervisorZoneMapRecord) =>

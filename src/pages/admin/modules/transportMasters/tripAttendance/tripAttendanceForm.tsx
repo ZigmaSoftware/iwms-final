@@ -279,9 +279,11 @@ export default function TripAttendanceForm() {
     e.preventDefault();
 
     if (
-      !formData.trip_instance_id ||
-      !formData.staff_id ||
-      !formData.vehicle_id ||
+      (!isEdit && (
+        !formData.trip_instance_id ||
+        !formData.staff_id ||
+        !formData.vehicle_id
+      )) ||
       formData.latitude === "" ||
       formData.longitude === "" ||
       !formData.source

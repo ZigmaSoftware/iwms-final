@@ -264,11 +264,14 @@ export default function AlternativeStaffTemplateForm() {
     }
 
     if (
-      !formData.staff_template ||
-      !formData.effective_date ||
-      !formData.driver ||
-      !formData.operator ||
-      !formData.change_reason
+      !isEdit &&
+      (
+        !formData.staff_template ||
+        !formData.effective_date ||
+        !formData.driver ||
+        !formData.operator ||
+        !formData.change_reason
+      )
     ) {
       Swal.fire(t("common.warning"), t("common.missing_fields"), "warning");
       return;
@@ -283,20 +286,31 @@ export default function AlternativeStaffTemplateForm() {
       return;
     }
 
-      const payload = {
-        staff_template: formData.staff_template,
-        effective_date: formData.effective_date,
-        driver: formData.driver,
-        operator: formData.operator,
-        extra_operator: formData.extra_operator,
-        change_reason: formData.change_reason,
-        change_remarks: formData.change_remarks || null,
-      };
+    const payload = {
+      staff_template: formData.staff_template,
+      effective_date: formData.effective_date,
+      driver: formData.driver,
+      operator: formData.operator,
+      extra_operator: formData.extra_operator,
+      change_reason: formData.change_reason,
+      change_remarks: formData.change_remarks || null,
+    };
 
     setLoading(true);
     try {
       if (isEdit && id) {
-        await alternativeStaffTemplateApi.update(id, payload);
+        const updatePayload = Object.fromEntries(
+          Object.entries(payload).filter(([key, value]) => {
+            if (key === "extra_operator") {
+              return true;
+            }
+            if (key === "change_remarks") {
+              return true;
+            }
+            return value !== "";
+          })
+        );
+        await alternativeStaffTemplateApi.update(id, updatePayload);
       } else {
         await alternativeStaffTemplateApi.create(payload);
       }
