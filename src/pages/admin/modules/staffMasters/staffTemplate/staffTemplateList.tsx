@@ -12,6 +12,7 @@ import { FilterMatchMode } from "primereact/api";
 import { PencilIcon } from "@/icons";
 import { staffCreationApi, staffTemplateApi } from "@/helpers/admin";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { Switch } from "@/components/ui/switch";
 
 /* ================= TYPES ================= */
 
@@ -86,6 +87,25 @@ export default function StaffTemplateList() {
   };
 
   /* ================= STATUS TOGGLE ================= */
+  const statusBodyTemplate = (row: StaffTemplate) => {
+    const updateStatus = async (checked: boolean) => {
+      try {
+        await staffTemplateApi.update(row.unique_id, {
+          status: checked ? "ACTIVE" : "INACTIVE",
+        });
+        fetchTemplates();
+      } catch {
+        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
+      }
+    };
+
+    return (
+      <Switch
+        checked={row.status === "ACTIVE"}
+        onCheckedChange={updateStatus}
+      />
+    );
+  };
 
   /* ================= ACTIONS ================= */
 
@@ -191,9 +211,9 @@ export default function StaffTemplateList() {
         />
 
         <Column
-          field="status"
           header={t("common.status")}
-          sortable
+          body={statusBodyTemplate}
+          style={{ width: 120 }}
         />
 
         <Column

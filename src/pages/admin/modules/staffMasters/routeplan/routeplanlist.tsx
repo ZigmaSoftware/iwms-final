@@ -12,6 +12,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 import { adminApi } from "@/helpers/admin/registry";
 import { useTranslation } from "react-i18next";
 import { PencilIcon } from "@/icons";
+import { Switch } from "@/components/ui/switch";
 
 type RoutePlanRecord = {
   unique_id: string;
@@ -115,6 +116,26 @@ export default function RoutePlanList() {
   const resolveSupervisor = (row: RoutePlanRecord) =>
     row.supervisor_id ? supervisorLookup[String(row.supervisor_id)] ?? row.supervisor_id : "-";
 
+  const statusBodyTemplate = (row: RoutePlanRecord) => {
+    const updateStatus = async (checked: boolean) => {
+      try {
+        await routePlanApi.update(row.unique_id, {
+          status: checked ? "ACTIVE" : "INACTIVE",
+        });
+        fetchList();
+      } catch {
+        Swal.fire(t("common.error"), t("common.update_status_failed"), "error");
+      }
+    };
+
+    return (
+      <Switch
+        checked={row.status === "ACTIVE"}
+        onCheckedChange={updateStatus}
+      />
+    );
+  };
+
   const actionTemplate = (row: RoutePlanRecord) => (
     <div className="flex gap-3 justify-center">
       <button
@@ -196,7 +217,7 @@ export default function RoutePlanList() {
         <Column header={t("admin.route_plan.zone")} body={resolveZone} />
         <Column header={t("admin.route_plan.vehicle")} body={resolveVehicle} />
         <Column header={t("admin.route_plan.supervisor")} body={resolveSupervisor} />
-        <Column field="status" header={t("common.status")} />
+        <Column header={t("common.status")} body={statusBodyTemplate} style={{ width: 120 }} />
         <Column
           header={t("common.created_at")}
           body={(row: RoutePlanRecord) =>
