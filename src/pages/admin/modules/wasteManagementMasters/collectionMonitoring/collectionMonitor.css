@@ -3,6 +3,27 @@
 .map-wrapper {
   position: relative;
   width: 100%;
+  border-radius: 18px;
+  border: 1px solid var(--admin-border, #e2e8f0);
+  background: var(--admin-surfaceAlt, #ffffff);
+  overflow: hidden;
+}
+
+.map-wrapper .map-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+}
+
+.map-wrapper .map-canvas.leaflet-container {
+  width: 100%;
+  height: 100%;
+}
+
+.map-wrapper .admin-map-panel {
+  z-index: 10;
 }
 
 .map-household-summary {
@@ -13,6 +34,9 @@
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-wrap: wrap;
+  max-width: calc(100% - 24px);
+  justify-content: center;
   background: rgba(255, 255, 255, 0.92);
   padding: 6px 10px;
   border-radius: 999px;
@@ -32,6 +56,9 @@
   border: none;
   cursor: pointer;
   font-weight: 600;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .map-household-summary .summary-pill .summary-dot {
@@ -94,6 +121,9 @@
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
+  text-align: center;
+  white-space: normal;
+  line-height: 1.2;
 }
 
 .map-status-pill.collected {
@@ -104,6 +134,48 @@
 .map-status-pill.not-collected {
   color: #b91c1c;
   background: #fee2e2;
+}
+
+.admin-map-panel__title-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex: 1 1 auto;
+  min-width: min-content;
+}
+
+.admin-map-panel__title-row > div {
+  min-width: 0;
+}
+
+.admin-map-panel__icon--house {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: var(--admin-primarySoft, #dbeafe);
+  color: var(--admin-primary, #1d4ed8);
+  border: 1px solid var(--admin-border, #bfdbfe);
+  box-shadow: 0 10px 24px rgba(30, 64, 175, 0.15);
+  animation: houseFloat 2.6s ease-in-out infinite;
+}
+
+.admin-map-panel__icon--house svg {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes houseFloat {
+  0% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-4px) scale(1.03);
+  }
+  100% {
+    transform: translateY(0) scale(1);
+  }
 }
 
 .vehicle-list {
@@ -151,13 +223,109 @@
 .on { color: green; font-weight: bold; }
 .off { color: red; font-weight: bold; }
 
-/* smaller truck marker */
+@keyframes truckPulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes truckBounce {
+  0% { transform: scale(0.9); }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
 .custom-marker .truck-marker {
-  font-size: 18px;
-  background: #f9c74f;
+  display: grid;
+  place-items: center;
   border: 2px solid #fff;
   border-radius: 50%;
-  padding: 3px;
+  position: relative;
+  color: #fff;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.25);
+}
+
+.custom-marker .truck-marker .truck-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.35;
+  transform: translate(-50%, -50%);
+  animation: truckPulse 1.4s ease-out infinite;
+}
+
+.custom-marker .truck-marker.focused {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.85), 0 10px 18px rgba(15, 23, 42, 0.3);
+  animation: truckBounce 0.6s ease-out;
+}
+
+.custom-marker .truck-marker .truck-emoji {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.custom-marker .truck-marker.focused .truck-emoji {
+  font-size: 19px;
+}
+
+@keyframes housePulse {
+  0% {
+    transform: translate(-50%, -50%) scale(0.9);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.35);
+    opacity: 0;
+  }
+}
+
+@keyframes houseBounce {
+  0% { transform: scale(0.9); }
+  60% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+
+.custom-marker .house-marker {
+  display: grid;
+  place-items: center;
+  border: 2px solid #fff;
+  border-radius: 10px;
+  position: relative;
+  color: #fff;
+  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.22);
+}
+
+.custom-marker .house-marker .house-pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.35;
+  transform: translate(-50%, -50%);
+  animation: housePulse 1.4s ease-out infinite;
+}
+
+.custom-marker .house-marker.focused {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.85), 0 10px 18px rgba(15, 23, 42, 0.28);
+  animation: houseBounce 0.6s ease-out;
+}
+
+.custom-marker .house-marker .house-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.custom-marker .house-marker.focused .house-icon {
+  width: 18px;
+  height: 18px;
 }
 
 

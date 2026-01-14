@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 
 import { encryptSegment } from "@/utils/routeCrypto";
 
@@ -32,6 +33,7 @@ import { mainScreenTypeApi } from "@/helpers/admin";
     COMPONENT START
 ========================================================== */
 export default function MainScreenTypeForm() {
+  const { t } = useTranslation();
   /* FORM FIELDS */
   const [typeName, setTypeName] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -56,7 +58,7 @@ export default function MainScreenTypeForm() {
         setTypeName(data.type_name ?? "");
         setIsActive(Boolean(data.is_active));
       } catch (err: any) {
-        Swal.fire("Error", "Unable to load record.", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
       }
     })();
   }, [id, isEdit]);
@@ -68,11 +70,7 @@ export default function MainScreenTypeForm() {
     e.preventDefault();
 
     if (!typeName.trim()) {
-      Swal.fire(
-        "Missing Field",
-        "Main Screen Type Name is required.",
-        "warning"
-      );
+      Swal.fire(t("common.warning"), t("common.missing_fields"), "warning");
       return;
     }
 
@@ -86,10 +84,10 @@ export default function MainScreenTypeForm() {
 
       if (isEdit && id) {
         await mainScreenTypeApi.update(id, payload);
-        Swal.fire("Success", "Updated successfully!", "success");
+        Swal.fire(t("common.success"), t("common.updated_success"), "success");
       } else {
         await mainScreenTypeApi.create(payload);
-        Swal.fire("Success", "Added successfully!", "success");
+        Swal.fire(t("common.success"), t("common.added_success"), "success");
       }
 
       navigate(ENC_LIST_PATH);
@@ -97,9 +95,9 @@ export default function MainScreenTypeForm() {
       const message =
         err?.response?.data?.type_name?.[0] ||
         err?.response?.data?.detail ||
-        "Unable to save.";
+        t("common.save_failed_desc");
 
-      Swal.fire("Save failed", message, "error");
+      Swal.fire(t("common.save_failed"), message, "error");
     } finally {
       setLoading(false);
     }
@@ -110,17 +108,28 @@ export default function MainScreenTypeForm() {
   ========================================================== */
   return (
     <ComponentCard
-      title={isEdit ? "Edit Main Screen Type" : "Add Main Screen Type"}
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.main_screen_type") })
+          : t("common.add_item", { item: t("admin.nav.main_screen_type") })
+      }
     >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Type Name */}
           <div>
-            <Label>Main Screen Type Name *</Label>
+            <Label>
+              {t("common.item_name", {
+                item: t("admin.nav.main_screen_type"),
+              })}{" "}
+              *
+            </Label>
             <Input
               value={typeName}
               onChange={(e) => setTypeName(e.target.value)}
-              placeholder="Enter type name"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.main_screen_type"),
+              })}
               className="input-validate w-full"
               required
             />
@@ -128,18 +137,18 @@ export default function MainScreenTypeForm() {
 
           {/* Status */}
           <div>
-            <Label>Status *</Label>
+            <Label>{t("common.status")} *</Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(v) => setIsActive(v === "true")}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
 
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -150,11 +159,11 @@ export default function MainScreenTypeForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-                ? "Update"
-                : "Save"}
+                ? t("common.update")
+                : t("common.save")}
           </Button>
 
           <Button
@@ -162,7 +171,7 @@ export default function MainScreenTypeForm() {
             variant="destructive"
             onClick={() => navigate(ENC_LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

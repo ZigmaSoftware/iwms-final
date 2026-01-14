@@ -14,6 +14,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -50,6 +51,7 @@ type ApiRow = {
 /* ================= COMPONENT ================= */
 
 export default function WasteSummary() {
+  const { t, i18n } = useTranslation();
   const today = new Date();
   const todayKey = today.toISOString().split("T")[0];
   const initialMonth = `${today.getFullYear()}-${String(
@@ -302,7 +304,7 @@ export default function WasteSummary() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search waste summary..."
+          placeholder={t("admin.reports.waste_summary.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -310,35 +312,53 @@ export default function WasteSummary() {
   );
 
   /* ================= EXPORT ================= */
+  const exportLabels = useMemo(
+    () => ({
+      date: t("admin.reports.waste_summary.columns.date"),
+      totalHousehold: t("admin.reports.waste_summary.columns.total_household"),
+      collected: t("admin.reports.waste_summary.columns.collected"),
+      notCollected: t("admin.reports.waste_summary.columns.not_collected"),
+      vehicleCount: t("admin.reports.waste_summary.columns.vehicle_count"),
+      tripCount: t("admin.reports.waste_summary.columns.trip_count"),
+      dryWeight: t("admin.reports.waste_summary.columns.dry_weight"),
+      wetWeight: t("admin.reports.waste_summary.columns.wet_weight"),
+      mixedWeight: t("admin.reports.waste_summary.columns.mixed_weight"),
+      weighment: t("admin.reports.waste_summary.columns.weighment"),
+      avgPerTrip: t("admin.reports.waste_summary.columns.avg_per_trip"),
+      sheetName: t("admin.reports.waste_summary.export_sheet"),
+      filePrefix: t("admin.reports.waste_summary.export_file_prefix"),
+    }),
+    [i18n.language, t],
+  );
 
   const handleDownload = () => {
     const exportRows = displayRows.map((r) => ({
-      Date: r.date,
-      "Total Household": totalHouseholdCount,
-      Collected: totalCollectedCount,
-      "Not Collected":
+      [exportLabels.date]: r.date,
+      [exportLabels.totalHousehold]: totalHouseholdCount,
+      [exportLabels.collected]: totalCollectedCount,
+      [exportLabels.notCollected]:
         totalHouseholdCount !== null
           ? Math.max(
               totalHouseholdCount - (totalCollectedCount ?? 0),
               0
             )
           : null,
-      "No. of Vehicle": getVehicleCount(r),
-      "No. of Trip": parseNum(r.total_trip),
-      "Dry Wt/kg": parseNum(r.dry_weight),
-      "Wet Wt/kg": parseNum(r.wet_weight),
-      "Mixed Wt/kg": parseNum(r.mix_weight),
-      "Weighment/kg": parseNum(r.total_net_weight),
-      "Avg/Per Trip": parseNum(r.average_weight_per_trip),
+      [exportLabels.vehicleCount]: getVehicleCount(r),
+      [exportLabels.tripCount]: parseNum(r.total_trip),
+      [exportLabels.dryWeight]: parseNum(r.dry_weight),
+      [exportLabels.wetWeight]: parseNum(r.wet_weight),
+      [exportLabels.mixedWeight]: parseNum(r.mix_weight),
+      [exportLabels.weighment]: parseNum(r.total_net_weight),
+      [exportLabels.avgPerTrip]: parseNum(r.average_weight_per_trip),
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportRows);
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Waste Summary");
+    XLSX.utils.book_append_sheet(wb, ws, exportLabels.sheetName);
 
     saveAs(
       new Blob([XLSX.write(wb, { bookType: "xlsx", type: "array" })]),
-      `waste-summary-${appliedMonth}.xlsx`
+      `${exportLabels.filePrefix}-${appliedMonth}.xlsx`
     );
   };
 
@@ -350,10 +370,10 @@ export default function WasteSummary() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Waste Collected Summary
+              {t("admin.reports.waste_summary.title")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Month-wise waste collection analytics
+              {t("admin.reports.waste_summary.subtitle")}
             </p>
           </div>
 
@@ -371,14 +391,14 @@ export default function WasteSummary() {
               onClick={() => setAppliedMonth(monthValue)}
               className="bg-blue-600 text-white px-4 py-2 rounded"
             >
-              Go
+              {t("common.go")}
             </button>
 
             <button
               onClick={handleDownload}
               className="bg-green-600 text-white px-4 py-2 rounded"
             >
-              Download
+              {t("common.download")}
             </button>
           </div>
         </div>
@@ -392,7 +412,7 @@ export default function WasteSummary() {
           header={renderHeader()}
           stripedRows
           showGridlines
-          emptyMessage="No waste data found."
+          emptyMessage={t("admin.reports.waste_summary.empty_message")}
           globalFilterFields={[
             "date",
             "total_trip",
@@ -403,15 +423,22 @@ export default function WasteSummary() {
           ]}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={(_, o) => o.rowIndex + 1} style={{ width: "80px" }} />
-          <Column field="date" header="Date" sortable />
-          <Column header="Total Household" body={() => formatNum(totalHouseholdCount)} />
           <Column
-            header="Collected"
+            header={t("admin.reports.waste_summary.columns.s_no")}
+            body={(_, o) => o.rowIndex + 1}
+            style={{ width: "80px" }}
+          />
+          <Column field="date" header={t("admin.reports.waste_summary.columns.date")} sortable />
+          <Column
+            header={t("admin.reports.waste_summary.columns.total_household")}
+            body={() => formatNum(totalHouseholdCount)}
+          />
+          <Column
+            header={t("admin.reports.waste_summary.columns.collected")}
             body={() => formatNum(totalCollectedCount)}
           />
           <Column
-            header="Not Collected"
+            header={t("admin.reports.waste_summary.columns.not_collected")}
             body={(row) =>
               formatNum(
                 totalHouseholdCount !== null
@@ -423,15 +450,18 @@ export default function WasteSummary() {
               )
             }
           />
-          <Column header="No. of Vehicle" body={(r) => formatNum(getVehicleCount(r))} />
-          <Column field="total_trip" header="No. of Trip" sortable />
-          <Column field="dry_weight" header="Dry Wt/kg" sortable />
-          <Column field="wet_weight" header="Wet Wt/kg" sortable />
-          <Column field="mix_weight" header="Mixed Wt/kg" sortable />
-          <Column field="total_net_weight" header="Weighment/kg" sortable />
+          <Column
+            header={t("admin.reports.waste_summary.columns.vehicle_count")}
+            body={(r) => formatNum(getVehicleCount(r))}
+          />
+          <Column field="total_trip" header={t("admin.reports.waste_summary.columns.trip_count")} sortable />
+          <Column field="dry_weight" header={t("admin.reports.waste_summary.columns.dry_weight")} sortable />
+          <Column field="wet_weight" header={t("admin.reports.waste_summary.columns.wet_weight")} sortable />
+          <Column field="mix_weight" header={t("admin.reports.waste_summary.columns.mixed_weight")} sortable />
+          <Column field="total_net_weight" header={t("admin.reports.waste_summary.columns.weighment")} sortable />
           <Column
             field="average_weight_per_trip"
-            header="Avg / Trip"
+            header={t("admin.reports.waste_summary.columns.avg_per_trip")}
             body={(r) => Number(r.average_weight_per_trip).toFixed(2)}
           />
         </DataTable>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { GIcon } from "@/components/ui/gicon";
 
@@ -33,7 +34,6 @@ import {
   userCreationApi,
   fuelApi,
   vehicleTypeApi,
-  vehicleCreationApi,
   customerCreationApi,
   wasteCollectionApi,
   complaintApi,
@@ -47,6 +47,8 @@ import {
 
 import { MetricCard } from "./MetricCard";
 import { DashboardSection } from "./DashboardSection";
+
+const RADIAN = Math.PI / 180;
 
 /* -----------------------------------------
    TYPES
@@ -64,6 +66,7 @@ interface DashboardStats {
 ----------------------------------------- */
 export default function AdminHome() {
   const [loading, setLoading] = useState(true);
+  const { t } = useTranslation();
   const [stats, setStats] = useState<DashboardStats>({
     masterData: {},
     users: {},
@@ -98,7 +101,6 @@ export default function AdminHome() {
         staffUserTypeApi.list(),
         staffCreationApi.list(),
         customerCreationApi.list(),
-        vehicleCreationApi.list(),
         vehicleTypeApi.list(),
         fuelApi.list(),
         wasteCollectionApi.list(),
@@ -120,40 +122,40 @@ export default function AdminHome() {
 
       setStats({
         masterData: {
-          Continents: pick<any>(0).length,
-          Countries: pick<any>(1).length,
-          States: pick<any>(2).length,
-          Districts: pick<any>(3).length,
-          Cities: pick<any>(4).length,
-          Zones: pick<any>(5).length,
-          Wards: pick<any>(6).length,
-          Properties: pick<any>(7).length,
-          "Sub Properties": pick<any>(8).length,
+          continents: pick<any>(0).length,
+          countries: pick<any>(1).length,
+          states: pick<any>(2).length,
+          districts: pick<any>(3).length,
+          cities: pick<any>(4).length,
+          zones: pick<any>(5).length,
+          wards: pick<any>(6).length,
+          properties: pick<any>(7).length,
+          subProperties: pick<any>(8).length,
         },
         users: {
-          "Total Users": users.length,
-          Staff: pick<any>(12).length,
-          Customers: pick<any>(13).length,
-          "User Types": pick<any>(10).length,
-          "Staff User Types": pick<any>(11).length,
-          "Active Users": users.filter((u) => u?.is_active).length,
+          totalUsers: users.length,
+          staff: pick<any>(12).length,
+          customers: pick<any>(13).length,
+          userTypes: pick<any>(10).length,
+          staffUserTypes: pick<any>(11).length,
+          activeUsers: users.filter((u) => u?.is_active).length,
         },
         transport: {
-          Vehicles: pick<any>(14).length,
-          "Vehicle Types": pick<any>(15).length,
-          "Fuel Types": pick<any>(16).length,
+          vehicles: pick<any>(14).length,
+          vehicleTypes: pick<any>(15).length,
+          fuelTypes: pick<any>(16).length,
         },
         operations: {
-          "Waste Collections": pick<any>(17).length,
-          Complaints: pick<any>(18).length,
-          Feedbacks: pick<any>(19).length,
+          wasteCollections: pick<any>(17).length,
+          complaints: pick<any>(18).length,
+          feedbacks: pick<any>(19).length,
         },
         system: {
-          "Main Screen Types": pick<any>(20).length,
-          "Main Screens": pick<any>(21).length,
-          "User Screens": pick<any>(22).length,
-          "Screen Actions": pick<any>(23).length,
-          Permissions: pick<any>(24).length,
+          mainScreenTypes: pick<any>(20).length,
+          mainScreens: pick<any>(21).length,
+          userScreens: pick<any>(22).length,
+          screenActions: pick<any>(23).length,
+          permissions: pick<any>(24).length,
         },
       });
     } finally {
@@ -167,24 +169,77 @@ export default function AdminHome() {
   const totalMaster = Object.values(stats.masterData).reduce((a, b) => a + b, 0);
   const totalOps = Object.values(stats.operations).reduce((a, b) => a + b, 0);
 
-  const userPie = [
-    { name: "Staff", value: stats.users.Staff || 0 },
-    { name: "Customers", value: stats.users.Customers || 0 },
+  const masterItems = [
+    { key: "continents", label: t("admin.nav.continent") },
+    { key: "countries", label: t("admin.nav.country") },
+    { key: "states", label: t("admin.nav.state") },
+    { key: "districts", label: t("admin.nav.district") },
+    { key: "cities", label: t("admin.nav.city") },
+    { key: "zones", label: t("admin.nav.zone") },
+    { key: "wards", label: t("admin.nav.ward") },
+    { key: "properties", label: t("admin.nav.property") },
+    { key: "subProperties", label: t("admin.nav.sub_property") },
   ];
 
-  const masterBar = Object.entries(stats.masterData).map(([k, v]) => ({
-    name: k,
-    value: v,
+  const userItems = [
+    { key: "totalUsers", label: t("admin.home.kpi_total_users") },
+    { key: "staff", label: t("admin.home.label_staff") },
+    { key: "customers", label: t("admin.home.label_customers") },
+    { key: "userTypes", label: t("admin.home.label_user_types") },
+    { key: "staffUserTypes", label: t("admin.home.label_staff_user_types") },
+    { key: "activeUsers", label: t("admin.home.kpi_active_users") },
+  ];
+
+  const operationItems = [
+    { key: "wasteCollections", label: t("admin.home.label_waste_collections") },
+    { key: "complaints", label: t("admin.nav.complaints") },
+    { key: "feedbacks", label: t("admin.home.label_feedbacks") },
+  ];
+
+  const userPie = [
+    { name: t("admin.home.label_staff"), value: stats.users.staff || 0 },
+    { name: t("admin.home.label_customers"), value: stats.users.customers || 0 },
+  ];
+
+  const masterBar = masterItems.map((item) => ({
+    name: item.label,
+    value: stats.masterData[item.key] || 0,
   }));
 
-  const opsLine = Object.entries(stats.operations).map(([k, v]) => ({
-    name: k,
-    value: v,
+  const opsLine = operationItems.map((item) => ({
+    name: item.label,
+    value: stats.operations[item.key] || 0,
   }));
 
   const hasUserPieData = userPie.some((d) => d.value > 0);
   const hasMasterBarData = masterBar.some((d) => d.value > 0);
   const hasOpsLineData = opsLine.some((d) => d.value > 0);
+  const renderUserPieLabel = (props: any) => {
+    const { cx, cy, midAngle, outerRadius, value } = props;
+    if (value === 0 || value === undefined || value === null) return null;
+
+    const radius = outerRadius + 18;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+    const textAnchor = x > cx ? "start" : "end";
+
+    return (
+      <text
+        x={x}
+        y={y}
+        textAnchor={textAnchor}
+        dominantBaseline="central"
+        fontSize={14}
+        fontWeight={700}
+        fill="#0f172a"
+        stroke="#ffffff"
+        strokeWidth={3}
+        paintOrder="stroke"
+      >
+        {value}
+      </text>
+    );
+  };
 
   /* -----------------------------------------
      UI
@@ -194,32 +249,39 @@ export default function AdminHome() {
       {/* HEADER */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Analytics Dashboard</h1>
+          <h1 className="text-3xl font-bold">{t("admin.home.title")}</h1>
           <p className="text-sm text-muted-foreground">
-            Centralized operational intelligence
+            {t("admin.home.subtitle")}
           </p>
         </div>
         <Button variant="outline" onClick={fetchDashboardData}>
           <GIcon name="refresh" className="mr-2" />
-          Refresh
+          {t("admin.home.refresh")}
         </Button>
       </div>
 
       {/* KPI STRIP */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <MetricCard title="Total Master Data" value={totalMaster} icon="public" loading={loading} />
-        <MetricCard title="Total Users" value={stats.users["Total Users"] || 0} icon="group" loading={loading} />
-        <MetricCard title="Total Operations" value={totalOps} icon="assignment" loading={loading} />
-        <MetricCard title="Active Users" value={stats.users["Active Users"] || 0} icon="check_circle" loading={loading} />
+        <MetricCard title={t("admin.home.kpi_total_master")} value={totalMaster} icon="public" loading={loading} />
+        <MetricCard title={t("admin.home.kpi_total_users")} value={stats.users.totalUsers || 0} icon="group" loading={loading} />
+        <MetricCard title={t("admin.home.kpi_total_operations")} value={totalOps} icon="assignment" loading={loading} />
+        <MetricCard title={t("admin.home.kpi_active_users")} value={stats.users.activeUsers || 0} icon="check_circle" loading={loading} />
       </div>
 
       {/* CHARTS */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <ChartCard title="User Distribution" icon="pie_chart">
+        <ChartCard title={t("admin.home.chart_user_distribution")} icon="pie_chart">
           {hasUserPieData ? (
             <ResponsiveContainer width="100%" height={220}>
-              <PieChart>
-                <Pie data={userPie} dataKey="value" nameKey="name" outerRadius={80} label>
+              <PieChart margin={{ top: 16, right: 18, bottom: 16, left: 18 }}>
+                <Pie
+                  data={userPie}
+                  dataKey="value"
+                  nameKey="name"
+                  outerRadius={80}
+                  labelLine={{ stroke: "#94a3b8", strokeWidth: 1 }}
+                  label={renderUserPieLabel}
+                >
                   <Cell fill="#22c55e" />
                   <Cell fill="#3b82f6" />
                 </Pie>
@@ -227,11 +289,15 @@ export default function AdminHome() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart icon="pie_chart" title="No user data" subtitle="No permission or data" />
+            <EmptyChart
+              icon="pie_chart"
+              title={t("admin.home.empty_no_user_data")}
+              subtitle={t("admin.home.empty_permission_or_data")}
+            />
           )}
         </ChartCard>
 
-        <ChartCard title="Master Data Overview" icon="bar_chart">
+        <ChartCard title={t("admin.home.chart_master_overview")} icon="bar_chart">
           {hasMasterBarData ? (
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={masterBar}>
@@ -241,11 +307,15 @@ export default function AdminHome() {
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart icon="bar_chart" title="No master data" subtitle="Permission restricted" />
+            <EmptyChart
+              icon="bar_chart"
+              title={t("admin.home.empty_no_master_data")}
+              subtitle={t("admin.home.empty_permission_restricted")}
+            />
           )}
         </ChartCard>
 
-        <ChartCard title="Operations Snapshot" icon="show_chart">
+        <ChartCard title={t("admin.home.chart_operations_snapshot")} icon="show_chart">
           {hasOpsLineData ? (
             <ResponsiveContainer width="100%" height={220}>
               <AreaChart data={opsLine}>
@@ -257,21 +327,37 @@ export default function AdminHome() {
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyChart icon="show_chart" title="No operations data" subtitle="No permission or data" />
+            <EmptyChart
+              icon="show_chart"
+              title={t("admin.home.empty_no_operations_data")}
+              subtitle={t("admin.home.empty_permission_or_data")}
+            />
           )}
         </ChartCard>
       </div>
 
       {/* DETAIL SECTIONS */}
-      <DashboardSection title="Master Data" icon="location_on">
-        {Object.entries(stats.masterData).map(([k, v]) => (
-          <MetricCard key={k} title={k} value={v} icon="database" loading={loading} />
+      <DashboardSection title={t("admin.home.section_master_data")} icon="location_on">
+        {masterItems.map((item) => (
+          <MetricCard
+            key={item.key}
+            title={item.label}
+            value={stats.masterData[item.key] || 0}
+            icon="database"
+            loading={loading}
+          />
         ))}
       </DashboardSection>
 
-      <DashboardSection title="User Management" icon="people">
-        {Object.entries(stats.users).map(([k, v]) => (
-          <MetricCard key={k} title={k} value={v} icon="person" loading={loading} />
+      <DashboardSection title={t("admin.home.section_user_management")} icon="people">
+        {userItems.map((item) => (
+          <MetricCard
+            key={item.key}
+            title={item.label}
+            value={stats.users[item.key] || 0}
+            icon="person"
+            loading={loading}
+          />
         ))}
       </DashboardSection>
     </div>

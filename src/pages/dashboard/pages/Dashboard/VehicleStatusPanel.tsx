@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ChevronDown, MapPin, Truck, Gauge, PauseCircle, Square } from "lucide-react";
 import { getEncryptedRoute } from "@/utils/routeCache";
+import { useTranslation } from "react-i18next";
 
 interface VehicleStats {
   all: number;
@@ -20,6 +21,7 @@ interface VehicleStats {
 }
 
 export function VehicleStatusPanel() {
+  const { t } = useTranslation();
   const { encDashboardLiveMap, encDashboardVehicleManagement } = getEncryptedRoute();
   const liveMapPath = `/dashboard/${encDashboardLiveMap}`;
   const vehiclePath = `/dashboard/${encDashboardVehicleManagement}`;
@@ -100,7 +102,7 @@ export function VehicleStatusPanel() {
 
   const items = [
     {
-      label: "All Vehicles",
+      label: t("dashboard.home.vehicle_status_all"),
       value: stats.all,
       icon: Truck,
       bg: "bg-gradient-to-r from-gray-100 to-gray-50 dark:from-gray-800 dark:to-gray-900",
@@ -108,7 +110,7 @@ export function VehicleStatusPanel() {
       dot: "bg-gray-400",
     },
     {
-      label: "Running",
+      label: t("dashboard.home.vehicle_status_running"),
       value: stats.running,
       icon: Gauge,
       bg: "bg-gradient-to-r from-green-100 to-green-50 dark:from-green-900/20 dark:to-green-900/10",
@@ -116,7 +118,7 @@ export function VehicleStatusPanel() {
       dot: "bg-green-500",
     },
     {
-      label: "Idle",
+      label: t("dashboard.home.vehicle_status_idle"),
       value: stats.idle,
       icon: PauseCircle,
       bg: "bg-gradient-to-r from-yellow-100 to-yellow-50 dark:from-yellow-900/20 dark:to-yellow-900/10",
@@ -124,7 +126,7 @@ export function VehicleStatusPanel() {
       dot: "bg-yellow-500",
     },
     {
-      label: "Stopped",
+      label: t("dashboard.home.vehicle_status_stopped"),
       value: stats.stopped,
       icon: Square,
       bg: "bg-gradient-to-r from-red-100 to-red-50 dark:from-red-900/20 dark:to-red-900/10",
@@ -135,7 +137,7 @@ export function VehicleStatusPanel() {
 
   return (
     <DataCard
-      title="Vehicle Status"
+      title={t("dashboard.home.vehicle_status_title")}
       compact
       className="h-[275px]"
       action={
@@ -145,7 +147,7 @@ export function VehicleStatusPanel() {
               type="button"
               className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
             >
-              View all
+              {t("common.view_all")}
               <ChevronDown className="h-3 w-3" />
             </button>
           </DropdownMenuTrigger>
@@ -153,13 +155,13 @@ export function VehicleStatusPanel() {
             <DropdownMenuItem asChild>
               <Link to={liveMapPath} className="flex items-center gap-2">
                 <MapPin className="h-3.5 w-3.5" />
-                Live Map
+                {t("dashboard.home.vehicle_status_live_map")}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
               <Link to={vehiclePath} className="flex items-center gap-2">
                 <Truck className="h-3.5 w-3.5" />
-                Vehicle
+                {t("dashboard.home.vehicle_status_vehicle")}
               </Link>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -172,9 +174,9 @@ export function VehicleStatusPanel() {
             key={i}
             className={`flex flex-col items-center justify-between p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-all cursor-pointer ${item.bg}`}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex flex-wrap items-center justify-center gap-2 text-center">
               <item.icon className={`w-5 h-5 ${item.color}`} />
-              <div className={`text-sm font-semibold ${item.color}`}>
+              <div className={`text-sm font-semibold break-words leading-tight ${item.color}`}>
                 {item.label}
               </div>
             </div>

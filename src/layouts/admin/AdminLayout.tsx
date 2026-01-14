@@ -20,7 +20,7 @@ function AdminLayoutShell({ children }: AdminLayoutProps) {
 
   return (
     <div
-      className="relative min-h-screen text-[var(--admin-text)]"
+      className="admin-shell relative min-h-screen text-[var(--admin-text)]"
       style={{ background: "var(--admin-surface)" }}
     >
       <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">

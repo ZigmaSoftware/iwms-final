@@ -4,12 +4,14 @@ import flatpickr from "flatpickr";
 import type { Instance as FlatpickrInstance } from "flatpickr/dist/types/instance";
 import { customerCreationApi, wasteCollectionApi } from "@/helpers/admin";
 import "./collectionMonitor.css";
+import "../../../../../components/map/adminMapPanel.css";
 import "flatpickr/dist/flatpickr.min.css";
 import {
   filterActiveCustomers,
   normalizeCustomerArray,
 } from "@/utils/customerUtils";
 import type { CustomerRecord as CustomerRecordBase } from "@/utils/customerUtils";
+import { useTranslation } from "react-i18next";
 
 interface Vehicle {
   id: string;
@@ -23,6 +25,8 @@ interface Vehicle {
   distance: number;
   updatedAt: string;
 }
+
+type VehicleStatus = Vehicle["status"];
 
 type CustomerRecord = CustomerRecordBase & {
   customer_name?: string;
@@ -50,9 +54,81 @@ interface CustomerLocation {
 }
 
 const parseCoordinate = (value?: number | string | null) => {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(String(value).replace(/,/g, "."));
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(/,/g, ".");
+  const match = normalized.match(/-?\d+(\.\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0]);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const VEHICLE_STATUS_COLORS: Record<VehicleStatus, string> = {
+  Running: "#66E066",
+  Idle: "#FFB03F",
+  Parked: "#808080",
+  "No Data": "#999",
+};
+
+const createTruckIcon = (status: VehicleStatus, isFocused: boolean) => {
+  const color = VEHICLE_STATUS_COLORS[status];
+  const size = isFocused ? 38 : 30;
+  const pulseSize = Math.round(size * 1.2);
+
+  return L.divIcon({
+    className: "custom-marker",
+    html: `
+      <div class="truck-marker ${isFocused ? "focused" : ""}" style="width:${size}px;height:${size}px;background:${color};--accent:${color};">
+        ${
+          isFocused
+            ? `<span class="truck-pulse" style="width:${pulseSize}px;height:${pulseSize}px;"></span>`
+            : ""
+        }
+        <span class="truck-emoji">🚛</span>
+      </div>
+    `,
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+  });
+};
+
+const createHouseIcon = (color: string, isFocused: boolean) => {
+  const size = isFocused ? 40 : 32;
+  const pulseSize = Math.round(size * 1.15);
+
+  return L.divIcon({
+    className: "custom-marker",
+    iconSize: [size, size],
+    iconAnchor: [size / 2, size / 2],
+    popupAnchor: [0, -size / 2],
+    html: `
+      <div class="house-marker ${isFocused ? "focused" : ""}" style="width:${size}px;height:${size}px;background:${color};--accent:${color};">
+        ${
+          isFocused
+            ? `<span class="house-pulse" style="width:${pulseSize}px;height:${pulseSize}px;"></span>`
+            : ""
+        }
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#fff"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="house-icon"
+        >
+          <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
+          <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+        </svg>
+      </div>
+    `,
+  });
 };
 
 const pickCoordinate = (record: Record<string, any>, keys: string[]) => {
@@ -65,6 +141,7 @@ const pickCoordinate = (record: Record<string, any>, keys: string[]) => {
 };
 
 const WasteCollectionMonitor: React.FC = () => {
+  const { t } = useTranslation();
   const [fromDate, setFromDate] = useState<string>(
     new Date().toISOString().split("T")[0]
   );
@@ -85,9 +162,26 @@ const WasteCollectionMonitor: React.FC = () => {
 
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [map, setMap] = useState<L.Map | null>(null);
+  const [focusedVehicleId, setFocusedVehicleId] = useState("");
+  const [panelOpen, setPanelOpen] = useState(false);
+  const vehicleMarkerLookupRef = useRef<Record<string, L.Marker>>({});
+  const getVehicleStatusLabel = (status: VehicleStatus) => {
+    switch (status) {
+      case "Running":
+        return t("dashboard.live_map.status_running");
+      case "Idle":
+        return t("dashboard.live_map.status_idle");
+      case "Parked":
+        return t("dashboard.live_map.status_parked");
+      case "No Data":
+        return t("dashboard.live_map.status_no_data");
+      default:
+        return status;
+    }
+  };
   const statusOptions = [
     {
-      label: "Not Collected",
+      label: t("common.not_collected"),
       value: "not_collected",
       count: notCollectedCount,
       activeBg: "bg-red-100",
@@ -95,7 +189,7 @@ const WasteCollectionMonitor: React.FC = () => {
       activeDot: "bg-red-500",
     },
     {
-      label: "Collected",
+      label: t("common.collected"),
       value: "collected",
       count: collectedCount,
       activeBg: "bg-green-100",
@@ -103,7 +197,7 @@ const WasteCollectionMonitor: React.FC = () => {
       activeDot: "bg-green-500",
     },
     {
-      label: "Total Household",
+      label: t("admin.collection_monitoring.total_household"),
       value: "total_household",
       count: totalHouseholdCount,
       activeBg: "bg-blue-100",
@@ -167,14 +261,32 @@ const WasteCollectionMonitor: React.FC = () => {
     return customerLocations.find((location) => location.id === customerId) ?? null;
   }, [customerLocations, hasSelectedCustomer, customerId]);
 
-  const selectedCustomerStatusLabel = hasSelectedCustomer
+  const selectedCustomerStatus = hasSelectedCustomer
     ? collectedCustomerIds.includes(customerId)
-      ? "Collected"
-      : "Not Collected"
+      ? "collected"
+      : "not_collected"
     : null;
+  const selectedCustomerStatusLabel = selectedCustomerStatus
+    ? selectedCustomerStatus === "collected"
+      ? t("common.collected")
+      : t("common.not_collected")
+    : null;
+  const formatCoordinate = (value?: number | null) =>
+    typeof value === "number" && Number.isFinite(value)
+      ? value.toFixed(5)
+      : t("common.not_available");
+
+  const focusedVehicle = useMemo(
+    () => vehicles.find((vehicle) => vehicle.id === focusedVehicleId) ?? null,
+    [vehicles, focusedVehicleId]
+  );
+
+  const focusedVehicleStatusClass = focusedVehicle
+    ? focusedVehicle.status.toLowerCase().replace(" ", "-")
+    : "";
 
   // Fetch vehicle data from Vamosys
-  const fetchVamosysData = async () => {
+  const fetchVamosysData = useCallback(async () => {
     try {
       const response = await fetch(
         "https://api.vamosys.com/mobile/getGrpDataForTrustedClients?providerName=BLUEPLANET&fcode=VAM",
@@ -195,31 +307,37 @@ const WasteCollectionMonitor: React.FC = () => {
       console.log("Raw API data:", data);
 
       const parsedData: Vehicle[] =
-        data?.data?.map((v: any, index: number) => ({
-          id: index.toString(),
-          number: v.vehicleNumber || "Unknown",
-          lat: parseFloat(v.latitude) || 28.61,
-          lon: parseFloat(v.longitude) || 77.23,
-          status: v.status || "Idle",
-          speed: v.speed || 0,
-          ignition: v.ignitionStatus === "ON",
-          location: v.location || "Unknown Area",
-          distance: v.distance || 0,
-          updatedAt: v.updatedAt || new Date().toISOString(),
-        })) || [];
+        data?.data?.map((v: any, index: number) => {
+          const number =
+            v.vehicleNumber || v.vehicleNo || v.vehicle_number || v.regNo || t("common.unknown");
+          const resolvedId =
+            number && number !== "Unknown" ? String(number) : String(index);
+          return {
+            id: resolvedId,
+            number,
+            lat: parseFloat(v.latitude) || 28.61,
+            lon: parseFloat(v.longitude) || 77.23,
+            status: v.status || "Idle",
+            speed: v.speed || 0,
+            ignition: v.ignitionStatus === "ON",
+            location: v.location || t("common.location_unavailable"),
+            distance: v.distance || 0,
+            updatedAt: v.updatedAt || new Date().toISOString(),
+          };
+        }) || [];
 
       setVehicles(parsedData);
     } catch (error) {
       console.error("Error fetching vehicle data:", error);
     }
-  };
+  }, [t]);
 
   
 
   // Load vehicle data once
   useEffect(() => {
     fetchVamosysData();
-  }, []);
+  }, [fetchVamosysData]);
 
   const fetchSummaryCounts = useCallback(async () => {
     let households = 0;
@@ -236,32 +354,34 @@ const WasteCollectionMonitor: React.FC = () => {
       console.error("Failed to fetch household summary:", error);
     }
 
-    const locations = customerData
-      .map((customer) => {
-        const lat = pickCoordinate(customer, [
-          "latitude",
-          "lat",
-          "latitude_value",
-          "latitudeValue",
-        ]);
-        const lon = pickCoordinate(customer, [
-          "longitude",
-          "lng",
-          "longitude_value",
-          "longitudeValue",
-        ]);
-        if (lat === null || lon === null) return null;
-        return {
-          id: resolveId(customer),
-          name: customer.customer_name ?? "Unknown",
-          lat,
-          lon,
-          address: `${customer.building_no || ""} ${customer.street || ""} ${customer.area || ""}`.trim(),
-          zone: customer.zone_name,
-          ward: customer.ward_name,
-        } satisfies CustomerLocation;
-      })
-      .filter((loc): loc is CustomerLocation => Boolean(loc) && Boolean(loc.id));
+    const locations = customerData.reduce<CustomerLocation[]>((acc, customer) => {
+      const lat = pickCoordinate(customer, [
+        "latitude",
+        "lat",
+        "latitude_value",
+        "latitudeValue",
+      ]);
+      const lon = pickCoordinate(customer, [
+        "longitude",
+        "lng",
+        "lon",
+        "longitude_value",
+        "longitudeValue",
+      ]);
+      if (lat === null || lon === null) return acc;
+      const id = resolveId(customer);
+      if (!id) return acc;
+      acc.push({
+        id,
+        name: customer.customer_name ?? t("common.unknown"),
+        lat,
+        lon,
+        address: `${customer.building_no || ""} ${customer.street || ""} ${customer.area || ""}`.trim(),
+        zone: customer.zone_name,
+        ward: customer.ward_name,
+      });
+      return acc;
+    }, []);
 
     setCustomerLocations(locations);
     setTotalHouseholdCount(households);
@@ -297,7 +417,7 @@ const WasteCollectionMonitor: React.FC = () => {
     setCollectedCustomerIds(collectedIds);
     setCollectedCount(collectedIds.length);
     setNotCollectedCount(Math.max(households - collectedIds.length, 0));
-  }, [fromDate]);
+  }, [fromDate, t]);
 
   useEffect(() => {
     fetchSummaryCounts();
@@ -357,34 +477,48 @@ const WasteCollectionMonitor: React.FC = () => {
     if (!map) return;
     const vehicleLayer = L.layerGroup();
 
+    vehicleMarkerLookupRef.current = {};
     vehicles.forEach((v) => {
-      const color =
-        v.status === "Running"
-          ? "#66E066"
-          : v.status === "Idle"
-          ? "#FFB03F"
-          : v.status === "Parked"
-          ? "#808080"
-          : "#999";
-
-      const truckIcon = L.divIcon({
-        html: `<div class="truck-marker" style="color:${color}">🚛</div>`,
-        iconSize: [28, 28],
-        className: "custom-marker",
-      });
-
-      L.marker([v.lat, v.lon], { icon: truckIcon })
+      const isFocused = v.id === focusedVehicleId;
+      const marker = L.marker([v.lat, v.lon], {
+        icon: createTruckIcon(v.status, isFocused),
+      })
         .addTo(vehicleLayer)
         .bindPopup(
-          `<b>${v.number}</b><br>Status: ${v.status}<br>Speed: ${v.speed} km/h<br>${v.location}`
+          `<b>${v.number}</b><br>${t("dashboard.live_map.popup_status")}: ${getVehicleStatusLabel(
+            v.status
+          )}<br>${t("dashboard.live_map.popup_speed")}: ${v.speed} ${t(
+            "dashboard.live_map.units.kmh"
+          )}<br>${v.location}`
         );
+      marker.on("mouseover", () => marker.openPopup());
+      marker.on("mouseout", () => marker.closePopup());
+      marker.on("click", () => {
+        setFocusedVehicleId(v.id);
+        setPanelOpen(true);
+      });
+      vehicleMarkerLookupRef.current[v.id] = marker;
     });
 
     vehicleLayer.addTo(map);
     return () => {
       vehicleLayer.remove();
     };
-  }, [map, vehicles]);
+  }, [map, vehicles, focusedVehicleId]);
+
+  useEffect(() => {
+    if (!map || !focusedVehicleId) return;
+    const target = vehicles.find((v) => v.id === focusedVehicleId);
+    if (!target) return;
+    const marker = vehicleMarkerLookupRef.current[focusedVehicleId];
+    if (marker) {
+      marker.openPopup();
+    }
+    const currentZoom = map.getZoom();
+    map.setView([target.lat, target.lon], Math.max(currentZoom, 15), {
+      animate: true,
+    });
+  }, [map, focusedVehicleId, vehicles]);
 
   useEffect(() => {
     if (!map) return;
@@ -403,50 +537,23 @@ const WasteCollectionMonitor: React.FC = () => {
         ? "#dc2626"
         : "#2563eb";
 
-    const houseIcon = L.divIcon({
-      className: "",
-      iconSize: [32, 32],
-      iconAnchor: [16, 16],
-      popupAnchor: [0, -16],
-      html: `
-        <div
-          style="
-            width:32px;
-            height:32px;
-            border-radius:10px;
-            background:${color};
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            box-shadow:0 6px 12px rgba(0,0,0,.22);
-            border:2px solid #fff;
-          "
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#fff"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            style="width:16px;height:16px;"
-          >
-            <path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"></path>
-            <path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          </svg>
-        </div>
-      `,
-    });
-
     selectedLocations.forEach((location) => {
-      L.marker([location.lat, location.lon], { icon: houseIcon })
+      const isFocused = selectedCustomerLocation?.id === location.id;
+      const marker = L.marker([location.lat, location.lon], {
+        icon: createHouseIcon(color, isFocused),
+      })
         .addTo(dataLayer)
         .bindPopup(
           `<strong>${location.name}</strong><br>${location.address}<br>${location.zone || ""} ${
             location.ward || ""
           }`
         );
+      marker.on("mouseover", () => marker.openPopup());
+      marker.on("mouseout", () => marker.closePopup());
+      marker.on("click", () => {
+        setCustomerId(location.id);
+        setPanelOpen(true);
+      });
     });
 
     dataLayer.addTo(map);
@@ -459,6 +566,7 @@ const WasteCollectionMonitor: React.FC = () => {
     customerLocations,
     collectedCustomerLocations,
     notCollectedCustomerLocations,
+    selectedCustomerLocation,
   ]);
 
   useEffect(() => {
@@ -467,7 +575,7 @@ const WasteCollectionMonitor: React.FC = () => {
 
     if (selectedCustomerLocation) {
       const highlightColor =
-        selectedCustomerStatusLabel === "Collected" ? "#16a34a" : "#dc2626";
+        selectedCustomerStatus === "collected" ? "#16a34a" : "#dc2626";
 
       L.circleMarker([selectedCustomerLocation.lat, selectedCustomerLocation.lon], {
         radius: 10,
@@ -489,7 +597,7 @@ const WasteCollectionMonitor: React.FC = () => {
     return () => {
       highlightLayer.remove();
     };
-  }, [map, selectedCustomerLocation, selectedCustomerStatusLabel]);
+  }, [map, selectedCustomerLocation, selectedCustomerStatusLabel, selectedCustomerStatus]);
 
 
   return (
@@ -497,14 +605,14 @@ const WasteCollectionMonitor: React.FC = () => {
      
         <div className="flex justify-between items-center border-b pb-2">
           <h5 className="text-lg font-semibold flex items-center">
-            Waste Collection Monitoring
+            {t("admin.collection_monitoring.title")}
           </h5>
         </div>
 
         {/* Filters */}
         <div className="grid grid-cols-1 md:grid-cols-6 gap-4 mt-2">
           <div>
-            <label className="block text-sm font-medium mb-1">Date</label>
+            <label className="block text-sm font-medium mb-1">{t("common.date")}</label>
             <input
               ref={datepickerRef}
               type="text"
@@ -515,7 +623,7 @@ const WasteCollectionMonitor: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Zone</label>
+            <label className="block text-sm font-medium mb-1">{t("common.zone")}</label>
             <select
               className="form-select w-full border rounded-md p-2"
               value={zone}
@@ -525,7 +633,9 @@ const WasteCollectionMonitor: React.FC = () => {
                 setCustomerId("");
               }}
             >
-              <option value="">Select the Zone</option>
+              <option value="">
+                {t("common.select_item_placeholder", { item: t("common.zone") })}
+              </option>
               {zoneOptions.map((z) => (
                 <option key={z.value} value={z.value}>
                   {z.label}
@@ -534,7 +644,7 @@ const WasteCollectionMonitor: React.FC = () => {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Ward</label>
+            <label className="block text-sm font-medium mb-1">{t("common.ward")}</label>
             <select
               className="form-select w-full border rounded-md p-2"
               value={ward}
@@ -543,7 +653,9 @@ const WasteCollectionMonitor: React.FC = () => {
                 setCustomerId("");
               }}
             >
-              <option value="">Select the Ward</option>
+              <option value="">
+                {t("common.select_item_placeholder", { item: t("common.ward") })}
+              </option>
               {wardOptions.map((w) => (
                 <option key={w.value} value={w.value}>
                   {w.label}
@@ -553,13 +665,17 @@ const WasteCollectionMonitor: React.FC = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Customer</label>
+            <label className="block text-sm font-medium mb-1">
+              {t("common.customer")}
+            </label>
             <select
               className="form-select w-full border rounded-md p-2"
               value={customerId}
               onChange={(e) => setCustomerId(e.target.value)}
             >
-              <option value="">Select Customer</option>
+              <option value="">
+                {t("common.select_item_placeholder", { item: t("common.customer") })}
+              </option>
               {customerOptions.map((c) => (
                 <option key={c.value} value={c.value}>
                   {c.label}
@@ -574,19 +690,229 @@ const WasteCollectionMonitor: React.FC = () => {
               onClick={fetchSummaryCounts}
               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition"
             >
-              Go
+              {t("common.go")}
             </button>
           </div>
         </div>
 
         <hr className="my-4" />
-        <div id="vehicle_id_text" className="font-semibold text-gray-600 mb-2">
-          {customerId ? `Vehicle ID: ${customerId}` : ""}
+        <div className="mb-3 rounded-xl border border-[var(--admin-border)] bg-[var(--admin-surfaceAlt)]/80 px-4 py-3 text-sm">
+          {selectedCustomerLocation ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide text-[var(--admin-mutedText)]">
+                  {t("common.customer")}
+                </div>
+                <div className="text-base font-semibold text-[var(--admin-text)]">
+                  {selectedCustomerLocation.name}
+                </div>
+                <div className="text-xs text-[var(--admin-mutedText)]">
+                  {selectedCustomerLocation.address || t("common.not_available")}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-3 text-xs font-semibold text-[var(--admin-text)]">
+                <span>
+                  <span className="text-[var(--admin-mutedText)]">
+                    {t("common.zone")}:
+                  </span>{" "}
+                  {selectedCustomerLocation.zone || t("common.not_available")}
+                </span>
+                <span>
+                  <span className="text-[var(--admin-mutedText)]">
+                    {t("common.ward")}:
+                  </span>{" "}
+                  {selectedCustomerLocation.ward || t("common.not_available")}
+                </span>
+                {selectedCustomerStatusLabel && (
+                  <span className="rounded-full bg-[var(--admin-accentSoft)] px-3 py-1 text-[var(--admin-accent)]">
+                    {selectedCustomerStatusLabel}
+                  </span>
+                )}
+              </div>
+            </div>
+          ) : (
+            <span className="text-[var(--admin-mutedText)]">
+              {t("admin.collection_monitoring.select_customer_hint")}
+            </span>
+          )}
         </div>
 
         {/* Map */}
-        <div className="map-wrapper">
-          <div id="map" style={{ height: "calc(100vh - 320px)", width: "100%" }}></div>
+        <div
+          className="map-wrapper"
+          style={{ height: "calc(100vh - 320px)", width: "100%" }}
+        >
+          <div id="map" className="map-canvas"></div>
+          <div className={`admin-map-panel ${panelOpen ? "is-open" : ""}`}>
+            <button
+              type="button"
+              className="admin-map-panel__toggle"
+              onClick={() => setPanelOpen((prev) => !prev)}
+            >
+              {panelOpen ? "<" : ">"}
+            </button>
+            <button
+              type="button"
+              className="admin-map-panel__close"
+              onClick={() => setPanelOpen(false)}
+            >
+              x
+            </button>
+            <div className="admin-map-panel__content">
+              <div className="admin-map-panel__section">
+                <div className="admin-map-panel__section-title">
+                  {t("common.vehicle")}
+                </div>
+                {focusedVehicle ? (
+                  <>
+                    <div className="admin-map-panel__header">
+                      <div>
+                        <div className="admin-map-panel__eyebrow">
+                          {t("dashboard.live_map.labels.vehicle")}
+                        </div>
+                        <div className="admin-map-panel__title">
+                          {focusedVehicle.number}
+                        </div>
+                      </div>
+                      <span
+                        className={`admin-map-panel__status status-${focusedVehicleStatusClass}`}
+                      >
+                        {getVehicleStatusLabel(focusedVehicle.status)}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("dashboard.live_map.labels.speed")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {Number(focusedVehicle.speed).toFixed(1)}{" "}
+                        {t("dashboard.live_map.units.kmh")}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("admin.vehicle_tracking.labels.ignition")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {focusedVehicle.ignition ? "ON" : "OFF"}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("admin.vehicle_tracking.labels.distance")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {Number(focusedVehicle.distance).toFixed(1)} km
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("dashboard.live_map.labels.location")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {focusedVehicle.location || t("common.location_unavailable")}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("admin.vehicle_tracking.labels.updated")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {focusedVehicle.updatedAt}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="admin-map-panel__empty">
+                    {t("dashboard.live_map.select_vehicle")}
+                  </div>
+                )}
+              </div>
+
+              <div className="admin-map-panel__divider" />
+
+              <div className="admin-map-panel__section">
+                <div className="admin-map-panel__section-title">
+                  {t("common.customer")}
+                </div>
+                {selectedCustomerLocation ? (
+                  <>
+                    <div className="admin-map-panel__header">
+                      <div className="admin-map-panel__title-row">
+                        <span className="admin-map-panel__icon admin-map-panel__icon--house" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                              d="M3 11.4L12 4l9 7.4M6 10.8V20h12v-9.2M9.5 20v-5h5v5"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.6"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </span>
+                        <div>
+                          <div className="admin-map-panel__eyebrow">
+                            {t("common.customer")}
+                          </div>
+                          <div className="admin-map-panel__title">
+                            {selectedCustomerLocation.name}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="admin-map-panel__status">
+                        {selectedCustomerStatusLabel}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("common.address")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {selectedCustomerLocation.address || t("common.not_available")}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("common.zone")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {selectedCustomerLocation.zone || t("common.not_available")}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("common.ward")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {selectedCustomerLocation.ward || t("common.not_available")}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("common.latitude")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {formatCoordinate(selectedCustomerLocation.lat)}
+                      </span>
+                    </div>
+                    <div className="admin-map-panel__row">
+                      <span className="admin-map-panel__label">
+                        {t("common.longitude")}
+                      </span>
+                      <span className="admin-map-panel__value">
+                        {formatCoordinate(selectedCustomerLocation.lon)}
+                      </span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="admin-map-panel__empty">
+                    {t("admin.collection_monitoring.select_customer_hint")}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
           <div className="map-household-summary">
             {statusOptions.map((status) => {
               const isSelected = selectedStatus === status.value;
@@ -613,7 +939,7 @@ const WasteCollectionMonitor: React.FC = () => {
                 </span>
                 <span
                   className={`map-status-pill ${
-                    selectedCustomerStatusLabel === "Collected"
+                    selectedCustomerStatus === "collected"
                       ? "collected"
                       : "not-collected"
                   }`}
@@ -623,7 +949,7 @@ const WasteCollectionMonitor: React.FC = () => {
               </>
             ) : (
               <span className="map-status-badge__hint">
-                Select a customer to view location
+                {t("admin.collection_monitoring.select_customer_hint")}
               </span>
             )}
           </div>

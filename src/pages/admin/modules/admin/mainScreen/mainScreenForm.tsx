@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 
 import { encryptSegment } from "@/utils/routeCrypto";
 
@@ -38,6 +39,7 @@ import {
       COMPONENT
 ========================================================== */
 export default function MainScreenForm() {
+  const { t } = useTranslation();
   /* FORM FIELDS */
   const [mainscreenName, setMainScreenName] = useState("");
   const [iconName, setIconName] = useState("");
@@ -74,7 +76,7 @@ export default function MainScreenForm() {
           }));
         setMainScreenTypes(mapped);
       } catch (err) {
-        Swal.fire("Error", "Failed to load screen types.", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
       }
     })();
   }, []);
@@ -96,7 +98,7 @@ export default function MainScreenForm() {
         setMainScreenTypeId(data.mainscreentype_id ?? "");
         setIsActive(Boolean(data.is_active));
       } catch (err) {
-        Swal.fire("Error", "Unable to load record.", "error");
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
       }
     })();
   }, [isEdit, id]);
@@ -108,7 +110,7 @@ export default function MainScreenForm() {
     e.preventDefault();
 
     if (!mainscreenName.trim() || !mainscreenTypeId) {
-      Swal.fire("Missing Fields", "Name and Type are required.", "warning");
+      Swal.fire(t("common.warning"), t("common.missing_fields"), "warning");
       return;
     }
 
@@ -126,17 +128,17 @@ export default function MainScreenForm() {
 
       if (isEdit && id) {
         await mainScreenApi.update(id, payload);
-        Swal.fire("Success", "Updated successfully!", "success");
+        Swal.fire(t("common.success"), t("common.updated_success"), "success");
       } else {
         await mainScreenApi.create(payload);
-        Swal.fire("Success", "Added successfully!", "success");
+        Swal.fire(t("common.success"), t("common.added_success"), "success");
       }
 
       navigate(ENC_LIST_PATH);
     } catch (err: any) {
       Swal.fire(
-        "Save Failed",
-        err?.response?.data?.detail || "Unable to save record.",
+        t("common.save_failed"),
+        err?.response?.data?.detail || t("common.save_failed_desc"),
         "error"
       );
     } finally {
@@ -149,25 +151,35 @@ export default function MainScreenForm() {
   ========================================================== */
   return (
     <ComponentCard
-      title={isEdit ? "Edit Main Screen" : "Add Main Screen"}
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.main_screen") })
+          : t("common.add_item", { item: t("admin.nav.main_screen") })
+      }
     >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           
           {/* MainScreen Type */}
           <div>
-            <Label>Main Screen Type *</Label>
+            <Label>{t("admin.nav.main_screen_type")} *</Label>
             <Select
               value={mainscreenTypeId}
               onValueChange={(v) => setMainScreenTypeId(v)}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select Type" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.main_screen_type"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {mainScreenTypes.length === 0 ? (
                   <div className="px-3 py-2 text-sm text-muted-foreground">
-                    No types found
+                    {t("common.no_items_found", {
+                      item: t("admin.nav.main_screen_type"),
+                    })}
                   </div>
                 ) : (
                   mainScreenTypes.map((opt) => (
@@ -182,11 +194,18 @@ export default function MainScreenForm() {
 
           {/* Name */}
           <div>
-            <Label>Main Screen Name *</Label>
+            <Label>
+              {t("common.item_name", {
+                item: t("admin.nav.main_screen"),
+              })}{" "}
+              *
+            </Label>
             <Input
               value={mainscreenName}
               onChange={(e) => setMainScreenName(e.target.value)}
-              placeholder="Enter main screen name"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.main_screen"),
+              })}
               className="input-validate w-full"
               required
             />
@@ -194,51 +213,51 @@ export default function MainScreenForm() {
 
           {/* Icon Name */}
           <div>
-            <Label>Icon Name</Label>
+            <Label>{t("common.icon_name")}</Label>
             <Input
               value={iconName}
               onChange={(e) => setIconName(e.target.value)}
-              placeholder="Enter icon class"
+              placeholder={t("common.enter_icon_name")}
               className="input-validate w-full"
             />
           </div>
 
           {/* Order No */}
           <div>
-            <Label>Order No</Label>
+            <Label>{t("common.order_no")}</Label>
             <Input
               type="number"
               value={orderNo}
               onChange={(e) => setOrderNo(e.target.value)}
-              placeholder="Enter order number"
+              placeholder={t("common.order_no_placeholder")}
               className="input-validate w-full"
             />
           </div>
 
           {/* Description */}
           <div className="md:col-span-2">
-            <Label>Description</Label>
+            <Label>{t("common.description")}</Label>
             <Input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="Enter description"
+              placeholder={t("common.description_optional")}
               className="input-validate w-full"
             />
           </div>
 
           {/* Status */}
           <div>
-            <Label>Status *</Label>
+            <Label>{t("common.status")} *</Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(v) => setIsActive(v === "true")}
             >
               <SelectTrigger className="input-validate w-full">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -249,11 +268,11 @@ export default function MainScreenForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-              ? "Update"
-              : "Save"}
+              ? t("common.update")
+              : t("common.save")}
           </Button>
 
           <Button
@@ -261,7 +280,7 @@ export default function MainScreenForm() {
             variant="destructive"
             onClick={() => navigate(ENC_LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

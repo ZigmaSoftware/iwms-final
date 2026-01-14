@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
+import { useTranslation } from "react-i18next";
 
 import { continentApi, countryApi, stateApi } from "@/helpers/admin";
 
@@ -59,45 +60,8 @@ const normalizeNullableId = (
   return String(value);
 };
 
-const extractErrorMessage = (error: unknown) => {
-  if (!error) {
-    return "Something went wrong while processing the request.";
-  }
-
-  if (typeof error === "string") {
-    return error;
-  }
-
-  const withResponse = error as ErrorWithResponse;
-  const data = withResponse.response?.data;
-
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.join(", ");
-  }
-
-  if (data && typeof data === "object") {
-    return Object.entries(data as Record<string, unknown>)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: ${value.join(", ")}`;
-        }
-        return `${key}: ${String(value)}`;
-      })
-      .join("\n");
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return "Something went wrong while processing the request.";
-};
-
 function StateForm() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [label, setLabel] = useState("");
   const [isActive, setIsActive] = useState(true);
@@ -116,6 +80,44 @@ function StateForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
+
+  const extractErrorMessage = (error: unknown) => {
+    if (!error) {
+      return t("common.request_failed");
+    }
+
+    if (typeof error === "string") {
+      return error;
+    }
+
+    const withResponse = error as ErrorWithResponse;
+    const data = withResponse.response?.data;
+
+    if (typeof data === "string") {
+      return data;
+    }
+
+    if (Array.isArray(data)) {
+      return data.join(", ");
+    }
+
+    if (data && typeof data === "object") {
+      return Object.entries(data as Record<string, unknown>)
+        .map(([key, value]) => {
+          if (Array.isArray(value)) {
+            return `${key}: ${value.join(", ")}`;
+          }
+          return `${key}: ${String(value)}`;
+        })
+        .join("\n");
+    }
+
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    return t("common.request_failed");
+  };
 
   useEffect(() => {
     const fetchContinents = async () => {
@@ -139,7 +141,7 @@ function StateForm() {
         console.error("Error fetching continents:", error);
         Swal.fire({
           icon: "error",
-          title: "Failed to fetch continents",
+          title: t("common.error"),
           text: extractErrorMessage(error),
         });
       }
@@ -173,7 +175,7 @@ function StateForm() {
         console.error("Error fetching countries:", error);
         Swal.fire({
           icon: "error",
-          title: "Failed to fetch countries",
+          title: t("common.error"),
           text: extractErrorMessage(error),
         });
       }
@@ -229,7 +231,7 @@ function StateForm() {
       } catch (error) {
         Swal.fire({
           icon: "error",
-          title: "Failed to load state",
+          title: t("common.error"),
           text: extractErrorMessage(error),
         });
       }
@@ -257,8 +259,8 @@ function StateForm() {
     if (!continentId || !countryId || !name.trim() || !label.trim()) {
       Swal.fire({
         icon: "warning",
-        title: "Missing fields",
-        text: "Please fill all required fields.",
+        title: t("common.warning"),
+        text: t("common.missing_fields"),
       });
       return;
     }
@@ -277,10 +279,10 @@ function StateForm() {
     try {
       if (isEdit && id) {
         await stateApi.update(id, payload);
-        Swal.fire({ icon: "success", title: "State updated successfully!" });
+        Swal.fire({ icon: "success", title: t("common.updated_success") });
       } else {
         await stateApi.create(payload);
-        Swal.fire({ icon: "success", title: "State created successfully!" });
+        Swal.fire({ icon: "success", title: t("common.added_success") });
       }
 
       navigate(ENC_LIST_PATH);
@@ -288,7 +290,7 @@ function StateForm() {
       console.error("Failed to save state:", error);
       Swal.fire({
         icon: "error",
-        title: "Failed to save",
+        title: t("common.save_failed"),
         text: extractErrorMessage(error),
       });
     } finally {
@@ -297,20 +299,30 @@ function StateForm() {
   };
 
   return (
-    <ComponentCard title={isEdit ? "Edit State" : "Add State"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.state") })
+          : t("common.add_item", { item: t("admin.nav.state") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
           <div>
             <Label htmlFor="continent">
-              Continent <span className="text-red-500">*</span>
+              {t("admin.nav.continent")} <span className="text-red-500">*</span>
             </Label>
             <Select
               value={continentId}
               onValueChange={(value) => setContinentId(value)}
             >
               <SelectTrigger className="input-validate w-full" id="continent">
-                <SelectValue placeholder="Select Continent" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.continent"),
+                  })}
+                />
               </SelectTrigger>
 
               <SelectContent>
@@ -325,7 +337,7 @@ function StateForm() {
 
           <div>
             <Label htmlFor="country">
-              Country <span className="text-red-500">*</span>
+              {t("admin.nav.country")} <span className="text-red-500">*</span>
             </Label>
             <Select
               value={countryId}
@@ -333,7 +345,11 @@ function StateForm() {
               onValueChange={(value) => setCountryId(value)}
             >
               <SelectTrigger className="input-validate w-full" id="country">
-                <SelectValue placeholder="Select Country" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.country"),
+                  })}
+                />
               </SelectTrigger>
 
               <SelectContent>
@@ -348,42 +364,45 @@ function StateForm() {
 
           <div>
             <Label htmlFor="stateName">
-              State Name <span className="text-red-500">*</span>
+              {t("common.item_name", { item: t("admin.nav.state") })}{" "}
+              <span className="text-red-500">*</span>
             </Label>
             <Input
               id="stateName"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter state"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.state"),
+              })}
             />
           </div>
 
           <div>
             <Label htmlFor="stateLabel">
-              Label <span className="text-red-500">*</span>
+              {t("common.label")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="stateLabel"
               value={label}
               onChange={(e) => setLabel(e.target.value)}
-              placeholder="Enter label"
+              placeholder={t("common.enter_label")}
             />
           </div>
 
           <div>
             <Label htmlFor="stateStatus">
-              Status <span className="text-red-500">*</span>
+              {t("common.status")} <span className="text-red-500">*</span>
             </Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(v) => setIsActive(v === "true")}
             >
               <SelectTrigger className="input-validate w-full" id="stateStatus">
-                <SelectValue placeholder="Select Status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -391,14 +410,18 @@ function StateForm() {
 
         <div className="flex justify-end gap-3 mt-6">
           <Button type="submit" disabled={loading}>
-            {loading ? "Saving..." : isEdit ? "Update" : "Save"}
+            {loading
+              ? t("common.saving")
+              : isEdit
+              ? t("common.update")
+              : t("common.save")}
           </Button>
           <Button
             type="button"
             variant="destructive"
             onClick={() => navigate(ENC_LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

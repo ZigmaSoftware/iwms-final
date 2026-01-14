@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { encryptSegment } from "@/utils/routeCrypto";
+import { useTranslation } from "react-i18next";
 
 import { continentApi, countryApi } from "@/helpers/admin";
 
@@ -57,40 +58,8 @@ const normalizeNullableId = (
   return String(value);
 };
 
-const extractErrorMessage = (error: unknown) => {
-  if (!error) return "Something went wrong while processing the request.";
-  if (typeof error === "string") return error;
-
-  const withResponse = error as ErrorWithResponse;
-  const data = withResponse.response?.data;
-
-  if (typeof data === "string") {
-    return data;
-  }
-
-  if (Array.isArray(data)) {
-    return data.join(", ");
-  }
-
-  if (data && typeof data === "object") {
-    return Object.entries(data as Record<string, unknown>)
-      .map(([key, value]) => {
-        if (Array.isArray(value)) {
-          return `${key}: ${value.join(", ")}`;
-        }
-        return `${key}: ${String(value)}`;
-      })
-      .join("\n");
-  }
-
-  if (error instanceof Error && error.message) {
-    return error.message;
-  }
-
-  return "Something went wrong while processing the request.";
-};
-
 function CountryForm() {
+  const { t } = useTranslation();
   const [name, setName] = useState("");
   const [mobCode, setMobCode] = useState("");
   const [currency, setCurrency] = useState("");
@@ -101,6 +70,39 @@ function CountryForm() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
+
+  const extractErrorMessage = (error: unknown) => {
+    if (!error) return t("common.request_failed");
+    if (typeof error === "string") return error;
+
+    const withResponse = error as ErrorWithResponse;
+    const data = withResponse.response?.data;
+
+    if (typeof data === "string") {
+      return data;
+    }
+
+    if (Array.isArray(data)) {
+      return data.join(", ");
+    }
+
+    if (data && typeof data === "object") {
+      return Object.entries(data as Record<string, unknown>)
+        .map(([key, value]) => {
+          if (Array.isArray(value)) {
+            return `${key}: ${value.join(", ")}`;
+          }
+          return `${key}: ${String(value)}`;
+        })
+        .join("\n");
+    }
+
+    if (error instanceof Error && error.message) {
+      return error.message;
+    }
+
+    return t("common.request_failed");
+  };
 
   useEffect(() => {
     const fetchContinents = async () => {
@@ -118,7 +120,7 @@ function CountryForm() {
         console.error("Error fetching continents:", error);
         Swal.fire({
           icon: "error",
-          title: "Failed to load continents",
+          title: t("common.error"),
           text: extractErrorMessage(error),
         });
       }
@@ -149,7 +151,7 @@ function CountryForm() {
         console.error("Error fetching country:", error);
         Swal.fire({
           icon: "error",
-          title: "Failed to load country",
+          title: t("common.error"),
           text: extractErrorMessage(error),
         });
       }
@@ -164,8 +166,8 @@ function CountryForm() {
     if (!name.trim() || !continentId) {
       Swal.fire({
         icon: "warning",
-        title: "Missing Fields",
-        text: "Please fill all the required fields before submitting.",
+        title: t("common.warning"),
+        text: t("common.missing_fields"),
         confirmButtonColor: "#3085d6",
       });
       return;
@@ -185,7 +187,7 @@ function CountryForm() {
         await countryApi.update(id, payload);
         Swal.fire({
           icon: "success",
-          title: "Updated successfully!",
+          title: t("common.updated_success"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -193,7 +195,7 @@ function CountryForm() {
         await countryApi.create(payload);
         Swal.fire({
           icon: "success",
-          title: "Added successfully!",
+          title: t("common.added_success"),
           timer: 1500,
           showConfirmButton: false,
         });
@@ -204,7 +206,7 @@ function CountryForm() {
       console.error("Failed to save:", error);
       Swal.fire({
         icon: "error",
-        title: "Save failed",
+        title: t("common.save_failed"),
         text: extractErrorMessage(error),
       });
     } finally {
@@ -213,20 +215,31 @@ function CountryForm() {
   };
 
   return (
-    <ComponentCard title={isEdit ? "Edit Country" : "Add Country"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.country") })
+          : t("common.add_item", { item: t("admin.nav.country") })
+      }
+    >
       <form onSubmit={handleSubmit} noValidate>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Continent Dropdown */}
           <div>
             <Label htmlFor="continent">
-              Continent Name <span className="text-red-500">*</span>
+              {t("common.item_name", { item: t("admin.nav.continent") })}{" "}
+              <span className="text-red-500">*</span>
             </Label>
             <Select
               value={continentId || undefined}
               onValueChange={(val) => setContinentId(val)}
             >
               <SelectTrigger className="input-validate w-full" id="continent">
-                <SelectValue placeholder="Select Continent" />
+                <SelectValue
+                  placeholder={t("common.select_item_placeholder", {
+                    item: t("admin.nav.continent"),
+                  })}
+                />
               </SelectTrigger>
               <SelectContent>
                 {continents.map((c) => (
@@ -241,14 +254,17 @@ function CountryForm() {
           {/*  Country Name */}
           <div>
             <Label htmlFor="countryName">
-              Country Name <span className="text-red-500">*</span>
+              {t("common.item_name", { item: t("admin.nav.country") })}{" "}
+              <span className="text-red-500">*</span>
             </Label>
             <Input
               id="countryName"
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="Enter country name"
+              placeholder={t("common.enter_item_name", {
+                item: t("admin.nav.country"),
+              })}
               className="input-validate w-full"
               required
             />
@@ -256,14 +272,14 @@ function CountryForm() {
           {/*  Mobile Code */}
           <div>
             <Label htmlFor="mobile_code">
-              Mobile Code <span className="text-red-500">*</span>
+              {t("common.mobile_code")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="mobile_code"
               type="number"
               value={mobCode}
               onChange={(e) => setMobCode(e.target.value)}
-              placeholder="Enter mobile code"
+              placeholder={t("common.mobile_code_placeholder")}
               className="input-validate w-full"
               required
             />
@@ -271,14 +287,14 @@ function CountryForm() {
           {/*  Currency Name */}
           <div>
             <Label htmlFor="currency">
-              Currency Name <span className="text-red-500">*</span>
+              {t("common.currency")} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="currency"
               type="text"
               value={currency}
               onChange={(e) => setCurrency(e.target.value)}
-              placeholder="Enter currency"
+              placeholder={t("common.currency_placeholder")}
               className="input-validate w-full"
               required
             />
@@ -287,18 +303,18 @@ function CountryForm() {
           {/*  Active Status */}
           <div>
             <Label htmlFor="isActive">
-              Active Status <span className="text-red-500">*</span>
+              {t("common.status")} <span className="text-red-500">*</span>
             </Label>
             <Select
               value={isActive ? "true" : "false"}
               onValueChange={(val) => setIsActive(val === "true")}
             >
               <SelectTrigger className="input-validate w-full" id="isActive">
-                <SelectValue placeholder="Select status" />
+                <SelectValue placeholder={t("common.select_status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="true">Active</SelectItem>
-                <SelectItem value="false">Inactive</SelectItem>
+                <SelectItem value="true">{t("common.active")}</SelectItem>
+                <SelectItem value="false">{t("common.inactive")}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -309,14 +325,14 @@ function CountryForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-                ? "Update"
-                : "Save"}
+                ? t("common.update")
+                : t("common.save")}
           </Button>
           <Button type="button" variant="destructive" onClick={() => navigate(ENC_LIST_PATH)}>
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

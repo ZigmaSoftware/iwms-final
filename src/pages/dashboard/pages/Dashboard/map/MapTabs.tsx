@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { MAP_TABS, type MapTabKey } from "./mapUtils";
 
 type MapTabsProps = {
@@ -28,12 +29,14 @@ const MapTabButton = ({
 );
 
 export function MapTabs({ activeKey, onChange }: MapTabsProps) {
+  const { t } = useTranslation();
+
   return (
     <div className="flex items-center gap-1 rounded-full bg-gray-100 p-1 text-xs font-semibold dark:bg-gray-800">
       {MAP_TABS.map((tab) => (
         <MapTabButton
           key={tab.key}
-          label={tab.label}
+          label={t(tab.labelKey)}
           active={activeKey === tab.key}
           onClick={() => onChange(tab.key)}
         />

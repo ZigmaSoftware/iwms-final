@@ -9,6 +9,7 @@ import Label from "@/components/form/Label";
 import Select from "@/components/form/Select";
 import { getEncryptedRoute } from "@/utils/routeCache";
 import { staffCreationApi } from "@/helpers/admin";
+import { useTranslation } from "react-i18next";
 import {
     countryApi,
     stateApi,
@@ -18,45 +19,45 @@ import {
 
 type Section = "official" | "personal";
 
-const gradeOptions = [
-  { value: "Grade A", label: "Grade A" },
-  { value: "Grade B", label: "Grade B" },
-  { value: "Grade C", label: "Grade C" },
-  { value: "Grade D", label: "Grade D" },
+const getGradeOptions = (t: (key: string) => string) => [
+  { value: "Grade A", label: t("admin.staff_creation.grade_a") },
+  { value: "Grade B", label: t("admin.staff_creation.grade_b") },
+  { value: "Grade C", label: t("admin.staff_creation.grade_c") },
+  { value: "Grade D", label: t("admin.staff_creation.grade_d") },
 ];
 
-const siteOptions = [
-  { value: "Erode (Head Office)", label: "Erode (Head Office)" },
-  { value: "Coimbatore", label: "Coimbatore" },
-  { value: "Chennai", label: "Chennai" },
-  { value: "Hyderabad", label: "Hyderabad" },
+const getSiteOptions = (t: (key: string) => string) => [
+  { value: "Erode (Head Office)", label: t("admin.staff_creation.site_erode") },
+  { value: "Coimbatore", label: t("admin.staff_creation.site_coimbatore") },
+  { value: "Chennai", label: t("admin.staff_creation.site_chennai") },
+  { value: "Hyderabad", label: t("admin.staff_creation.site_hyderabad") },
 ];
 
-const salaryTypeOptions = [
-  { value: "Monthly", label: "Monthly" },
-  { value: "Daily", label: "Daily" },
-  { value: "Contract", label: "Contract" },
+const getSalaryTypeOptions = (t: (key: string) => string) => [
+  { value: "Monthly", label: t("admin.staff_creation.salary_monthly") },
+  { value: "Daily", label: t("admin.staff_creation.salary_daily") },
+  { value: "Contract", label: t("admin.staff_creation.salary_contract") },
 ];
 
-const yesNoOptions = [
-  { value: "Yes", label: "Yes" },
-  { value: "No", label: "No" },
+const getYesNoOptions = (t: (key: string) => string) => [
+  { value: "Yes", label: t("common.yes") },
+  { value: "No", label: t("common.no") },
 ];
 
-const maritalStatusOptions = [
-  { value: "Single", label: "Single" },
-  { value: "Married", label: "Married" },
-  { value: "Widowed", label: "Widowed" },
-  { value: "Divorced", label: "Divorced" },
+const getMaritalStatusOptions = (t: (key: string) => string) => [
+  { value: "Single", label: t("admin.staff_creation.marital_single") },
+  { value: "Married", label: t("admin.staff_creation.marital_married") },
+  { value: "Widowed", label: t("admin.staff_creation.marital_widowed") },
+  { value: "Divorced", label: t("admin.staff_creation.marital_divorced") },
 ];
 
-const genderOptions = [
-  { value: "Male", label: "Male" },
-  { value: "Female", label: "Female" },
-  { value: "Other", label: "Other" },
+const getGenderOptions = (t: (key: string) => string) => [
+  { value: "Male", label: t("admin.staff_creation.gender_male") },
+  { value: "Female", label: t("admin.staff_creation.gender_female") },
+  { value: "Other", label: t("admin.staff_creation.gender_other") },
 ];
 
-const bloodGroupOptions = [
+const getBloodGroupOptions = () => [
   { value: "A+", label: "A+" },
   { value: "A-", label: "A-" },
   { value: "B+", label: "B+" },
@@ -78,8 +79,8 @@ type ErrorWithResponse = {
   };
 };
 
-const formatErrorMessage = (error: unknown) => {
-  if (!error) return "Please review the highlighted fields.";
+const formatErrorMessage = (t: (key: string) => string, error: unknown) => {
+  if (!error) return t("common.review_fields");
   if (typeof error === "string") return error;
 
   const data = (error as ErrorWithResponse)?.response?.data;
@@ -97,7 +98,7 @@ const formatErrorMessage = (error: unknown) => {
       .join("\n");
   }
 
-  return "Please review the highlighted fields.";
+  return t("common.review_fields");
 };
 
 const initialFormData = {
@@ -159,13 +160,26 @@ export default function StaffCreationForm() {
   const [cityOptions, setCityOptions] = useState<{ value: string; label: string }[]>([]);
 
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { id } = useParams<{ id?: string }>();
   const isEdit = Boolean(id);
 
-  const { encMasters, encStaffCreation } = getEncryptedRoute();
-  const ENC_LIST_PATH = `/${encMasters}/${encStaffCreation}`;
+  const { encStaffMasters, encStaffCreation } = getEncryptedRoute();
+  const ENC_LIST_PATH = `/${encStaffMasters}/${encStaffCreation}`;
   const backendOrigin =
     desktopApi.defaults.baseURL?.replace(/\/api\/desktop\/?$/, "") || "";
+
+  const gradeOptions = getGradeOptions(t);
+  const siteOptions = getSiteOptions(t);
+  const salaryTypeOptions = getSalaryTypeOptions(t);
+  const yesNoOptions = getYesNoOptions(t);
+  const maritalStatusOptions = getMaritalStatusOptions(t);
+  const genderOptions = getGenderOptions(t);
+  const bloodGroupOptions = getBloodGroupOptions();
+  const activeStatusOptions = [
+    { value: "1", label: t("common.active") },
+    { value: "0", label: t("common.inactive") },
+  ];
 
   useEffect(() => {
     const loadLocationOptions = async () => {
@@ -262,8 +276,10 @@ console.log("Fetched staff data:", staff);
         console.error("Failed to load staff", error);
         Swal.fire({
           icon: "error",
-          title: "Unable to load staff",
-          text: error.response?.data?.detail || "Please try again later.",
+          title: t("admin.staff_creation.load_failed_title"),
+          text:
+            error.response?.data?.detail ||
+            t("admin.staff_creation.load_failed_desc"),
         });
       })
       .finally(() => setFetching(false));
@@ -344,8 +360,8 @@ console.log("Fetched staff data:", staff);
     if (photoFile && !photoFile.type.startsWith("image/")) {
       Swal.fire({
         icon: "warning",
-        title: "Invalid Photo",
-        text: "Please upload a valid image file.",
+        title: t("admin.staff_creation.invalid_photo_title"),
+        text: t("admin.staff_creation.invalid_photo_desc"),
       });
       return;
     }
@@ -434,8 +450,13 @@ console.log("Fetched staff data:", staff);
 
       Swal.fire({
         icon: "success",
-        title: isEdit ? "Staff updated" : "Staff created",
-        text: response?.message || response?.data?.message || "Details saved successfully.",
+        title: isEdit
+          ? t("admin.staff_creation.save_success_update")
+          : t("admin.staff_creation.save_success_create"),
+        text:
+          response?.message ||
+          response?.data?.message ||
+          t("admin.staff_creation.save_success_desc"),
       });
 
       navigate(ENC_LIST_PATH);
@@ -443,8 +464,8 @@ console.log("Fetched staff data:", staff);
       console.error("Failed to save staff", error);
       Swal.fire({
         icon: "error",
-        title: "Save failed",
-        text: formatErrorMessage(error),
+        title: t("common.save_failed"),
+        text: formatErrorMessage(t, error),
       });
     } finally {
       setSubmitting(false);
@@ -452,14 +473,16 @@ console.log("Fetched staff data:", staff);
   };
 
   const sectionButtons: { label: string; key: Section }[] = [
-    { label: "Office Details", key: "official" },
-    { label: "Personal Details", key: "personal" },
+    { label: t("admin.staff_creation.section_official"), key: "official" },
+    { label: t("admin.staff_creation.section_personal"), key: "personal" },
   ];
 
   const renderOfficialSection = () => (
     <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
       <div>
-        <Label htmlFor="employee_name">Employee Name</Label>
+        <Label htmlFor="employee_name">
+          {t("admin.staff_creation.employee_name")}
+        </Label>
         <Input
           id="employee_name"
           value={formData.employee_name}
@@ -476,11 +499,11 @@ console.log("Fetched staff data:", staff);
         />
       </div> */}
       <div>
-        <Label htmlFor="doj">Date of Joining</Label>
+        <Label htmlFor="doj">{t("admin.staff_creation.doj")}</Label>
         <Input id="doj" type="date" value={formData.doj} onChange={handleInputChange} />
       </div>
       <div>
-        <Label htmlFor="department">Department Name</Label>
+        <Label htmlFor="department">{t("admin.staff_creation.department_name")}</Label>
         <Input
           id="department"
           value={formData.department}
@@ -488,7 +511,7 @@ console.log("Fetched staff data:", staff);
         />
       </div>
       <div>
-        <Label htmlFor="designation">Designation</Label>
+        <Label htmlFor="designation">{t("admin.staff_creation.designation")}</Label>
         <Input
           id="designation"
           value={formData.designation}
@@ -496,7 +519,7 @@ console.log("Fetched staff data:", staff);
         />
       </div>
       <div>
-        <Label htmlFor="department_id">Department ID</Label>
+        <Label htmlFor="department_id">{t("admin.staff_creation.department_id")}</Label>
         <Input
           id="department_id"
           value={formData.department_id}
@@ -504,7 +527,7 @@ console.log("Fetched staff data:", staff);
         />
       </div>
       <div>
-        <Label htmlFor="designation_id">Designation ID</Label>
+        <Label htmlFor="designation_id">{t("admin.staff_creation.designation_id")}</Label>
         <Input
           id="designation_id"
           value={formData.designation_id}
@@ -512,27 +535,27 @@ console.log("Fetched staff data:", staff);
         />
       </div>
       <div>
-        <Label htmlFor="grade">Grade</Label>
+        <Label htmlFor="grade">{t("admin.staff_creation.grade")}</Label>
         <Select
           id="grade"
           value={formData.grade}
           onChange={(value) => handleSelectChange("grade", value)}
           options={gradeOptions}
-          placeholder="Select a grade"
+          placeholder={t("admin.staff_creation.grade_placeholder")}
         />
       </div>
       <div>
-        <Label htmlFor="site_name">Site Name</Label>
+        <Label htmlFor="site_name">{t("admin.staff_creation.site_name")}</Label>
         <Select
           id="site_name"
           value={formData.site_name}
           onChange={(value) => handleSelectChange("site_name", value)}
           options={siteOptions}
-          placeholder="Select a site"
+          placeholder={t("admin.staff_creation.site_placeholder")}
         />
       </div>
       <div>
-        <Label htmlFor="biometric_id">Bio Metric Id</Label>
+        <Label htmlFor="biometric_id">{t("admin.staff_creation.biometric_id")}</Label>
         <Input
           id="biometric_id"
           value={formData.biometric_id}
@@ -540,7 +563,7 @@ console.log("Fetched staff data:", staff);
         />
       </div>
       <div>
-        <Label htmlFor="staff_head">Staff Head</Label>
+        <Label htmlFor="staff_head">{t("admin.staff_creation.staff_head")}</Label>
         <Input
           id="staff_head"
           value={formData.staff_head}
@@ -548,7 +571,7 @@ console.log("Fetched staff data:", staff);
         />
       </div>
       <div>
-        <Label htmlFor="staff_head_id">Staff Head ID</Label>
+        <Label htmlFor="staff_head_id">{t("admin.staff_creation.staff_head_id")}</Label>
         <Input
           id="staff_head_id"
           value={formData.staff_head_id}
@@ -556,40 +579,37 @@ console.log("Fetched staff data:", staff);
         />
       </div>
       <div>
-        <Label htmlFor="employee_known">Employee Known</Label>
+        <Label htmlFor="employee_known">{t("admin.staff_creation.employee_known")}</Label>
         <Select
           id="employee_known"
           value={formData.employee_known}
           onChange={(value) => handleSelectChange("employee_known", value)}
           options={yesNoOptions}
-          placeholder="Select an option"
+          placeholder={t("admin.staff_creation.select_option")}
         />
       </div>
       <div>
-        <Label htmlFor="salary_type">Salary Type</Label>
+        <Label htmlFor="salary_type">{t("admin.staff_creation.salary_type")}</Label>
         <Select
           id="salary_type"
           value={formData.salary_type}
           onChange={(value) => handleSelectChange("salary_type", value)}
           options={salaryTypeOptions}
-          placeholder="Select salary type"
+          placeholder={t("admin.staff_creation.salary_type_placeholder")}
         />
       </div>
       <div>
-        <Label htmlFor="active_status">Active Status</Label>
+        <Label htmlFor="active_status">{t("admin.staff_creation.active_status")}</Label>
         <Select
           id="active_status"
           value={formData.active_status}
           onChange={(value) => handleSelectChange("active_status", value)}
-          options={[
-            { value: "1", label: "Active" },
-            { value: "0", label: "Inactive" },
-          ]}
-          placeholder="Select status"
+          options={activeStatusOptions}
+          placeholder={t("common.select_status")}
         />
       </div>
       <div className="md:col-span-2">
-        <Label htmlFor="photo">Employee Photo</Label>
+        <Label htmlFor="photo">{t("admin.staff_creation.photo_label")}</Label>
         <div className="flex flex-col gap-2 md:flex-row md:items-center">
           <div className="flex items-center gap-3">
             <button
@@ -597,10 +617,10 @@ console.log("Fetched staff data:", staff);
               onClick={() => photoInputRef.current?.click()}
               className="rounded border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:border-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/40"
             >
-              Choose photo
+              {t("admin.staff_creation.photo_choose")}
             </button>
             <span className="text-sm text-gray-500">
-              {photoFile?.name || "No file selected"}
+              {photoFile?.name || t("admin.staff_creation.photo_none")}
             </span>
           </div>
           <input
@@ -618,8 +638,8 @@ console.log("Fetched staff data:", staff);
               if (!file.type.startsWith("image/")) {
                 Swal.fire({
                   icon: "warning",
-                  title: "Invalid Photo",
-                  text: "Please upload a valid image file.",
+                  title: t("admin.staff_creation.invalid_photo_title"),
+                  text: t("admin.staff_creation.invalid_photo_desc"),
                 });
                 event.target.value = "";
                 setPhotoFile(null);
@@ -632,12 +652,12 @@ console.log("Fetched staff data:", staff);
           {photoPreview ? (
             <img
               src={photoPreview}
-              alt="Employee preview"
+              alt={t("admin.staff_creation.photo_preview_alt")}
               className="h-32 w-32 rounded-lg border object-cover"
             />
           ) : (
             <div className="flex h-32 w-32 items-center justify-center rounded-lg border border-dashed px-2 text-xs text-gray-500">
-              No image selected
+              {t("admin.staff_creation.photo_empty")}
             </div>
           )}
         </div>
@@ -649,59 +669,65 @@ console.log("Fetched staff data:", staff);
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
         <div>
-          <Label htmlFor="marital_status">Marital Status</Label>
+          <Label htmlFor="marital_status">
+            {t("admin.staff_creation.marital_status")}
+          </Label>
           <Select
             id="marital_status"
             value={formData.marital_status}
             onChange={(value) => handleSelectChange("marital_status", value)}
             options={maritalStatusOptions}
-            placeholder="Select marital status"
+            placeholder={t("admin.staff_creation.marital_status_placeholder")}
           />
         </div>
         <div>
-          <Label htmlFor="dob">Date of Birth</Label>
+          <Label htmlFor="dob">{t("admin.staff_creation.dob")}</Label>
           <Input id="dob" type="date" value={formData.dob} onChange={handleInputChange} />
         </div>
         <div>
-          <Label htmlFor="age">Age</Label>
+          <Label htmlFor="age">{t("admin.staff_creation.age")}</Label>
           <Input
             id="age"
             value={formData.dob ? calculateAge(formData.dob) : ""}
-            placeholder="Auto-calculated"
+            placeholder={t("admin.staff_creation.age_auto")}
           />
         </div>
         <div>
-          <Label htmlFor="blood_group">Blood Group</Label>
+          <Label htmlFor="blood_group">{t("admin.staff_creation.blood_group")}</Label>
           <Select
             id="blood_group"
             value={formData.blood_group}
             onChange={(value) => handleSelectChange("blood_group", value)}
             options={bloodGroupOptions}
-            placeholder="Select blood group"
+            placeholder={t("admin.staff_creation.blood_group_placeholder")}
           />
         </div>
         <div>
-          <Label htmlFor="gender">Gender</Label>
+          <Label htmlFor="gender">{t("admin.staff_creation.gender")}</Label>
           <Select
             id="gender"
             value={formData.gender}
             onChange={(value) => handleSelectChange("gender", value)}
             options={genderOptions}
-            placeholder="Select gender"
+            placeholder={t("admin.staff_creation.gender_placeholder")}
           />
         </div>
         <div>
-          <Label htmlFor="physically_challenged">Physically Challenged</Label>
+          <Label htmlFor="physically_challenged">
+            {t("admin.staff_creation.physically_challenged")}
+          </Label>
           <Select
             id="physically_challenged"
             value={formData.physically_challenged}
             onChange={(value) => handleSelectChange("physically_challenged", value)}
             options={yesNoOptions}
-            placeholder="Select an option"
+            placeholder={t("admin.staff_creation.select_option")}
           />
         </div>
         <div>
-          <Label htmlFor="extra_curricular">Extra Curricular Activities</Label>
+          <Label htmlFor="extra_curricular">
+            {t("admin.staff_creation.extra_curricular")}
+          </Label>
           <textarea
             id="extra_curricular"
             value={formData.extra_curricular}
@@ -714,50 +740,52 @@ console.log("Fetched staff data:", staff);
 
       <div className="grid gap-6 md:grid-cols-2">
         <div className="space-y-3 rounded-lg border border-gray-200 p-4">
-          <p className="text-sm font-semibold text-gray-600">Present Address Details</p>
+          <p className="text-sm font-semibold text-gray-600">
+            {t("admin.staff_creation.address_present_title")}
+          </p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <Label htmlFor="present_country">Country</Label>
+              <Label htmlFor="present_country">{t("common.country")}</Label>
               <Select
                 id="present_country"
                 value={formData.present_country}
                 onChange={(value) => handleSelectChange("present_country", value)}
                 options={countryOptions}
-                placeholder="Select country"
+                placeholder={t("common.select_item_placeholder", { item: t("common.country") })}
               />
             </div>
             <div>
-              <Label htmlFor="present_state">State</Label>
+              <Label htmlFor="present_state">{t("common.state")}</Label>
               <Select
                 id="present_state"
                 value={formData.present_state}
                 onChange={(value) => handleSelectChange("present_state", value)}
                 options={stateOptions}
-                placeholder="Select state"
+                placeholder={t("common.select_item_placeholder", { item: t("common.state") })}
               />
             </div>
             <div>
-              <Label htmlFor="present_district">District</Label>
+              <Label htmlFor="present_district">{t("common.district")}</Label>
               <Select
                 id="present_district"
                 value={formData.present_district}
                 onChange={(value) => handleSelectChange("present_district", value)}
                 options={districtOptions}
-                placeholder="Select district"
+                placeholder={t("common.select_item_placeholder", { item: t("common.district") })}
               />
             </div>
             <div>
-              <Label htmlFor="present_city">City</Label>
+              <Label htmlFor="present_city">{t("common.city")}</Label>
               <Select
                 id="present_city"
                 value={formData.present_city}
                 onChange={(value) => handleSelectChange("present_city", value)}
                 options={cityOptions}
-                placeholder="Select city"
+                placeholder={t("common.select_item_placeholder", { item: t("common.city") })}
               />
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="present_building_no">Building No</Label>
+              <Label htmlFor="present_building_no">{t("common.building_no")}</Label>
               <Input
                 id="present_building_no"
                 value={formData.present_building_no}
@@ -765,7 +793,7 @@ console.log("Fetched staff data:", staff);
               />
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="present_street">Street</Label>
+              <Label htmlFor="present_street">{t("common.street")}</Label>
               <textarea
                 id="present_street"
                 value={formData.present_street}
@@ -775,7 +803,7 @@ console.log("Fetched staff data:", staff);
               />
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="present_area">Area</Label>
+              <Label htmlFor="present_area">{t("common.area")}</Label>
               <textarea
                 id="present_area"
                 value={formData.present_area}
@@ -785,7 +813,7 @@ console.log("Fetched staff data:", staff);
               />
             </div>
             <div>
-              <Label htmlFor="present_pincode">Pincode</Label>
+              <Label htmlFor="present_pincode">{t("common.pincode")}</Label>
               <Input
                 id="present_pincode"
                 value={formData.present_pincode}
@@ -797,7 +825,9 @@ console.log("Fetched staff data:", staff);
 
         <div className="space-y-3 rounded-lg border border-gray-200 p-4">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-semibold text-gray-600">Permanent Address Details</p>
+            <p className="text-sm font-semibold text-gray-600">
+              {t("admin.staff_creation.address_permanent_title")}
+            </p>
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input
                 type="checkbox"
@@ -805,52 +835,52 @@ console.log("Fetched staff data:", staff);
                 onChange={() => setSameAddress((prev) => !prev)}
                 className="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
               />
-              Same
+              {t("admin.staff_creation.address_same")}
             </label>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <Label htmlFor="permanent_country">Country</Label>
+              <Label htmlFor="permanent_country">{t("common.country")}</Label>
               <Select
                 id="permanent_country"
                 value={formData.permanent_country}
                 onChange={(value) => handleSelectChange("permanent_country", value)}
                 options={countryOptions}
-                placeholder="Select country"
+                placeholder={t("common.select_item_placeholder", { item: t("common.country") })}
               />
             </div>
             <div>
-              <Label htmlFor="permanent_state">State</Label>
+              <Label htmlFor="permanent_state">{t("common.state")}</Label>
               <Select
                 id="permanent_state"
                 value={formData.permanent_state}
                 onChange={(value) => handleSelectChange("permanent_state", value)}
                 options={stateOptions}
-                placeholder="Select state"
+                placeholder={t("common.select_item_placeholder", { item: t("common.state") })}
               />
             </div>
             <div>
-              <Label htmlFor="permanent_district">District</Label>
+              <Label htmlFor="permanent_district">{t("common.district")}</Label>
               <Select
                 id="permanent_district"
                 value={formData.permanent_district}
                 onChange={(value) => handleSelectChange("permanent_district", value)}
                 options={districtOptions}
-                placeholder="Select district"
+                placeholder={t("common.select_item_placeholder", { item: t("common.district") })}
               />
             </div>
             <div>
-              <Label htmlFor="permanent_city">City</Label>
+              <Label htmlFor="permanent_city">{t("common.city")}</Label>
               <Select
                 id="permanent_city"
                 value={formData.permanent_city}
                 onChange={(value) => handleSelectChange("permanent_city", value)}
                 options={cityOptions}
-                placeholder="Select city"
+                placeholder={t("common.select_item_placeholder", { item: t("common.city") })}
               />
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="permanent_building_no">Building No</Label>
+              <Label htmlFor="permanent_building_no">{t("common.building_no")}</Label>
               <Input
                 id="permanent_building_no"
                 value={formData.permanent_building_no}
@@ -858,7 +888,7 @@ console.log("Fetched staff data:", staff);
               />
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="permanent_street">Street</Label>
+              <Label htmlFor="permanent_street">{t("common.street")}</Label>
               <textarea
                 id="permanent_street"
                 value={formData.permanent_street}
@@ -868,7 +898,7 @@ console.log("Fetched staff data:", staff);
               />
             </div>
             <div className="sm:col-span-2">
-              <Label htmlFor="permanent_area">Area</Label>
+              <Label htmlFor="permanent_area">{t("common.area")}</Label>
               <textarea
                 id="permanent_area"
                 value={formData.permanent_area}
@@ -878,7 +908,7 @@ console.log("Fetched staff data:", staff);
               />
             </div>
             <div>
-              <Label htmlFor="permanent_pincode">Pincode</Label>
+              <Label htmlFor="permanent_pincode">{t("common.pincode")}</Label>
               <Input
                 id="permanent_pincode"
                 value={formData.permanent_pincode}
@@ -890,10 +920,14 @@ console.log("Fetched staff data:", staff);
       </div>
 
       <div className="rounded-lg border border-gray-200 p-4">
-        <p className="text-sm font-semibold text-gray-600">Contact Details</p>
+        <p className="text-sm font-semibold text-gray-600">
+          {t("admin.staff_creation.contact_details")}
+        </p>
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
           <div>
-            <Label htmlFor="contact_mobile">Mobile No</Label>
+            <Label htmlFor="contact_mobile">
+              {t("admin.staff_creation.contact_mobile")}
+            </Label>
             <Input
               id="contact_mobile"
               value={formData.contact_mobile}
@@ -901,7 +935,9 @@ console.log("Fetched staff data:", staff);
             />
           </div>
           <div>
-            <Label htmlFor="contact_email">Email ID</Label>
+            <Label htmlFor="contact_email">
+              {t("admin.staff_creation.contact_email")}
+            </Label>
             <Input
               id="contact_email"
               type="email"
@@ -933,8 +969,12 @@ console.log("Fetched staff data:", staff);
   return (
     <div className="p-6">
       <ComponentCard
-        title={isEdit ? "Update Staff Details" : "Staff / Employee Creation"}
-        desc="Fill in official and personal details to create a new staff record."
+        title={
+          isEdit
+            ? t("admin.staff_creation.title_edit")
+            : t("admin.staff_creation.title_add")
+        }
+        desc={t("admin.staff_creation.form_subtitle")}
       >
         <div className="flex flex-wrap gap-3 pb-4">
           {sectionButtons.map((btn) => (
@@ -962,14 +1002,20 @@ console.log("Fetched staff data:", staff);
               disabled={submitting || fetching}
               className="rounded-lg bg-green-custom px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
             >
-              {submitting ? (isEdit ? "Updating..." : "Saving...") : isEdit ? "Update" : "Save"}
+              {submitting
+                ? isEdit
+                  ? t("common.updating")
+                  : t("common.saving")
+                : isEdit
+                ? t("common.update")
+                : t("common.save")}
             </button>
             <button
               type="button"
               onClick={() => navigate(ENC_LIST_PATH)}
               className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-600"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
           </div>
         </form>

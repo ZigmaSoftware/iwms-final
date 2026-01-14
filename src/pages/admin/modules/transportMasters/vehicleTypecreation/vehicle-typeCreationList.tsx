@@ -17,6 +17,7 @@ import { getEncryptedRoute } from "@/utils/routeCache";
 
 import { Switch } from "@/components/ui/switch"; // Toggle
 import { adminApi } from "@/helpers/admin/registry";
+import { useTranslation } from "react-i18next";
 
 const vehicleTypeApi = adminApi.vehicleTypes;
 
@@ -51,6 +52,7 @@ const normalizeVehicleTypes = (payload: any): VehicleType[] => {
 };
 
 export default function VehicleTypeCreation() {
+  const { t } = useTranslation();
   const [vehicleTypes, setVehicleTypes] = useState<VehicleType[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -77,8 +79,8 @@ export default function VehicleTypeCreation() {
       console.error("Failed to fetch vehicle types:", error);
       Swal.fire({
         icon: "error",
-        title: "Unable to load vehicle types",
-        text: "Please try again in a moment.",
+        title: t("admin.vehicle_type.load_failed_title"),
+        text: t("admin.vehicle_type.load_failed_desc"),
       });
     } finally {
       setLoading(false);
@@ -91,8 +93,8 @@ export default function VehicleTypeCreation() {
 
   const handleDelete = async (unique_id: string) => {
     const confirmDelete = await Swal.fire({
-      title: "Are you sure?",
-      text: "This vehicle type will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -105,7 +107,7 @@ export default function VehicleTypeCreation() {
       await vehicleTypeApi.remove(unique_id);
       Swal.fire({
         icon: "success",
-        title: "Deleted successfully!",
+        title: t("common.deleted_success"),
         timer: 1500,
         showConfirmButton: false,
       });
@@ -152,7 +154,7 @@ export default function VehicleTypeCreation() {
       <button
         onClick={() => navigate(ENC_EDIT_PATH(resolveId(row)))}
         className="inline-flex items-center justify-center text-blue-600 hover:text-blue-800"
-        title="Edit"
+        title={t("common.edit")}
       >
         <PencilIcon className="size-5" />
       </button>
@@ -178,7 +180,7 @@ export default function VehicleTypeCreation() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search vehicle types..."
+          placeholder={t("admin.vehicle_type.search_placeholder")}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -192,15 +194,15 @@ export default function VehicleTypeCreation() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              Vehicle Types
+              {t("admin.vehicle_type.title")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage your vehicle type records
+              {t("admin.vehicle_type.subtitle")}
             </p>
           </div>
 
           <Button
-            label="Add Vehicle Type"
+            label={t("admin.vehicle_type.add")}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -220,29 +222,29 @@ export default function VehicleTypeCreation() {
           header={header}
           stripedRows
           showGridlines
-          emptyMessage="No vehicle types found."
+          emptyMessage={t("admin.vehicle_type.empty_message")}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "80px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "80px" }} />
 
           <Column
             field="vehicleType"
-            header="Vehicle Type"
+            header={t("admin.vehicle_type.label")}
             sortable
             body={(row: VehicleType) => cap(row.vehicleType)}
             style={{ minWidth: "200px" }}
           />
 
-          {/* 🔥 Toggle Status */}
+          {/* Toggle Status */}
           <Column
             field="is_active"
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "150px" }}
           />
 
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px" }}
           />

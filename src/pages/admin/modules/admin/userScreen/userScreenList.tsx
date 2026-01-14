@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -22,6 +23,7 @@ import {
 import type { UserScreen } from "../types/admin.types"; 
 
 export default function UserScreenList() {
+  const { t } = useTranslation();
   const [screens, setScreens] = useState<UserScreen[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -59,13 +61,13 @@ export default function UserScreenList() {
 
   const handleDelete = async (id: string) => {
     const confirmDelete = await Swal.fire({
-      title: "Are you sure?",
-      text: "This screen will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
       cancelButtonColor: "#3085d6",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: t("common.confirm_delete_button"),
     });
 
     if (!confirmDelete.isConfirmed) return;
@@ -74,7 +76,7 @@ export default function UserScreenList() {
 
     Swal.fire({
       icon: "success",
-      title: "Deleted successfully!",
+      title: t("common.deleted_success"),
       timer: 1500,
       showConfirmButton: false,
     });
@@ -115,7 +117,7 @@ export default function UserScreenList() {
   const actionTemplate = (row: UserScreen) => (
     <div className="flex gap-2 justify-center">
       <button
-        title="Edit"
+        title={t("common.edit")}
         className="text-blue-600 hover:text-blue-800"
         onClick={() => navigate(ENC_EDIT_PATH(row.unique_id))}
       >
@@ -139,7 +141,9 @@ export default function UserScreenList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search screens..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.nav.user_screen"),
+          })}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -152,15 +156,19 @@ export default function UserScreenList() {
         <div className="flex justify-between items-center mb-6">
           <div>
             <h1 className="text-3xl font-bold text-gray-800 mb-1">
-              User Screens
+              {t("admin.nav.user_screen")}
             </h1>
             <p className="text-gray-500 text-sm">
-              Manage application screens
+              {t("common.manage_item_records", {
+                item: t("admin.nav.user_screen"),
+              })}
             </p>
           </div>
 
           <Button
-            label="Add User Screen"
+            label={t("common.add_item", {
+              item: t("admin.nav.user_screen"),
+            })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -183,50 +191,52 @@ export default function UserScreenList() {
           showGridlines
           className="p-datatable-sm"
           header={header}
-          emptyMessage="No screens found."
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.nav.user_screen"),
+          })}
         >
           <Column
-            header="S.No"
+            header={t("common.s_no")}
             body={indexTemplate}
             style={{ width: "70px" }}
           />
           <Column
             field="mainscreen_name"
-            header="MainScreen"
+            header={t("admin.nav.main_screen")}
             sortable
             style={{ minWidth: "150px" }}
           />
           <Column
             field="userscreen_name"
-            header="UserScreen"
+            header={t("admin.nav.user_screen")}
             sortable
             style={{ minWidth: "150px" }}
           />
           <Column
             field="folder_name"
-            header="Folder"
+            header={t("common.folder")}
             sortable
             style={{ minWidth: "120px" }}
           />
           <Column
             field="icon_name"
-            header="Icon"
+            header={t("common.icon")}
             sortable
             style={{ minWidth: "100px" }}
           />
           <Column
             field="order_no"
-            header="Order"
+            header={t("common.order")}
             sortable
             style={{ width: "100px" }}
           />
           <Column
-            header="Status"
+            header={t("common.status")}
             body={statusTemplate}
             style={{ width: "120px" }}
           />
           <Column
-            header="Actions"
+            header={t("common.actions")}
             body={actionTemplate}
             style={{ width: "150px" }}
           />

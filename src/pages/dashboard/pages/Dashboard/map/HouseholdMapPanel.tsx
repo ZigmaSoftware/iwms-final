@@ -15,6 +15,7 @@ import {
   normalizeCustomerArray,
   type CustomerRecord as CustomerRecordBase,
 } from "@/utils/customerUtils";
+import { useTranslation } from "react-i18next";
 
 /* ================= TYPES ================= */
 type CustomerRecord = CustomerRecordBase & {
@@ -67,9 +68,26 @@ type CollectionMeta = {
 };
 
 const parseCoordinate = (value?: number | string | null) => {
-  if (value === null || value === undefined || value === "") return null;
-  const parsed = Number(String(value).replace(/,/g, "."));
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : null;
+  }
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(/,/g, ".");
+  const match = normalized.match(/-?\d+(\.\d+)?/);
+  if (!match) return null;
+  const parsed = Number(match[0]);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const pickCoordinate = (record: Record<string, any>, keys: string[]) => {
+  for (const key of keys) {
+    const value = record?.[key];
+    const parsed = parseCoordinate(value);
+    if (parsed !== null) return parsed;
+  }
+  return null;
 };
 
 const pickText = (source: Record<string, any>, keys: string[], fallback = "") => {
@@ -91,9 +109,11 @@ const formatDateTime = (value?: string) => {
 
 /* ================= COMPONENT ================= */
 export function HouseholdMapPanel() {
+  const { t } = useTranslation();
   const mapRef = useRef<L.Map | null>(null);
   const mapDivRef = useRef<HTMLDivElement | null>(null);
   const markersRef = useRef<L.LayerGroup | null>(null);
+  const markerLookupRef = useRef<Record<string, L.Marker>>({});
 
   const [households, setHouseholds] = useState<Household[]>([]);
   const [summaryCounts, setSummaryCounts] = useState({
@@ -176,8 +196,19 @@ export function HouseholdMapPanel() {
         const mapped = activeCustomers.reduce<Household[]>((acc, customer) => {
           const id = String(customer.unique_id ?? customer.id ?? "").trim();
           if (!id) return acc;
-          const lat = parseCoordinate(customer.latitude ?? customer.lat ?? customer.latitude_value);
-          const lng = parseCoordinate(customer.longitude ?? customer.lng ?? customer.longitude_value);
+          const lat = pickCoordinate(customer, [
+            "latitude",
+            "lat",
+            "latitude_value",
+            "latitudeValue",
+          ]);
+          const lng = pickCoordinate(customer, [
+            "longitude",
+            "lng",
+            "lon",
+            "longitude_value",
+            "longitudeValue",
+          ]);
           if (lat === null || lng === null) return acc;
 
           const status: HouseholdStatus = collectedIds.has(id)
@@ -252,7 +283,7 @@ export function HouseholdMapPanel() {
 
   const totalSelected = statusFilter.collected && statusFilter.not_collected;
   const totalMeta = {
-    label: "Total Household",
+    label: t("dashboard.home.total_households_label"),
     color: "#1d4ed8",
     bg: "rgba(59,130,246,0.16)",
   };
@@ -289,6 +320,7 @@ export function HouseholdMapPanel() {
     if (!map || !layer) return;
 
     layer.clearLayers();
+    markerLookupRef.current = {};
     const bounds: LatLngTuple[] = [];
 
     filteredHouseholds.forEach((house) => {
@@ -296,14 +328,15 @@ export function HouseholdMapPanel() {
       bounds.push(pos);
 
       const marker = L.marker(pos, {
-        icon: createHouseIcon(house.status),
+        icon: createHouseIcon(house.status, house.id === selectedHouse?.id),
         title: house.name,
       });
 
+      const statusLabel = t(HOUSEHOLD_STATUS_META[house.status].labelKey);
       marker.bindPopup(
         `<strong>${house.name}</strong><br/>
-         Ward: ${house.ward}<br/>
-         Status: ${HOUSEHOLD_STATUS_META[house.status].label}`,
+         ${t("common.ward")}: ${house.ward}<br/>
+         ${t("common.status")}: ${statusLabel}`,
         { closeButton: false, autoClose: false, closeOnClick: false }
       );
 
@@ -317,11 +350,24 @@ export function HouseholdMapPanel() {
       });
 
       marker.addTo(layer);
+      markerLookupRef.current[house.id] = marker;
     });
 
     if (bounds.length) map.fitBounds(bounds, { padding: [40, 40] });
     else map.setView(DEFAULT_CENTER, 13);
-  }, [filteredHouseholds]);
+  }, [filteredHouseholds, selectedHouse, t]);
+
+  useEffect(() => {
+    if (!selectedHouse) return;
+    const map = mapRef.current;
+    const marker = markerLookupRef.current[selectedHouse.id];
+    if (map && marker) {
+      map.setView(marker.getLatLng(), Math.max(map.getZoom(), 15), {
+        animate: true,
+      });
+      marker.openPopup();
+    }
+  }, [selectedHouse]);
 
   /* ================= UI ================= */
   return (
@@ -330,13 +376,13 @@ export function HouseholdMapPanel() {
 
       {/* TOP FILTER BAR */}
       <div className="absolute left-1/2 top-2 z-[600] -translate-x-1/2">
-        <div className="flex gap-2 rounded-md border border-white/40 bg-white/80 px-4 py-1 text-[10px] text-slate-700 dark:text-slate-200">
+        <div className="flex max-w-[calc(100vw-32px)] flex-wrap items-center justify-center gap-2 rounded-md border border-white/40 bg-white/80 px-4 py-1 text-[10px] text-slate-700 dark:text-slate-200">
           {(Object.keys(statusFilter) as HouseholdStatus[]).map((key) => {
             const meta = HOUSEHOLD_STATUS_META[key];
             return (
               <label
                 key={key}
-                className="flex items-center gap-1.5 rounded-full px-2 py-1 font-semibold cursor-pointer"
+                className="flex flex-wrap items-center justify-center gap-1.5 rounded-full px-2 py-1 text-center font-semibold leading-tight cursor-pointer"
                 style={{
                   background: meta.bg,
                   color: meta.color,
@@ -347,7 +393,7 @@ export function HouseholdMapPanel() {
                   className="h-2 w-2 rounded-full"
                   style={{ background: meta.color }}
                 />
-                {meta.label}
+                {t(meta.labelKey)}
                 <span className="ml-1 text-[11px] font-bold">
                   {summary[key]}
                 </span>
@@ -365,7 +411,7 @@ export function HouseholdMapPanel() {
           <button
             type="button"
             onClick={() => setStatusFilter({ collected: true, not_collected: true })}
-            className="flex items-center gap-1.5 rounded-full px-2 py-1 font-semibold"
+            className="flex flex-wrap items-center justify-center gap-1.5 rounded-full px-2 py-1 text-center font-semibold leading-tight"
             style={{
               background: totalMeta.bg,
               color: totalMeta.color,
@@ -405,6 +451,7 @@ function HouseholdSideDetailsPanel({
   onToggle: () => void;
   onClose: () => void;
 }) {
+  const { t } = useTranslation();
   const statusMeta = house ? HOUSEHOLD_STATUS_META[house.status] : null;
   const WIDTH = 240;
 
@@ -441,37 +488,39 @@ function HouseholdSideDetailsPanel({
               <div>
                 <h3 className="text-sm font-bold">{house.name}</h3>
                 <p className="text-[11px] text-gray-500">
-                  Ward {house.ward} · {statusMeta?.label}
+                  {t("common.ward")} {house.ward} · {statusMeta ? t(statusMeta.labelKey) : ""}
                 </p>
               </div>
             </div>
 
             {/* DETAILS */}
             <div className="space-y-4 p-3 text-xs">
-              <Section title="Household Info">
-                <InfoRow label="Owner" value={house.ownerName} />
-                <InfoRow label="Mobile" value={house.mobile} />
-                <InfoRow label="House Type" value={house.houseType} />
-                <InfoRow label="Occupancy" value={house.occupancy} />
+              <Section title={t("dashboard.home.household_info_title")}>
+                <InfoRow label={t("common.owner")} value={house.ownerName} />
+                <InfoRow label={t("common.mobile")} value={house.mobile} />
+                <InfoRow label={t("common.house_type")} value={house.houseType} />
+                <InfoRow label={t("common.occupancy")} value={house.occupancy} />
               </Section>
 
-              <Section title="Location">
-                <InfoRow label="City" value={house.city} />
-                <InfoRow label="Zone" value={house.zone} />
-                <InfoRow label="Address" value={house.address ?? house.street} />
-                <InfoRow label="Latitude" value={house.lat} />
-                <InfoRow label="Longitude" value={house.lng} />
+              <Section title={t("dashboard.home.location_title")}>
+                <InfoRow label={t("common.city")} value={house.city} />
+                <InfoRow label={t("common.zone")} value={house.zone} />
+                <InfoRow label={t("common.address")} value={house.address ?? house.street} />
+                <InfoRow label={t("common.latitude")} value={house.lat} />
+                <InfoRow label={t("common.longitude")} value={house.lng} />
               </Section>
 
-              <Section title="Collection">
-                <InfoRow label="Last Collected" value={house.lastCollectedOn} />
-                <InfoRow label="Vehicle" value={house.assignedVehicle} />
-                <InfoRow label="Beat Worker" value={house.beatWorker} />
+              <Section title={t("dashboard.home.collection_title")}>
+                <InfoRow label={t("common.last_collected")} value={house.lastCollectedOn} />
+                <InfoRow label={t("common.vehicle")} value={house.assignedVehicle} />
+                <InfoRow label={t("common.beat_worker")} value={house.beatWorker} />
               </Section>
             </div>
           </>
         ) : (
-          <div className="p-3 text-xs text-gray-400">Select a household</div>
+          <div className="p-3 text-xs text-gray-400">
+            {t("dashboard.home.select_household")}
+          </div>
         )}
       </div>
     </div>

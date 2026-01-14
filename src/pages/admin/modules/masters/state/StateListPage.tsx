@@ -7,6 +7,7 @@ import { Column } from "primereact/column";
 import { Button } from "primereact/button";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 import "primereact/resources/themes/lara-light-blue/theme.css";
 import "primereact/resources/primereact.min.css";
@@ -31,29 +32,8 @@ type ErrorWithResponse = {
   };
 };
 
-const extractErrorMessage = (error: unknown) => {
-  if (!error) return "Something went wrong while processing the request.";
-  if (typeof error === "string") return error;
-
-  const data = (error as ErrorWithResponse)?.response?.data;
-
-  if (typeof data === "string") return data;
-  if (Array.isArray(data)) return data.join(", ");
-
-  if (data && typeof data === "object") {
-    return Object.entries(data as Record<string, unknown>)
-      .map(([k, v]) =>
-        Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
-      )
-      .join("\n");
-  }
-
-  if (error instanceof Error && error.message) return error.message;
-
-  return "Something went wrong while processing the request.";
-};
-
 export default function StateList() {
+  const { t } = useTranslation();
   const [states, setStates] = useState<StateRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -71,6 +51,28 @@ export default function StateList() {
   const ENC_EDIT_PATH = (unique_id: string) =>
     `/${encMasters}/${encStates}/${unique_id}/edit`;
 
+  const extractErrorMessage = (error: unknown) => {
+    if (!error) return t("common.request_failed");
+    if (typeof error === "string") return error;
+
+    const data = (error as ErrorWithResponse)?.response?.data;
+
+    if (typeof data === "string") return data;
+    if (Array.isArray(data)) return data.join(", ");
+
+    if (data && typeof data === "object") {
+      return Object.entries(data as Record<string, unknown>)
+        .map(([k, v]) =>
+          Array.isArray(v) ? `${k}: ${v.join(", ")}` : `${k}: ${String(v)}`
+        )
+        .join("\n");
+    }
+
+    if (error instanceof Error && error.message) return error.message;
+
+    return t("common.request_failed");
+  };
+
   const fetchStates = useCallback(async () => {
     // setLoading(true);
     try {
@@ -79,7 +81,7 @@ export default function StateList() {
     } catch (error) {
       Swal.fire({
         icon: "error",
-        title: "Unable to load states",
+        title: t("common.error"),
         text: extractErrorMessage(error),
       });
     } finally {
@@ -93,12 +95,12 @@ export default function StateList() {
 
   const handleDelete = async (unique_id: string) => {
     const confirm = await Swal.fire({
-      title: "Are you sure?",
-      text: "This state will be permanently deleted!",
+      title: t("common.confirm_title"),
+      text: t("common.confirm_delete_text"),
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
-      confirmButtonText: "Yes, delete it!",
+      confirmButtonText: t("common.confirm_delete_button"),
     });
 
     if (!confirm.isConfirmed) return;
@@ -107,7 +109,7 @@ export default function StateList() {
       await stateApi.remove(unique_id);
       Swal.fire({
         icon: "success",
-        title: "Deleted successfully!",
+        title: t("common.deleted_success"),
         timer: 1500,
         showConfirmButton: false,
       });
@@ -115,7 +117,7 @@ export default function StateList() {
     } catch (error) {
       Swal.fire({
         icon: "error",
-        title: "Delete failed",
+        title: t("common.delete_failed"),
         text: extractErrorMessage(error),
       });
     }
@@ -137,7 +139,9 @@ export default function StateList() {
         <InputText
           value={globalFilterValue}
           onChange={onGlobalFilterChange}
-          placeholder="Search states..."
+          placeholder={t("common.search_item_placeholder", {
+            item: t("admin.nav.state"),
+          })}
           className="p-inputtext-sm !border-0 !shadow-none"
         />
       </div>
@@ -155,7 +159,7 @@ export default function StateList() {
       } catch (error) {
         Swal.fire({
           icon: "error",
-          title: "Failed to update status",
+          title: t("common.update_status_failed"),
           text: extractErrorMessage(error),
         });
       }
@@ -189,12 +193,16 @@ export default function StateList() {
 
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-1">States</h1>
-            <p className="text-gray-500 text-sm">Manage state records</p>
+            <h1 className="text-3xl font-bold text-gray-800 mb-1">
+              {t("admin.nav.state")}
+            </h1>
+            <p className="text-gray-500 text-sm">
+              {t("common.manage_item_records", { item: t("admin.nav.state") })}
+            </p>
           </div>
 
           <Button
-            label="Add State"
+            label={t("common.add_item", { item: t("admin.nav.state") })}
             icon="pi pi-plus"
             className="p-button-success"
             onClick={() => navigate(ENC_NEW_PATH)}
@@ -212,31 +220,33 @@ export default function StateList() {
           header={renderHeader()}
           stripedRows
           showGridlines
-          emptyMessage="No states found."
+          emptyMessage={t("common.no_items_found", {
+            item: t("admin.nav.state"),
+          })}
           globalFilterFields={["name", "country_name", "label"]}
           className="p-datatable-sm"
         >
-          <Column header="S.No" body={indexTemplate} style={{ width: "70px" }} />
+          <Column header={t("common.s_no")} body={indexTemplate} style={{ width: "70px" }} />
           <Column
             field="country_name"
-            header="Country"
+            header={t("admin.nav.country")}
             body={(r) => cap(r.country_name)}
             sortable
           />
           <Column
             field="name"
-            header="State"
+            header={t("admin.nav.state")}
             body={(r) => cap(r.name)}
             sortable
           />
           <Column
             field="label"
-            header="Label"
+            header={t("common.label")}
             body={(r) => r.label.toUpperCase()}
             sortable
           />
-          <Column header="Status" body={statusTemplate} />
-          <Column header="Actions" body={actionTemplate} />
+          <Column header={t("common.status")} body={statusTemplate} />
+          <Column header={t("common.actions")} body={actionTemplate} />
         </DataTable>
      
     </div>

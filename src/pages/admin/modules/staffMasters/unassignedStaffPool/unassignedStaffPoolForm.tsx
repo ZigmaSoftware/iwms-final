@@ -1,0 +1,383 @@
+import { useEffect, useMemo, useState } from "react";
+import type { FormEvent } from "react";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
+import Swal from "sweetalert2";
+import { useTranslation } from "react-i18next";
+
+import ComponentCard from "@/components/common/ComponentCard";
+import Label from "@/components/form/Label";
+import Select from "@/components/form/Select";
+
+import { adminApi } from "@/helpers/admin/registry";
+import { getEncryptedRoute } from "@/utils/routeCache";
+
+type SelectOption = { value: string; label: string };
+
+type UnassignedStaffPoolFormState = {
+  operator_id: string;
+  driver_id: string;
+  zone_id: string;
+  ward_id: string;
+  status: string;
+  trip_instance_id: string;
+};
+
+type UserLocationMeta = {
+  zone_id?: string;
+  ward_id?: string;
+};
+
+const statusOptions: SelectOption[] = [
+  { value: "AVAILABLE", label: "Available" },
+  { value: "ASSIGNED", label: "Assigned" },
+];
+
+const roleOptions: SelectOption[] = [
+  { value: "operator", label: "Operator" },
+  { value: "driver", label: "Driver" },
+];
+
+const normalizeList = (payload: any): any[] =>
+  Array.isArray(payload) ? payload : Array.isArray(payload?.data) ? payload.data : payload?.results ?? [];
+
+const toOptions = (items: any[], valueKey: string, labelKey: string, fallbackKey?: string): SelectOption[] =>
+  items
+    .map((item) => ({
+      value: String(item?.[valueKey] ?? ""),
+      label: String(item?.[labelKey] ?? item?.[fallbackKey ?? ""] ?? item?.[valueKey] ?? ""),
+    }))
+    .filter((option) => option.value);
+
+export default function UnassignedStaffPoolForm() {
+  const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { id } = useParams<{ id?: string }>();
+  const location = useLocation();
+  const isEdit = Boolean(id);
+
+  const unassignedStaffPoolApi = adminApi.unassignedStaffPool;
+  const userApi = adminApi.usercreations;
+  const zoneApi = adminApi.zones;
+  const wardApi = adminApi.wards;
+  const tripInstanceApi = adminApi.tripInstances;
+
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(false);
+
+  const [operators, setOperators] = useState<SelectOption[]>([]);
+  const [drivers, setDrivers] = useState<SelectOption[]>([]);
+  const [zones, setZones] = useState<SelectOption[]>([]);
+  const [wardRecords, setWardRecords] = useState<any[]>([]);
+  const [tripInstances, setTripInstances] = useState<SelectOption[]>([]);
+  const [userMeta, setUserMeta] = useState<Record<string, UserLocationMeta>>({});
+
+  const [role, setRole] = useState<string>("");
+
+  const [formData, setFormData] = useState<UnassignedStaffPoolFormState>({
+    operator_id: "",
+    driver_id: "",
+    zone_id: "",
+    ward_id: "",
+    status: "AVAILABLE",
+    trip_instance_id: "",
+  });
+
+  const { encStaffMasters, encUnassignedStaffPool } = getEncryptedRoute();
+  const ENC_LIST_PATH = `/${encStaffMasters}/${encUnassignedStaffPool}`;
+  const stateRecord = (location.state as { record?: Partial<UnassignedStaffPoolFormState> } | null)?.record;
+
+  useEffect(() => {
+    setFetching(true);
+    Promise.all([
+      userApi.list(),
+      zoneApi.list(),
+      wardApi.list(),
+      tripInstanceApi.list(),
+    ])
+      .then(([userRes, zoneRes, wardRes, tripRes]) => {
+        const users = normalizeList(userRes);
+        const operatorUsers = users.filter(
+          (user: any) => String(user?.staffusertype_name ?? "").toLowerCase() === "operator"
+        );
+        const driverUsers = users.filter(
+          (user: any) => String(user?.staffusertype_name ?? "").toLowerCase() === "driver"
+        );
+
+        setOperators(toOptions(operatorUsers, "unique_id", "staff_name", "unique_id"));
+        setDrivers(toOptions(driverUsers, "unique_id", "staff_name", "unique_id"));
+        setZones(toOptions(normalizeList(zoneRes), "unique_id", "name"));
+        setWardRecords(normalizeList(wardRes));
+        setTripInstances(toOptions(normalizeList(tripRes), "unique_id", "trip_no"));
+        setUserMeta(
+          users.reduce<Record<string, UserLocationMeta>>((acc, user: any) => {
+            const id = user?.unique_id;
+            if (!id) return acc;
+            acc[String(id)] = {
+              zone_id: user?.zone_id ?? undefined,
+              ward_id: user?.ward_id ?? undefined,
+            };
+            return acc;
+          }, {})
+        );
+      })
+      .catch(() => {
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      })
+      .finally(() => setFetching(false));
+  }, [t, tripInstanceApi, userApi, wardApi, zoneApi]);
+
+  useEffect(() => {
+    if (!isEdit || !stateRecord) return;
+
+    const operatorId = stateRecord?.operator_id ?? "";
+    const driverId = stateRecord?.driver_id ?? "";
+
+    setFormData({
+      operator_id: operatorId,
+      driver_id: driverId,
+      zone_id: stateRecord?.zone_id ?? "",
+      ward_id: stateRecord?.ward_id ?? "",
+      status: stateRecord?.status ?? "AVAILABLE",
+      trip_instance_id: stateRecord?.trip_instance_id ?? "",
+    });
+
+    if (operatorId) {
+      setRole("operator");
+    } else if (driverId) {
+      setRole("driver");
+    }
+  }, [isEdit, stateRecord]);
+
+  useEffect(() => {
+    if (!isEdit || !id) return;
+
+    unassignedStaffPoolApi
+      .get(id)
+      .then((res: any) => {
+        const operatorId = res?.operator_id ?? "";
+        const driverId = res?.driver_id ?? "";
+
+        setFormData({
+          operator_id: operatorId,
+          driver_id: driverId,
+          zone_id: res?.zone_id ?? "",
+          ward_id: res?.ward_id ?? "",
+          status: res?.status ?? "AVAILABLE",
+          trip_instance_id: res?.trip_instance_id ?? "",
+        });
+
+        if (operatorId) {
+          setRole("operator");
+        } else if (driverId) {
+          setRole("driver");
+        }
+      })
+      .catch(() => {
+        Swal.fire(t("common.error"), t("common.load_failed"), "error");
+      });
+  }, [id, isEdit, t, unassignedStaffPoolApi]);
+
+  const wardOptions = useMemo(() => {
+    const filtered = formData.zone_id
+      ? wardRecords.filter((ward) => String(ward?.zone_id ?? "") === String(formData.zone_id))
+      : wardRecords;
+    return toOptions(filtered, "unique_id", "name");
+  }, [formData.zone_id, wardRecords]);
+
+  const handleRoleChange = (value: string) => {
+    setRole(value);
+    if (value === "operator") {
+      setFormData((prev) => ({ ...prev, driver_id: "" }));
+    } else if (value === "driver") {
+      setFormData((prev) => ({ ...prev, operator_id: "" }));
+    }
+  };
+
+  const applyStaffLocation = (staffId: string) => {
+    const meta = userMeta[staffId];
+    if (!meta) return;
+
+    setFormData((prev) => {
+      const nextZone = meta.zone_id ?? prev.zone_id;
+      const zoneChanged = meta.zone_id && meta.zone_id !== prev.zone_id;
+      const nextWard = meta.ward_id ?? (zoneChanged ? "" : prev.ward_id);
+
+      return {
+        ...prev,
+        zone_id: nextZone,
+        ward_id: nextWard,
+      };
+    });
+  };
+
+  const handleSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+
+    const selectedId = role === "operator" ? formData.operator_id : formData.driver_id;
+
+    if (!role || !selectedId || !formData.zone_id || !formData.ward_id || !formData.status) {
+      Swal.fire(t("common.warning"), t("common.missing_fields"), "warning");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        operator_id: role === "operator" ? formData.operator_id : null,
+        driver_id: role === "driver" ? formData.driver_id : null,
+        zone_id: formData.zone_id,
+        ward_id: formData.ward_id,
+        status: formData.status,
+        trip_instance_id: formData.trip_instance_id || null,
+      };
+
+      if (isEdit && id) {
+        await unassignedStaffPoolApi.update(id, payload);
+      } else {
+        await unassignedStaffPoolApi.create(payload);
+      }
+
+      Swal.fire(
+        t("common.success"),
+        isEdit ? t("common.updated_success") : t("common.added_success"),
+        "success"
+      );
+      navigate(ENC_LIST_PATH);
+    } catch {
+      Swal.fire(t("common.save_failed"), t("common.save_failed_desc"), "error");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="p-3">
+      <ComponentCard
+        title={
+          isEdit
+            ? t("admin.unassigned_staff_pool.title_edit")
+            : t("admin.unassigned_staff_pool.title_add")
+        }
+        desc={t("admin.unassigned_staff_pool.subtitle")}
+      >
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+            <div>
+              <Label>{t("admin.unassigned_staff_pool.role")}</Label>
+              <Select
+                value={role}
+                onChange={handleRoleChange}
+                options={roleOptions}
+                placeholder={t("admin.unassigned_staff_pool.role_placeholder")}
+                disabled={fetching}
+                required
+              />
+            </div>
+
+            {role === "operator" && (
+              <div>
+                <Label>{t("admin.unassigned_staff_pool.operator")}</Label>
+                <Select
+                  value={formData.operator_id}
+                  onChange={(value) => {
+                    setFormData((prev) => ({ ...prev, operator_id: value }));
+                    applyStaffLocation(value);
+                  }}
+                  options={operators}
+                  placeholder={t("common.select_option")}
+                  disabled={fetching}
+                  required
+                />
+              </div>
+            )}
+
+            {role === "driver" && (
+              <div>
+                <Label>{t("admin.unassigned_staff_pool.driver")}</Label>
+                <Select
+                  value={formData.driver_id}
+                  onChange={(value) => {
+                    setFormData((prev) => ({ ...prev, driver_id: value }));
+                    applyStaffLocation(value);
+                  }}
+                  options={drivers}
+                  placeholder={t("common.select_option")}
+                  disabled={fetching}
+                  required
+                />
+              </div>
+            )}
+
+            <div>
+              <Label>{t("admin.unassigned_staff_pool.zone")}</Label>
+              <Select
+                value={formData.zone_id}
+                onChange={(value) =>
+                  setFormData((prev) => ({ ...prev, zone_id: value, ward_id: "" }))
+                }
+                options={zones}
+                placeholder={t("common.select_option")}
+                disabled={fetching}
+                required
+              />
+            </div>
+
+            <div>
+              <Label>{t("admin.unassigned_staff_pool.ward")}</Label>
+              <Select
+                value={formData.ward_id}
+                onChange={(value) => setFormData((prev) => ({ ...prev, ward_id: value }))}
+                options={wardOptions}
+                placeholder={t("common.select_option")}
+                disabled={fetching || !formData.zone_id}
+                required
+              />
+            </div>
+
+            <div>
+              <Label>{t("admin.unassigned_staff_pool.status")}</Label>
+              <Select
+                value={formData.status}
+                onChange={(value) => setFormData((prev) => ({ ...prev, status: value }))}
+                options={statusOptions}
+                placeholder={t("common.select_status")}
+                disabled={fetching}
+              />
+            </div>
+
+            <div>
+              <Label>{t("admin.unassigned_staff_pool.trip_instance")}</Label>
+              <Select
+                value={formData.trip_instance_id}
+                onChange={(value) =>
+                  setFormData((prev) => ({ ...prev, trip_instance_id: value }))
+                }
+                options={tripInstances}
+                placeholder={t("common.select_option")}
+                disabled={fetching}
+              />
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button
+              type="submit"
+              disabled={loading || fetching}
+              className="rounded-lg bg-green-custom px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
+            >
+              {loading ? t("common.saving") : isEdit ? t("common.update") : t("common.save")}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => navigate(ENC_LIST_PATH)}
+              className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-semibold text-gray-600"
+            >
+              {t("common.cancel")}
+            </button>
+          </div>
+        </form>
+      </ComponentCard>
+    </div>
+  );
+}

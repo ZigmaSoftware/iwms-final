@@ -13,6 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 
 import { binApi, wardApi } from "@/helpers/admin";
 import { encryptSegment } from "@/utils/routeCrypto";
@@ -26,31 +27,32 @@ const LIST_PATH = `/${encMasters}/${encBins}`;
 type SelectOption = { value: string; label: string };
 
 /* ================= HELPERS ================= */
-const extractErr = (e: any): string => {
-  const data = e?.response?.data;
-  if (data) {
-    if (typeof data === "string") return data;
-    if (typeof data === "object") {
-      return Object.entries(data)
-        .map(([key, value]) => {
-          if (Array.isArray(value)) return `${key}: ${value.join(", ")}`;
-          return `${key}: ${String(value)}`;
-        })
-        .join("\n");
-    }
-    return String(data);
-  }
-  if (e?.message) return e.message;
-  return "Unexpected error";
-};
-
 /* ==========================================================
       COMPONENT
 ========================================================== */
 export default function BinForm() {
+  const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
+
+  const extractErr = (e: any): string => {
+    const data = e?.response?.data;
+    if (data) {
+      if (typeof data === "string") return data;
+      if (typeof data === "object") {
+        return Object.entries(data)
+          .map(([key, value]) => {
+            if (Array.isArray(value)) return `${key}: ${value.join(", ")}`;
+            return `${key}: ${String(value)}`;
+          })
+          .join("\n");
+      }
+      return String(data);
+    }
+    if (e?.message) return e.message;
+    return t("common.unexpected_error");
+  };
 
   /* ================= FORM STATE ================= */
   const [binName, setBinName] = useState("");
@@ -85,7 +87,7 @@ export default function BinForm() {
             }))
         )
       )
-      .catch((err) => Swal.fire("Error", extractErr(err), "error"));
+      .catch((err) => Swal.fire(t("common.error"), extractErr(err), "error"));
   }, []);
 
   /* ================= EDIT MODE LOAD ================= */
@@ -119,7 +121,9 @@ export default function BinForm() {
         const w = String(data.ward ?? data.ward_id ?? "");
         if (w) setPendingWard(w);
       })
-      .catch(() => Swal.fire("Error", "Failed to load bin details", "error"));
+      .catch(() =>
+        Swal.fire(t("common.error"), t("common.load_failed"), "error")
+      );
   }, [id, isEdit]);
 
   /* ================= APPLY PENDING WARD ================= */
@@ -143,22 +147,22 @@ export default function BinForm() {
       typeof value === "number" && Number.isFinite(value);
 
     if (!binName.trim()) missingFields.push("Bin name");
-    if (!wardId) missingFields.push("Ward");
+    if (!wardId) missingFields.push(t("common.ward"));
     if (typeof capacity !== "number" || capacity <= 0) {
-      missingFields.push("Capacity");
+      missingFields.push(t("common.capacity_liters"));
     }
-    if (!colorCode.trim()) missingFields.push("Color code");
-    if (!latitude.trim()) missingFields.push("Latitude");
-    if (!longitude.trim()) missingFields.push("Longitude");
-    if (!installationDate) missingFields.push("Installation date");
+    if (!colorCode.trim()) missingFields.push(t("common.color_code"));
+    if (!latitude.trim()) missingFields.push(t("common.latitude"));
+    if (!longitude.trim()) missingFields.push(t("common.longitude"));
+    if (!installationDate) missingFields.push(t("common.installed_on"));
     if (typeof expectedLife !== "number" || expectedLife <= 0) {
-      missingFields.push("Expected life");
+      missingFields.push(t("common.expected_life_years"));
     }
 
     if (missingFields.length > 0) {
       Swal.fire(
-        "Missing Fields",
-        `Please provide: ${missingFields.join(", ")}.`,
+        t("common.warning"),
+        t("admin.bin.missing_fields", { fields: missingFields.join(", ") }),
         "warning"
       );
       return;
@@ -170,8 +174,8 @@ export default function BinForm() {
     const lonValue = Number.parseFloat(longitude.replace(/,/g, "."));
     if (Number.isNaN(latValue) || Number.isNaN(lonValue)) {
       Swal.fire(
-        "Invalid Coordinates",
-        "Latitude and Longitude must be valid numbers.",
+        t("admin.bin.invalid_coordinates_title"),
+        t("admin.bin.invalid_coordinates_desc"),
         "warning"
       );
       return;
@@ -196,15 +200,15 @@ export default function BinForm() {
       if (isEdit && id) {
         console.log(payload);
         await binApi.update(id, payload);
-        Swal.fire("Success", "Bin updated successfully!", "success");
+        Swal.fire(t("common.success"), t("common.updated_success"), "success");
       } else {
         await binApi.create(payload);
-        Swal.fire("Success", "Bin added successfully!", "success");
+        Swal.fire(t("common.success"), t("common.added_success"), "success");
       }
 
       navigate(LIST_PATH);
     } catch (err: any) {
-      Swal.fire("Save failed", extractErr(err), "error");
+      Swal.fire(t("common.save_failed"), extractErr(err), "error");
     } finally {
       setLoading(false);
     }
@@ -212,7 +216,13 @@ export default function BinForm() {
 
   /* ================= JSX ================= */
   return (
-    <ComponentCard title={isEdit ? "Edit Bin" : "Add Bin"}>
+    <ComponentCard
+      title={
+        isEdit
+          ? t("common.edit_item", { item: t("admin.nav.bin_master") })
+          : t("common.add_item", { item: t("admin.nav.bin_creation") })
+      }
+    >
       <form
         onSubmit={handleSubmit}
         className="grid grid-cols-1 md:grid-cols-2 gap-6"
@@ -220,7 +230,9 @@ export default function BinForm() {
       >
         {/* Bin Name */}
         <div>
-          <Label>Bin Name *</Label>
+          <Label>
+            {t("common.item_name", { item: t("admin.nav.bin_master") })} *
+          </Label>
           <Input
             value={binName}
             onChange={(e) => setBinName(e.target.value)}
@@ -230,10 +242,14 @@ export default function BinForm() {
 
         {/* Ward */}
         <div>
-          <Label>Ward *</Label>
+          <Label>{t("common.ward")} *</Label>
           <Select value={wardId} onValueChange={setWardId}>
             <SelectTrigger className="input-validate w-full">
-              <SelectValue placeholder="Select Ward" />
+              <SelectValue
+                placeholder={t("common.select_item_placeholder", {
+                  item: t("common.ward"),
+                })}
+              />
             </SelectTrigger>
             <SelectContent>
               {wards.map((w) => (
@@ -247,39 +263,55 @@ export default function BinForm() {
 
         {/* Bin Type */}
         <div>
-          <Label>Bin Type</Label>
+          <Label>{t("common.bin_type")}</Label>
           <Select value={binType} onValueChange={setBinType}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="public">Public</SelectItem>
-              <SelectItem value="commercial">Commercial</SelectItem>
-              <SelectItem value="residential">Residential</SelectItem>
+              <SelectItem value="public">
+                {t("admin.bin.type_public")}
+              </SelectItem>
+              <SelectItem value="commercial">
+                {t("admin.bin.type_commercial")}
+              </SelectItem>
+              <SelectItem value="residential">
+                {t("admin.bin.type_residential")}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Waste Type */}
         <div>
-          <Label>Waste Type</Label>
+          <Label>{t("common.waste_type")}</Label>
           <Select value={wasteType} onValueChange={setWasteType}>
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="organic">Organic</SelectItem>
-              <SelectItem value="plastic">Plastic</SelectItem>
-              <SelectItem value="metal">Metal</SelectItem>
-              <SelectItem value="paper">Paper</SelectItem>
-              <SelectItem value="mixed">Mixed</SelectItem>
+              <SelectItem value="organic">
+                {t("admin.bin.waste_organic")}
+              </SelectItem>
+              <SelectItem value="plastic">
+                {t("admin.bin.waste_plastic")}
+              </SelectItem>
+              <SelectItem value="metal">
+                {t("admin.bin.waste_metal")}
+              </SelectItem>
+              <SelectItem value="paper">
+                {t("admin.bin.waste_paper")}
+              </SelectItem>
+              <SelectItem value="mixed">
+                {t("admin.bin.waste_mixed")}
+              </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         {/* Capacity */}
         <div>
-          <Label>Capacity (Liters) *</Label>
+          <Label>{t("common.capacity_liters")} *</Label>
           <Input
             type="number"
             value={capacity}
@@ -291,7 +323,7 @@ export default function BinForm() {
 
         {/* Color */}
         <div>
-          <Label>Color Code *</Label>
+          <Label>{t("common.color_code")} *</Label>
           <Input
             value={colorCode}
             onChange={(e) => setColorCode(e.target.value)}
@@ -301,7 +333,7 @@ export default function BinForm() {
 
         {/* Latitude */}
         <div>
-          <Label>Latitude *</Label>
+          <Label>{t("common.latitude")} *</Label>
           <Input
             type="text"
             inputMode="decimal"
@@ -313,7 +345,7 @@ export default function BinForm() {
 
         {/* Longitude */}
         <div>
-          <Label>Longitude *</Label>
+          <Label>{t("common.longitude")} *</Label>
           <Input
             type="text"
             inputMode="decimal"
@@ -325,7 +357,7 @@ export default function BinForm() {
 
         {/* Installation Date */}
         <div>
-          <Label>Installation Date *</Label>
+          <Label>{t("common.installed_on")} *</Label>
           <Input
             type="date"
             value={installationDate}
@@ -336,7 +368,7 @@ export default function BinForm() {
 
         {/* Expected Life */}
         <div>
-          <Label>Expected Life (Years) *</Label>
+          <Label>{t("common.expected_life_years")} *</Label>
           <Input
             type="number"
             value={expectedLife}
@@ -350,7 +382,7 @@ export default function BinForm() {
 
         {/* Active Status */}
         <div>
-          <Label>Active Status</Label>
+          <Label>{t("common.status")}</Label>
           <Select
             value={isActive ? "true" : "false"}
             onValueChange={(v) => setIsActive(v === "true")}
@@ -359,8 +391,8 @@ export default function BinForm() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="true">Active</SelectItem>
-              <SelectItem value="false">Inactive</SelectItem>
+              <SelectItem value="true">{t("common.active")}</SelectItem>
+              <SelectItem value="false">{t("common.inactive")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -370,11 +402,11 @@ export default function BinForm() {
           <Button type="submit" disabled={loading}>
             {loading
               ? isEdit
-                ? "Updating..."
-                : "Saving..."
+                ? t("common.updating")
+                : t("common.saving")
               : isEdit
-                ? "Update"
-                : "Save"}
+                ? t("common.update")
+                : t("common.save")}
           </Button>
 
           <Button
@@ -382,7 +414,7 @@ export default function BinForm() {
             variant="destructive"
             onClick={() => navigate(LIST_PATH)}
           >
-            Cancel
+            {t("common.cancel")}
           </Button>
         </div>
       </form>

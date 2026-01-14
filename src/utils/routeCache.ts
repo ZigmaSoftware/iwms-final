@@ -16,6 +16,10 @@ export type EncryptedRoutes = {
   encFuel: string;
   encMainComplaintCategory: string;
   encMasters: string;
+  encStaffMasters: string;
+  encStaffTemplate: string;
+  encAlternativeStaffTemplate: string;
+  encStaffTemplateAudit: string;
   encMonthlyDistance: string;
   encProperties: string;
   encReport: string;
@@ -42,11 +46,24 @@ export type EncryptedRoutes = {
   encDayReport: string;
   encWorkforceManagement: string;
   encZones: string;
+  encRoutePlans: string;
+  encSupervisorZoneMap: string;
+  encSupervisorZoneAccessAudit: string;
   encTransportMaster: string;
   encMainScreenType: string;
   encUserScreenAction: string;
   encMainScreen: string;
   encUserScreen: string;
+  encTripDefinition: string;
+  encBinLoadLog: string;
+  encCustomerTag: string;
+  encHouseholdPickupEvent: string;
+  encZonePropertyLoadTracker: string;
+  encTripInstance: string;
+  encUnassignedStaffPool: string;
+  encTripAttendance: string;
+  encVehicleTripAudit: string;
+  encTripExceptionLog: string;
 
   // dashboard
   encDashboardLiveMap: string;
@@ -76,6 +93,10 @@ const plainRoutes: EncryptedRoutes = {
   encFuel: "fuel",
   encMainComplaintCategory: "main-complaint-category",
   encMasters: "masters",
+  encStaffMasters: "staff-masters",
+  encStaffTemplate: "staff-template",
+  encAlternativeStaffTemplate: "alternative-staff-template",
+  encStaffTemplateAudit: "staff-template-audit",
   encMonthlyDistance: "monthly-distance",
   encProperties: "properties",
   encReport: "reports",
@@ -101,12 +122,25 @@ const plainRoutes: EncryptedRoutes = {
   encDayReport: "day-report",
   encWorkforceManagement: "workforce-management",
   encZones: "zones",
+  encRoutePlans: "route-plans",
+  encSupervisorZoneMap: "supervisor-zone-map",
+  encSupervisorZoneAccessAudit: "supervisor-zone-access-audit",
   encTransportMaster: "transport-master",
   encMainScreenType: "mainscreen-type",
   encUserScreenAction: "userscreen-action",
   encMainScreen: "mainscreens",
   encUserScreen: "userscreens",
   encUserScreenPermission: "userscreenpermissions",
+  encTripDefinition: "trip-definition",
+  encBinLoadLog: "bin-load-log",
+  encCustomerTag: "customer-tag",
+  encHouseholdPickupEvent: "household-pickup-event",
+  encZonePropertyLoadTracker: "zone-property-load-tracker",
+  encTripInstance: "trip-instance",
+  encUnassignedStaffPool: "unassigned-staff-pool",
+  encTripAttendance: "trip-attendance",
+  encVehicleTripAudit: "vehicle-trip-audit",
+  encTripExceptionLog: "trip-exception-log",
 
   //dashboard
 

@@ -6,7 +6,6 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useTranslation } from "react-i18next";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import { useUser } from "@/contexts/UserContext";
 import {
   ADMIN_ROLE,
@@ -138,10 +137,8 @@ export default function Auth() {
     }
   };
 
-  console.log(username + " " + password);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f3f6f4] p-4 font-sans">
+    <div className="min-h-screen flex items-center justify-center bg-[#f3f6f4] dark:bg-[#050b15] p-4 font-sans">
       <div
         className="absolute inset-0 bg-cover bg-center"
         style={{ backgroundImage: `url(${BgImg})` }}
@@ -150,9 +147,9 @@ export default function Auth() {
 
       <div className="relative w-full max-w-5xl grid md:grid-cols-2 rounded-2xl bg-white shadow-xl border border-gray-200 overflow-hidden">
         {/* LEFT */}
-        <div className="flex flex-col items-center justify-center p-10 bg-[#e8f5e9] text-center border-r border-gray-200">
+        <div className="flex flex-col items-center justify-center p-10 bg-[#e8f5e9] dark:bg-[#0f1c31] text-center border-r border-gray-200">
           <img src={ZigmaLogo} className="h-40 w-40 mb-4" />
-          <h2 className="text-2xl font-bold text-[#2e7d32]">
+          <h2 className="text-2xl font-bold text-[#2e7d32] dark:text-[#9be37d]">
             {t("login.left_title")}
           </h2>
           <p className="text-gray-700 text-sm mt-3 max-w-xs leading-relaxed">
@@ -162,16 +159,15 @@ export default function Auth() {
 
         {/* RIGHT */}
         <div className="p-10 flex flex-col justify-center">
-          <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center mb-6">
             <div>
               <h1 className="text-3xl font-semibold text-gray-800">
                 {t("login.title")}
               </h1>
-              <p className="text-[#43A047] mt-1 text-sm">
+              <p className="text-[#43A047] dark:text-[#7cd67c] mt-1 text-sm">
                 {t("login.subtitle")}
               </p>
             </div>
-            <LanguageSwitcher />
           </div>
 
           <form onSubmit={handleSignIn} className="space-y-6">
@@ -188,7 +184,7 @@ export default function Auth() {
                   setUsername(e.target.value)
                 }
                 className="h-12 rounded-lg bg-white border border-gray-300 
-                  text-gray-800 placeholder-gray-500 
+                  text-gray-800 placeholder-gray-500 dark:placeholder-gray-400
                   focus:ring-2 focus:ring-[#43A047] focus:border-[#43A047]"
                 required
               />
@@ -209,7 +205,7 @@ export default function Auth() {
                     setPassword(e.target.value)
                   }
                   className="h-12 rounded-lg bg-white border border-gray-300 
-                    text-gray-800 placeholder-gray-500 
+                    text-gray-800 placeholder-gray-500 dark:placeholder-gray-400
                     focus:ring-2 focus:ring-[#43A047] focus:border-[#43A047] pr-12"
                   required
                 />
@@ -252,14 +248,14 @@ export default function Auth() {
             </Button>
 
             <div className="pt-6 border-t border-dashed border-gray-200">
-              <p className="text-xs uppercase tracking-[0.2em] text-gray-400 text-center">
+              <p className="text-xs uppercase tracking-[0.2em] text-gray-400 dark:text-gray-300 text-center">
                 {t("login.rnd_shortcuts_label")}
               </p>
               <div className="mt-4 flex flex-col gap-3 sm:flex-row">
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 h-11 border-dashed border-[#43A047] text-[#2e7d32]"
+                  className="flex-1 min-h-[2.75rem] h-auto border-dashed border-[#43A047] px-3 py-2 text-xs leading-snug text-center whitespace-normal break-words text-[#2e7d32]"
                   onClick={() => handleRndAccess(DEFAULT_ROLE)}
                 >
                   {t("login.rnd_dashboard")}
@@ -267,7 +263,7 @@ export default function Auth() {
                 <Button
                   type="button"
                   variant="outline"
-                  className="flex-1 h-11 border-dashed border-orange-500 text-orange-700"
+                  className="flex-1 min-h-[2.75rem] h-auto border-dashed border-orange-500 px-3 py-2 text-xs leading-snug text-center whitespace-normal break-words text-orange-700"
                   onClick={() => handleRndAccess(ADMIN_ROLE)}
                 >
                   {t("login.rnd_admin")}

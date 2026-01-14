@@ -2,13 +2,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Download, FileText, Calendar, TrendingUp, Sparkles, BarChart2, Fuel, Recycle } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useTranslation } from "react-i18next";
 
 export default function Reports() {
+  const { t } = useTranslation();
   const kpiCards = [
     {
-      title: "Total Attendance",
+      title: t("dashboard.reports.kpis.total_attendance"),
       value: "96.8%",
-      subtext: "+2.4% from last week",
+      subtext: t("dashboard.reports.kpis.total_attendance_subtext"),
       subtextColor: "text-success",
       icon: FileText,
       overlay: "from-sky-50 via-white/40 to-blue-100 dark:from-slate-900/80 dark:via-transparent dark:to-slate-900",
@@ -19,9 +21,9 @@ export default function Reports() {
       iconColor: "text-sky-600 dark:text-sky-200",
     },
     {
-      title: "Fuel Efficiency",
+      title: t("dashboard.reports.kpis.fuel_efficiency"),
       value: "8.2 km/L",
-      subtext: "+5.1% improvement",
+      subtext: t("dashboard.reports.kpis.fuel_efficiency_subtext"),
       subtextColor: "text-success",
       icon: Fuel,
       overlay: "from-emerald-50 via-white/40 to-emerald-100 dark:from-slate-900/80 dark:via-transparent dark:to-slate-900",
@@ -32,9 +34,9 @@ export default function Reports() {
       iconColor: "text-emerald-600 dark:text-emerald-200",
     },
     {
-      title: "Waste Collected",
+      title: t("dashboard.reports.kpis.waste_collected"),
       value: "847 tons",
-      subtext: "This month",
+      subtext: t("dashboard.reports.kpis.waste_collected_subtext"),
       subtextColor: "text-muted-foreground",
       icon: Recycle,
       showTrendIcon: false,
@@ -55,10 +57,14 @@ export default function Reports() {
         <div>
           <div className="flex items-center gap-2 text-sky-500 dark:text-sky-300">
             <Sparkles className="h-4 w-4 animate-pulse" />
-            <span className="text-sm font-medium">Insights Hub</span>
+            <span className="text-sm font-medium">{t("dashboard.reports.insights_hub")}</span>
           </div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground mt-1">Reports & Analytics</h2>
-          <p className="text-muted-foreground">Comprehensive fleet performance and operational reports</p>
+          <h2 className="text-3xl font-bold tracking-tight text-foreground mt-1">
+            {t("dashboard.reports.title")}
+          </h2>
+          <p className="text-muted-foreground">
+            {t("dashboard.reports.subtitle")}
+          </p>
         </div>
         <div className="flex items-center gap-2">
           <Select defaultValue="today">
@@ -67,10 +73,10 @@ export default function Reports() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="today">Today</SelectItem>
-              <SelectItem value="week">This Week</SelectItem>
-              <SelectItem value="month">This Month</SelectItem>
-              <SelectItem value="quarter">This Quarter</SelectItem>
+              <SelectItem value="today">{t("dashboard.reports.range_today")}</SelectItem>
+              <SelectItem value="week">{t("dashboard.reports.range_week")}</SelectItem>
+              <SelectItem value="month">{t("dashboard.reports.range_month")}</SelectItem>
+              <SelectItem value="quarter">{t("dashboard.reports.range_quarter")}</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -111,14 +117,14 @@ export default function Reports() {
         <Card className="relative overflow-hidden border border-amber-200/60 dark:border-amber-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur">
           <div className="absolute inset-0 bg-gradient-to-r from-amber-50 via-transparent to-white/60 dark:from-slate-900/60 dark:via-transparent dark:to-slate-900 opacity-60 pointer-events-none animate-[pulse_8s_ease-in-out_infinite]" />
           <CardHeader className="relative">
-            <CardTitle>Attendance Report</CardTitle>
-            <CardDescription>Staff attendance and punctuality analysis</CardDescription>
+            <CardTitle>{t("dashboard.reports.attendance_report_title")}</CardTitle>
+            <CardDescription>{t("dashboard.reports.attendance_report_subtitle")}</CardDescription>
           </CardHeader>
           <CardContent className="relative">
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">On-time arrivals</span>
+                  <span className="text-muted-foreground">{t("dashboard.reports.attendance_on_time")}</span>
                   <span className="font-medium">89%</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-secondary overflow-hidden dark:bg-slate-800/80">
@@ -127,7 +133,7 @@ export default function Reports() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Late arrivals (within 30min)</span>
+                  <span className="text-muted-foreground">{t("dashboard.reports.attendance_late")}</span>
                   <span className="font-medium">8%</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-secondary overflow-hidden dark:bg-slate-800/80">
@@ -136,7 +142,7 @@ export default function Reports() {
               </div>
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Absent/No show</span>
+                  <span className="text-muted-foreground">{t("dashboard.reports.attendance_absent")}</span>
                   <span className="font-medium">3%</span>
                 </div>
                 <div className="h-2 w-full rounded-full bg-secondary overflow-hidden dark:bg-slate-800/80">
@@ -145,7 +151,7 @@ export default function Reports() {
               </div>
               <Button variant="outline" className="w-full mt-4 border-amber-200 hover:bg-amber-50 dark:hover:bg-slate-900/60">
                 <Download className="h-4 w-4 mr-2" />
-                Export Attendance Report
+                {t("dashboard.reports.attendance_export")}
               </Button>
             </div>
           </CardContent>
@@ -156,8 +162,8 @@ export default function Reports() {
           <CardHeader className="relative">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>Fuel Efficiency Trends</CardTitle>
-                <CardDescription>Fuel consumption analysis by vehicle</CardDescription>
+                <CardTitle>{t("dashboard.reports.fuel_trends_title")}</CardTitle>
+                <CardDescription>{t("dashboard.reports.fuel_trends_subtitle")}</CardDescription>
               </div>
               <BarChart2 className="h-5 w-5 text-rose-500" />
             </div>
@@ -175,12 +181,12 @@ export default function Reports() {
                     <p className="font-medium text-sm">{data.vehicle}</p>
                     <p className="text-xs text-muted-foreground">
                       {data.status === "excellent"
-                        ? "Excellent"
+                        ? t("dashboard.reports.fuel_status_excellent")
                         : data.status === "good"
-                        ? "Good"
+                        ? t("dashboard.reports.fuel_status_good")
                         : data.status === "average"
-                        ? "Average"
-                        : "Needs Attention"}
+                        ? t("dashboard.reports.fuel_status_average")
+                        : t("dashboard.reports.fuel_status_needs_attention")}
                     </p>
                   </div>
                   <div className="text-right">
@@ -211,42 +217,44 @@ export default function Reports() {
       <Card className="relative overflow-hidden border border-sky-200/60 dark:border-sky-500/40 bg-white/95 dark:bg-slate-900/80 backdrop-blur">
         <div className="absolute inset-0 bg-gradient-to-r from-sky-50 via-transparent to-white/60 dark:from-slate-900/60 dark:via-transparent dark:to-slate-900 opacity-60 pointer-events-none animate-[pulse_10s_ease-in-out_infinite]" />
         <CardHeader className="relative">
-          <CardTitle>Daily Waste Collection Summary</CardTitle>
-          <CardDescription>Waste collection statistics and performance metrics</CardDescription>
+          <CardTitle>{t("dashboard.reports.daily_summary.title")}</CardTitle>
+          <CardDescription>{t("dashboard.reports.daily_summary.subtitle")}</CardDescription>
         </CardHeader>
         <CardContent className="relative">
           <div className="grid gap-6 md:grid-cols-3">
             {[
               {
-                label: "Total Routes Completed",
-                value: "142",
-                note: "+12% vs last week",
+                key: "total_routes",
+                value: t("dashboard.reports.daily_summary.cards.total_routes.value"),
+                note: t("dashboard.reports.daily_summary.cards.total_routes.note"),
                 noteClass: "text-success",
                 accent: "from-white via-sky-50 to-blue-100 dark:from-slate-900 dark:via-sky-950/20 dark:to-slate-900",
                 valueClass: "text-sky-600 dark:text-sky-200",
               },
               {
-                label: "Average Load per Trip",
-                value: "2.8 tons",
-                note: "Within optimal range",
+                key: "avg_load",
+                value: t("dashboard.reports.daily_summary.cards.avg_load.value"),
+                note: t("dashboard.reports.daily_summary.cards.avg_load.note"),
                 noteClass: "text-muted-foreground",
                 accent: "from-white via-emerald-50 to-emerald-100 dark:from-slate-900 dark:via-emerald-950/20 dark:to-slate-900",
                 valueClass: "text-emerald-600 dark:text-emerald-200",
               },
               {
-                label: "Collection Efficiency",
-                value: "94.2%",
-                note: "+3.1% improvement",
+                key: "efficiency",
+                value: t("dashboard.reports.daily_summary.cards.efficiency.value"),
+                note: t("dashboard.reports.daily_summary.cards.efficiency.note"),
                 noteClass: "text-success",
                 accent: "from-white via-amber-50 to-amber-100 dark:from-slate-900 dark:via-amber-950/20 dark:to-slate-900",
                 valueClass: "text-amber-600 dark:text-amber-200",
               },
             ].map((stat) => (
               <div
-                key={stat.label}
+                key={stat.key}
                 className={`space-y-2 rounded-2xl border border-border/40 dark:border-border/60 bg-gradient-to-br ${stat.accent} p-4`}
               >
-                <p className="text-sm font-medium text-muted-foreground">{stat.label}</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {t(`dashboard.reports.daily_summary.cards.${stat.key}.label`)}
+                </p>
                 <p className={`text-3xl font-bold ${stat.valueClass ?? ""}`}>{stat.value}</p>
                 <p className={`text-xs ${stat.noteClass}`}>{stat.note}</p>
               </div>
@@ -255,11 +263,11 @@ export default function Reports() {
           <div className="mt-6 flex gap-2">
             <Button variant="outline" className="flex-1">
               <Download className="h-4 w-4 mr-2" />
-              Export to Excel
+              {t("dashboard.reports.daily_summary.export_excel")}
             </Button>
             <Button variant="outline" className="flex-1">
               <Download className="h-4 w-4 mr-2" />
-              Export to PDF
+              {t("dashboard.reports.daily_summary.export_pdf")}
             </Button>
           </div>
         </CardContent>

@@ -10,6 +10,7 @@ import { DataTable } from "primereact/datatable";
 import { Column } from "primereact/column";
 import { InputText } from "primereact/inputtext";
 import { FilterMatchMode } from "primereact/api";
+import { useTranslation } from "react-i18next";
 
 type RawVehicle = Record<string, any>;
 
@@ -192,6 +193,7 @@ const normalizeVehicle = (record: RawVehicle): VehicleOption | null => {
 };
 
 export default function TripSummary() {
+  const { t } = useTranslation();
   const initialRange = useMemo(() => computeInitialRange(), []);
   const [vehicles, setVehicles] = useState<VehicleOption[]>(FALLBACK_VEHICLES);
   const [vehicleId, setVehicleId] = useState(FALLBACK_VEHICLES[0].id);
@@ -232,7 +234,7 @@ export default function TripSummary() {
           } else {
             setVehicles(FALLBACK_VEHICLES);
             setVehicleId(FALLBACK_VEHICLES[0].id);
-            setRosterError("No live vehicles. Showing fallback vehicles.");
+            setRosterError("admin.reports.trip_summary.roster_no_live");
           }
         }
       } catch (error) {
@@ -240,7 +242,7 @@ export default function TripSummary() {
         if (!aborted) {
           setVehicles(FALLBACK_VEHICLES);
           setVehicleId(FALLBACK_VEHICLES[0].id);
-          setRosterError("Live vehicle list unavailable. Using fallback list.");
+          setRosterError("admin.reports.trip_summary.roster_unavailable");
         }
       } finally {
         if (!aborted) {
@@ -260,18 +262,18 @@ export default function TripSummary() {
     allowFallback?: boolean;
   }) => {
     if (!vehicleId) {
-      setSummaryError("Please choose a vehicle.");
+      setSummaryError("admin.reports.trip_summary.error_select_vehicle");
       return;
     }
     const range = options?.range ?? { from: fromDate, to: toDate };
     const fromMs = new Date(range.from).getTime();
     const toMs = new Date(range.to).getTime();
     if (Number.isNaN(fromMs) || Number.isNaN(toMs)) {
-      setSummaryError("Invalid date range.");
+      setSummaryError("admin.reports.trip_summary.error_invalid_range");
       return;
     }
     if (fromMs >= toMs) {
-      setSummaryError("From date must be earlier than To date.");
+      setSummaryError("admin.reports.trip_summary.error_from_after_to");
       return;
     }
 
@@ -307,15 +309,15 @@ export default function TripSummary() {
             await fetchSummary({ range: fallbackRange, allowFallback: false });
             return;
           }
-          setSummaryError("No trip records for selected range.");
+          setSummaryError("admin.reports.trip_summary.error_no_records");
         }
       } else {
-        setSummaryError("No data returned from API.");
+        setSummaryError("admin.reports.trip_summary.error_no_data");
         setSummary(null);
       }
     } catch (err) {
       console.error(err);
-      setSummaryError("Failed to fetch trip summary.");
+      setSummaryError("admin.reports.trip_summary.error_fetch_failed");
       setSummary(null);
     } finally {
       setLoading(false);
@@ -331,25 +333,29 @@ export default function TripSummary() {
   const handleExport = () => {
     const dataSource = summary?.historyConsilated ?? [];
     if (!dataSource.length) {
-      setSummaryError("No data to export. Try fetching a range with trips first.");
+      setSummaryError("admin.reports.trip_summary.error_no_export");
       return;
     }
 
     const rows = dataSource.map((row, idx) => ({
-      "S.No": idx + 1,
-      "Vehicle No": summary?.vehicleName || vehicleId,
-      "Start Time": new Date(row.startTime).toLocaleString(),
-      "Start Address": row.intLoc || "-",
-      "End Time": new Date(row.endTime).toLocaleString(),
-      "End Address": row.finLoc || "-",
-      Position: row.position || "-",
-      "Total Minutes": Math.floor((row.duration ?? 0) / 60000),
-      Distance: row.tripDistance ?? 0,
+      [t("admin.reports.trip_summary.columns.s_no")]: idx + 1,
+      [t("admin.reports.trip_summary.columns.vehicle_no")]: summary?.vehicleName || vehicleId,
+      [t("admin.reports.trip_summary.columns.start_time")]: new Date(row.startTime).toLocaleString(),
+      [t("admin.reports.trip_summary.columns.start_address")]: row.intLoc || "-",
+      [t("admin.reports.trip_summary.columns.end_time")]: new Date(row.endTime).toLocaleString(),
+      [t("admin.reports.trip_summary.columns.end_address")]: row.finLoc || "-",
+      [t("admin.reports.trip_summary.columns.position")]: row.position || "-",
+      [t("admin.reports.trip_summary.columns.total_minutes")]: Math.floor((row.duration ?? 0) / 60000),
+      [t("admin.reports.trip_summary.columns.distance")]: row.tripDistance ?? 0,
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(rows);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Trip Summary");
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      t("admin.reports.trip_summary.export_sheet"),
+    );
     const wbout = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     const blob = new Blob([wbout], { type: "application/octet-stream" });
     const filename = `trip-summary-${vehicleId}-${Date.now()}.xlsx`;
@@ -371,16 +377,16 @@ export default function TripSummary() {
     <div className="trip-summary-shell">
       <div className="trip-summary-container">
         <div className="trip-summary-header">
-          <h3>Trip Summary</h3>
+          <h3>{t("admin.reports.trip_summary.title")}</h3>
           <button className="btn-excel" type="button" onClick={handleExport}>
             <i className="fa fa-file-excel-o" aria-hidden="true" />
-            Download
+            {t("common.download")}
           </button>
         </div>
 
         <div className="filter-row">
           <div className="filter-field">
-            <label>Vehicle ID</label>
+            <label>{t("admin.reports.trip_summary.filters.vehicle_id")}</label>
             <select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
               {vehicles.map((vehicle) => (
                 <option key={vehicle.id} value={vehicle.id}>
@@ -391,7 +397,7 @@ export default function TripSummary() {
           </div>
 
           <div className="filter-field">
-            <label>From Date</label>
+            <label>{t("admin.reports.trip_summary.filters.from_date")}</label>
             <input
               type="datetime-local"
               className="trip-date-input"
@@ -401,7 +407,7 @@ export default function TripSummary() {
           </div>
 
           <div className="filter-field">
-            <label>To Date</label>
+            <label>{t("admin.reports.trip_summary.filters.to_date")}</label>
             <input
               type="datetime-local"
               className="trip-date-input"
@@ -411,25 +417,29 @@ export default function TripSummary() {
           </div>
 
           <button className="btn-go" onClick={fetchSummary} disabled={loading}>
-            {loading ? "Loading..." : "Go"}
+            {loading ? t("common.loading") : t("common.go")}
           </button>
         </div>
 
-        {rosterError && <div className="trip-inline-alert">{rosterError}</div>}
-        {summaryError && <div className="trip-inline-alert warning">{summaryError}</div>}
+        {rosterError && <div className="trip-inline-alert">{t(rosterError)}</div>}
+        {summaryError && <div className="trip-inline-alert warning">{t(summaryError)}</div>}
 
         <div className="summary-header">
           <p>
-            <span>Vehicle No:</span> {displaySummary.vehicleName || "-"}
+            <span>{t("admin.reports.trip_summary.summary.vehicle_no")}:</span>{" "}
+            {displaySummary.vehicleName || "-"}
           </p>
           <p>
-            <span>Start Km:</span> {displaySummary.startOdo ?? "-"}
+            <span>{t("admin.reports.trip_summary.summary.start_km")}:</span>{" "}
+            {displaySummary.startOdo ?? "-"}
           </p>
           <p>
-            <span>End Km:</span> {displaySummary.endOdo ?? "-"}
+            <span>{t("admin.reports.trip_summary.summary.end_km")}:</span>{" "}
+            {displaySummary.endOdo ?? "-"}
           </p>
           <p>
-            <span>Trip Distance:</span> {displaySummary.totalTripLength ?? "-"} km
+            <span>{t("admin.reports.trip_summary.summary.trip_distance")}:</span>{" "}
+            {displaySummary.totalTripLength ?? "-"} km
           </p>
         </div>
 
@@ -439,7 +449,7 @@ export default function TripSummary() {
               {STATUS_ICONS.moving}
             </div>
             <div>
-              <p>Moving</p>
+              <p>{t("admin.reports.trip_summary.status.moving")}</p>
               <strong>{displaySummary.moveCount ?? "-"}</strong>
             </div>
           </div>
@@ -448,7 +458,7 @@ export default function TripSummary() {
               {STATUS_ICONS.parked}
             </div>
             <div>
-              <p>Parked</p>
+              <p>{t("admin.reports.trip_summary.status.parked")}</p>
               <strong>{displaySummary.parkCount ?? "-"}</strong>
             </div>
           </div>
@@ -457,7 +467,7 @@ export default function TripSummary() {
               {STATUS_ICONS.idle}
             </div>
             <div>
-              <p>Idle</p>
+              <p>{t("admin.reports.trip_summary.status.idle")}</p>
               <strong>{displaySummary.idleCount ?? "-"}</strong>
             </div>
           </div>
@@ -472,50 +482,72 @@ export default function TripSummary() {
             globalFilterFields={["intLoc", "finLoc", "position"]}
             header={
               <div className="flex justify-between items-center gap-4">
-                <div className="text-lg font-semibold text-gray-700">Trip Records</div>
+                <div className="text-lg font-semibold text-gray-700">
+                  {t("admin.reports.trip_summary.records_title")}
+                </div>
                 <div className="flex items-center gap-3 bg-white px-3 py-1 rounded-md border border-gray-300 shadow-sm">
                   <InputText
                     value={globalFilterValue}
                     onChange={onGlobalFilterChange}
-                    placeholder="Search trips..."
+                    placeholder={t("admin.reports.trip_summary.search_placeholder")}
                     className="p-inputtext-sm !border-0 !shadow-none"
                   />
                 </div>
               </div>
             }
-            emptyMessage="No trip records found."
+            emptyMessage={t("admin.reports.trip_summary.empty_message")}
             responsiveLayout="scroll"
             stripedRows
             showGridlines
             className="p-datatable-sm"
           >
             <Column
-              header="S.No"
+              header={t("admin.reports.trip_summary.columns.s_no")}
               body={(_row, { rowIndex }) => rowIndex + 1}
               style={{ width: "80px" }}
             />
             <Column
-              header="Start Time"
+              header={t("admin.reports.trip_summary.columns.start_time")}
               body={(row: HistoryRow) => new Date(row.startTime).toLocaleString()}
               sortable
               style={{ minWidth: "170px" }}
             />
-            <Column header="Start Address" body={(row: HistoryRow) => row.intLoc || "-"} style={{ minWidth: "180px" }} />
             <Column
-              header="End Time"
+              header={t("admin.reports.trip_summary.columns.start_address")}
+              body={(row: HistoryRow) => row.intLoc || "-"}
+              style={{ minWidth: "180px" }}
+            />
+            <Column
+              header={t("admin.reports.trip_summary.columns.end_time")}
               body={(row: HistoryRow) => new Date(row.endTime).toLocaleString()}
               sortable
               style={{ minWidth: "170px" }}
             />
-            <Column header="End Address" body={(row: HistoryRow) => row.finLoc || "-"} style={{ minWidth: "180px" }} />
-            <Column header="Vehicle No" body={() => displaySummary.vehicleName || vehicleId} style={{ minWidth: "160px" }} />
-            <Column header="Position" body={(row: HistoryRow) => row.position || "-"} style={{ minWidth: "140px" }} />
             <Column
-              header="Total Minutes"
+              header={t("admin.reports.trip_summary.columns.end_address")}
+              body={(row: HistoryRow) => row.finLoc || "-"}
+              style={{ minWidth: "180px" }}
+            />
+            <Column
+              header={t("admin.reports.trip_summary.columns.vehicle_no")}
+              body={() => displaySummary.vehicleName || vehicleId}
+              style={{ minWidth: "160px" }}
+            />
+            <Column
+              header={t("admin.reports.trip_summary.columns.position")}
+              body={(row: HistoryRow) => row.position || "-"}
+              style={{ minWidth: "140px" }}
+            />
+            <Column
+              header={t("admin.reports.trip_summary.columns.total_minutes")}
               body={(row: HistoryRow) => Math.floor((row.duration ?? 0) / 60000)}
               style={{ width: "150px" }}
             />
-            <Column header="Distance" body={(row: HistoryRow) => row.tripDistance ?? 0} style={{ width: "140px" }} />
+            <Column
+              header={t("admin.reports.trip_summary.columns.distance")}
+              body={(row: HistoryRow) => row.tripDistance ?? 0}
+              style={{ width: "140px" }}
+            />
           </DataTable>
         </div>
       </div>
